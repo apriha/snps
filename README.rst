@@ -2,10 +2,9 @@
 
 |build| |codecov| |docs| |pypi| |python| |downloads| |license|
 
-lineage
-=======
-``lineage`` provides a framework for analyzing genotype (raw data) files from direct-to-consumer
-(DTC) DNA testing companies, primarily for the purposes of genetic genealogy.
+snps
+====
+tools for reading, writing, merging, and remapping SNPs
 
 Capabilities
 ------------

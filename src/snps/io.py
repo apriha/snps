@@ -569,8 +569,10 @@ class Writer:
         comment = (
             "##fileformat=VCFv4.2\n"
             "##fileDate={}\n"
-            '##source="snps v{}; https://github.com/apriha/snps"\n'.format(
-                datetime.datetime.utcnow().strftime("%Y%m%d"), snps.__version__
+            '##source="{}; snps v{}; https://github.com/apriha/snps"\n'.format(
+                datetime.datetime.utcnow().strftime("%Y%m%d"),
+                self._snps._source,
+                snps.__version__,
             )
         )
 

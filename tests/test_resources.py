@@ -119,7 +119,7 @@ class TestResources(BaseLineageTestCase):
         )
         assert (
             seqs["MT"].path
-            == "resources/reference_sequences/NCBI36/Homo_sapiens.NCBI36.54.dna.chromosome.MT.fa.gz"
+            == "resources/fasta/NCBI36/Homo_sapiens.NCBI36.54.dna.chromosome.MT.fa.gz"
         )
         assert os.path.exists(seqs["MT"].path)
         assert seqs["MT"].assembly == "NCBI36"
@@ -142,7 +142,7 @@ class TestResources(BaseLineageTestCase):
         )
         assert (
             seqs["MT"].path
-            == "resources/reference_sequences/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
+            == "resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
         )
         assert os.path.exists(seqs["MT"].path)
         assert seqs["MT"].assembly == "GRCh37"
@@ -165,7 +165,7 @@ class TestResources(BaseLineageTestCase):
         )
         assert (
             seqs["MT"].path
-            == "resources/reference_sequences/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.MT.fa.gz"
+            == "resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.MT.fa.gz"
         )
         assert os.path.exists(seqs["MT"].path)
         assert seqs["MT"].assembly == "GRCh38"
@@ -193,7 +193,7 @@ class TestResources(BaseLineageTestCase):
         )
         assert (
             seqs["MT"].path
-            == "resources/reference_sequences/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
+            == "resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
         )
         assert os.path.exists(seqs["MT"].path)
         assert seqs["MT"].assembly == "GRCh37"
@@ -207,17 +207,17 @@ class TestResources(BaseLineageTestCase):
         assert len(seqs["NCBI36"]) == 1
         assert (
             seqs["NCBI36"]["MT"].path
-            == "resources/reference_sequences/NCBI36/Homo_sapiens.NCBI36.54.dna.chromosome.MT.fa.gz"
+            == "resources/fasta/NCBI36/Homo_sapiens.NCBI36.54.dna.chromosome.MT.fa.gz"
         )
         assert len(seqs["GRCh37"]) == 1
         assert (
             seqs["GRCh37"]["MT"].path
-            == "resources/reference_sequences/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
+            == "resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
         )
         assert len(seqs["GRCh38"]) == 1
         assert (
             seqs["GRCh38"]["MT"].path
-            == "resources/reference_sequences/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.MT.fa.gz"
+            == "resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.MT.fa.gz"
         )
 
     def test_get_reference_sequences_invalid_assembly(self):
@@ -238,7 +238,7 @@ class TestResources(BaseLineageTestCase):
         )
         assert (
             seqs["MT"].path
-            == "resources/reference_sequences/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
+            == "resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
         )
         assert os.path.exists(seqs["MT"].path)
         assert seqs["MT"].assembly == "GRCh37"

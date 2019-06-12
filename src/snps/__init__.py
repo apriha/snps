@@ -986,7 +986,9 @@ class SNPsCollection(SNPs):
             if not self._name:
                 filename = "{}.csv".format(discrepant_snps_type)
             else:
-                filename = "{}_{}.csv".format(clean_str(self._name), discrepant_snps_type)
+                filename = "{}_{}.csv".format(
+                    clean_str(self._name), discrepant_snps_type
+                )
 
         return save_df_as_csv(
             df,

@@ -41,7 +41,7 @@ script:
       tar -xzf resources.tar.gz
       rm resources.tar.gz
     fi
-  - pytest --cov=lineage tests
+  - pytest --cov=snps tests
   - |
     if [ $SELECTED_JOB == $JOB_ID ]; then
       codecov
@@ -76,7 +76,7 @@ jobs:
         - provider: pypi
           user: "apriha"
           password:
-            secure: "ILDxck7IPSffABa4mWFANETAOJgazxXJRJBFoMQ+0TKxsrTKVA6VDtrUBEAgxAdm2Zp9Lwh8vsOKodEToTrcm5J4JmnFsyz+pxBbPNpKE1RU4bn+X0qqd3D//iK6DoATxrQCS73MZA7GoMOEL7dvU2R8d2d8i6H3x4lDCIp3dcPRZm1+YYGo51bwv6MYJGcN9lQOtQlVgFYPp/9TSAiwK5sWjQk8Bfv7ASIJWGb0+oLW5AK468ANk1agof+pg56d041vWYDqTBuuaZs6gEYxJQSk0V0o896NoNoqenfIch39KeHnL4jTBUhftDk/NNT/wGfi8JasGC/ks+ESE7R8BwbWYb0QH9AhBQSraAjIr0IEyoOXYYl2FlghHWFC2/mBKZcmQXuL+Dx6tJxvAP914bB2sb+ZNNcBfuPkfzeOYoVosTly/O/MPoyuj2/Ohmw76hKzeGu2IE4UILQUsggaZvgVk/A+Vu8KmeOx15X+IgHn3ahJ3550K4d5vFTRlvY1EZQP5XY5Mx7OW55Orm71wZKOMIN4Y6COyZA7NCs0tCR5M7EjIk/j401Dm/O75hcYIY0J69eZiifSIXUNsJ+6QmOvhZJA8ZtYNlJ6nyGhBAF22a6wp7E2OQEY2WR2X1ZMRaP9SSr7X8wUbKHTt9JbEVFQwqTQzqdP+8Szj/Hh0nA="
+            secure: "UgERaEw1BVm/crJiCBuctaj79ofya/eCOwnRfpLlhpap57dlEHzlfaGGQNMlRxPWPkHWAy0wGuaYfG2ZHy1F5WaiZqwfPdsA8wISZflqoudZuvoKWaThByVYebcx8nGU6qCLbA3VxDAcnRyg7ncC2DJm0HKnfAYltDjTPujq6Ui8h/hobwvB5xZJktfSjOWZwrvZ1HIqBSpWuPg5eJjoQAifuMwgnfPh2lq+w+UFuLd5L12+uwWxIkKgcx8bsmVcpixddRv6broozVRxj1ctvJiq8/CzclsLgtAtthsTxLjadr9llCXTy3HnYy01M1LHUAiN8K/Qpu81k/JWdGmvBwJRIHXpJSZLrDM6VjfPtainZbBxOZaffFxqzdY4Tk3/1f4c11FCsVCcZJfV+phIFxZrNNhBOMO7+6wA17iGEHy5L6RdighZAv5JKKvAnZGnbYv+BO0x8DtTjqxN1BPI2tMNjQm8S8I/p5YKv0u1FWN8KwOyqYn2ccSLv6fuzRU89iUIvqiuhRA6xdmiouTUElfstjVuY7Nz68giZnhN4/iX6nRPU3Pgaiuy/ajOwJka5JN5gWFDFq3fmuoCixGB3q5t+FplN2t6yoTogoZX9DN1g0Ju4PSCnjJ7qL5juColkDkyUv8W1SInb/OAXTDSzxVSOcMBNxPiHNPzukx25rs="
           distributions: "sdist bdist_wheel"
           on:
             branch: master

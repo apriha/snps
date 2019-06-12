@@ -1,7 +1,7 @@
-lineage
-=======
+snps
+====
 
 .. toctree::
    :maxdepth: 4
 
-   lineage
+   snps

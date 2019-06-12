@@ -1,18 +1,33 @@
 """
-Copyright (C) 2017 Andrew Riha
+BSD 3-Clause License
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+Copyright (c) 2019, Andrew Riha
+All rights reserved.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 
@@ -24,7 +39,7 @@ import warnings
 from atomicwrites import atomic_write
 import numpy as np
 
-from lineage.resources import Resources, ReferenceSequence
+from snps.resources import Resources, ReferenceSequence
 from tests import BaseLineageTestCase
 
 
@@ -32,22 +47,6 @@ class TestResources(BaseLineageTestCase):
     def setUp(self):
         self.resource = Resources(resources_dir="resources")
         self.del_output_dir_helper()
-
-    def test_get_genetic_map_HapMapII_GRCh37(self):
-        genetic_map_HapMapII_GRCh37 = self.resource.get_genetic_map_HapMapII_GRCh37()
-        assert len(genetic_map_HapMapII_GRCh37) == 23
-
-    def test_get_cytoBand_hg19(self):
-        cytoBand_hg19 = self.resource.get_cytoBand_hg19()
-        assert len(cytoBand_hg19) == 862
-
-    def test_get_knownGene_hg19(self):
-        knownGene_hg19 = self.resource.get_knownGene_hg19()
-        assert len(knownGene_hg19) == 82960
-
-    def test_get_kgXref_hg19(self):
-        kgXref_hg19 = self.resource.get_kgXref_hg19()
-        assert len(kgXref_hg19) == 82960
 
     def test_get_assembly_mapping_data_bad_tar(self):
         if os.getenv("DOWNLOADS_ENABLED"):
@@ -69,7 +68,7 @@ class TestResources(BaseLineageTestCase):
     def test_get_all_resources(self):
         resources = self.resource.get_all_resources()
         for k, v in resources.items():
-            if v is None:
+            if not v:
                 assert False
         assert True
 
@@ -82,27 +81,11 @@ class TestResources(BaseLineageTestCase):
         paths = self.resource.download_example_datasets()
 
         for path in paths:
-            if path is None or not os.path.exists(path):
+            if not path or not os.path.exists(path):
                 warnings.warn("Example dataset(s) not currently available")
                 return
 
         assert True
-
-    def test__load_genetic_map_None(self):
-        result = self.resource._load_genetic_map(None)
-        assert not result
-
-    def test__load_cytoBand_None(self):
-        result = self.resource._load_cytoBand(None)
-        assert result.empty
-
-    def test__load_knownGene_None(self):
-        result = self.resource._load_knownGene(None)
-        assert result.empty
-
-    def test__load_kgXref_None(self):
-        result = self.resource._load_kgXref(None)
-        assert result.empty
 
     def test__load_assembly_mapping_data_None(self):
         result = self.resource._load_assembly_mapping_data(None)

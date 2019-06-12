@@ -1,4 +1,4 @@
 Changelog
 =========
 
-The changelog is maintained here: https://github.com/apriha/lineage/releases
+The changelog is maintained here: https://github.com/apriha/snps/releases

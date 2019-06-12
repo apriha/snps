@@ -1,37 +1,37 @@
-lineage package
-===============
+snps package
+============
 
 Submodules
 ----------
 
-lineage\.ensembl module
------------------------
+snps\.ensembl module
+--------------------
 
-.. automodule:: lineage.ensembl
+.. automodule:: snps.ensembl
     :members:
     :undoc-members:
     :show-inheritance:
 
-lineage\.individual module
---------------------------
+snps\.io module
+---------------
 
-.. automodule:: lineage.individual
+.. automodule:: snps.io
     :members:
     :undoc-members:
     :show-inheritance:
 
-lineage\.resources module
--------------------------
+snps\.resources module
+----------------------
 
-.. automodule:: lineage.resources
+.. automodule:: snps.resources
     :members:
     :undoc-members:
     :show-inheritance:
 
-lineage\.visualization module
------------------------------
+snps\.utils module
+------------------
 
-.. automodule:: lineage.visualization
+.. automodule:: snps.utils
     :members:
     :undoc-members:
     :show-inheritance:
@@ -40,7 +40,7 @@ lineage\.visualization module
 Module contents
 ---------------
 
-.. automodule:: lineage
+.. automodule:: snps
     :members:
     :undoc-members:
     :show-inheritance:

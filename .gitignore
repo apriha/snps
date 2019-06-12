@@ -104,11 +104,11 @@ ENV/
 # development
 .idea/
 
-# lineage
+# snps
 output/
 resources/
 
-# lineage tests
+# snps tests
 tests/output/
 tests/resources/
 tests/input/23andme.txt.zip

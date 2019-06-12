@@ -1,20 +1,39 @@
-""" Utilities for reading and analyzing SNPs within the `lineage` framework. """
+""" snps
+
+tools for reading, writing, merging, and remapping SNPs
 
 """
-Copyright (C) 2018 Andrew Riha
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+"""
+BSD 3-Clause License
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+Copyright (c) 2019, Andrew Riha
+All rights reserved.
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 
@@ -26,10 +45,16 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 
-from lineage.ensembl import EnsemblRestClient
-from lineage.resources import Resources
-from lineage.snps.io import Reader, Writer
-from lineage.utils import save_df_as_csv, Parallelizer, clean_str
+from snps.ensembl import EnsemblRestClient
+from snps.resources import Resources
+from snps.io import Reader, Writer
+from snps.utils import save_df_as_csv, Parallelizer, clean_str
+
+# set version string with Versioneer
+from snps._version import get_versions
+
+__version__ = get_versions()["version"]
+del get_versions
 
 
 class SNPs:
@@ -59,6 +84,7 @@ class SNPs:
         processes : int
             processes to launch if multiprocessing
         """
+        self._file = file
         self._snps = pd.DataFrame()
         self._source = ""
         self._build = 0
@@ -82,6 +108,9 @@ class SNPs:
 
                 if assign_par_snps:
                     self._assign_par_snps()
+
+    def __repr__(self):
+        return "SNPs({!r})".format(self._file)
 
     @property
     def source(self):
@@ -764,6 +793,9 @@ class SNPsCollection(SNPs):
         if raw_data is not None:
             self.load_snps(raw_data)
 
+    def __repr__(self):
+        return "SNPsCollection(name={!r})".format(self._name)
+
     @property
     def source(self):
         """ Summary of the SNP data source for ``SNPs``.
@@ -884,15 +916,18 @@ class SNPsCollection(SNPs):
         str
             path to file in output directory if SNPs were saved, else empty str
         """
+        if not self._name:
+            prefix = ""
+        else:
+            prefix = "{}_".format(clean_str(self._name))
+
         if not filename:
             if vcf:
                 ext = ".vcf"
             else:
                 ext = ".csv"
 
-            filename = "{}_lineage_{}{}".format(
-                clean_str(self._name), self.assembly, ext
-            )
+            filename = "{}{}{}".format(prefix, self.assembly, ext)
         return super().save_snps(filename=filename, vcf=vcf)
 
     def save_discrepant_positions(self, filename=""):
@@ -946,9 +981,12 @@ class SNPsCollection(SNPs):
             self.discrepant_snps, "discrepant_snps", filename
         )
 
-    def _save_discrepant_snps_file(self, df, name, filename):
+    def _save_discrepant_snps_file(self, df, discrepant_snps_type, filename):
         if not filename:
-            filename = clean_str(self._name) + "_" + name + ".csv"
+            if not self._name:
+                filename = "{}.csv".format(discrepant_snps_type)
+            else:
+                filename = "{}_{}.csv".format(clean_str(self._name), discrepant_snps_type)
 
         return save_df_as_csv(
             df,
@@ -1015,6 +1053,11 @@ class SNPsCollection(SNPs):
                 | (common_snps["pos"] != common_snps["pos_added"])
             ]
 
+            if not self._name:
+                prefix = ""
+            else:
+                prefix = "{}_".format(clean_str(self._name))
+
             if 0 < len(discrepant_positions) < discrepant_snp_positions_threshold:
                 print(
                     "{} SNP positions were discrepant; keeping original positions".format(
@@ -1027,10 +1070,8 @@ class SNPsCollection(SNPs):
                     save_df_as_csv(
                         discrepant_positions,
                         self._output_dir,
-                        "{}_discrepant_positions_{}{}".format(
-                            clean_str(self._name),
-                            str(self._discrepant_positions_file_count),
-                            ".csv",
+                        "{}discrepant_positions_{}{}".format(
+                            prefix, str(self._discrepant_positions_file_count), ".csv"
                         ),
                     )
             elif len(discrepant_positions) >= discrepant_snp_positions_threshold:
@@ -1094,10 +1135,8 @@ class SNPsCollection(SNPs):
                     save_df_as_csv(
                         discrepant_genotypes,
                         self._output_dir,
-                        "{}_discrepant_genotypes_{}{}".format(
-                            clean_str(self._name),
-                            str(self._discrepant_genotypes_file_count),
-                            ".csv",
+                        "{}discrepant_genotypes_{}{}".format(
+                            prefix, str(self._discrepant_genotypes_file_count), ".csv"
                         ),
                     )
             elif len(discrepant_genotypes) >= discrepant_genotypes_threshold:

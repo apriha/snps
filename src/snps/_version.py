@@ -41,8 +41,8 @@ def get_config():
     cfg.VCS = "git"
     cfg.style = "pep440-post"
     cfg.tag_prefix = "v"
-    cfg.parentdir_prefix = "lineage-"
-    cfg.versionfile_source = "src/lineage/_version.py"
+    cfg.parentdir_prefix = "snps-"
+    cfg.versionfile_source = "src/snps/_version.py"
     cfg.verbose = False
     return cfg
 

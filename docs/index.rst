@@ -3,12 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: https://raw.githubusercontent.com/apriha/lineage/master/docs/images/lineage_banner.png
+`snps`
+======
+*tools for reading, writing, merging, and remapping SNPs*
 
-`lineage`
-=========
-
-*tools for genetic genealogy and the analysis of consumer DNA test results*
 
 .. toctree::
    :maxdepth: 2

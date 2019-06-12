@@ -1,1 +1,1 @@
-src/lineage/_version.py export-subst
+src/snps/_version.py export-subst

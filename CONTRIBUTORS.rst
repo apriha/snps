@@ -3,8 +3,8 @@
 Contributors
 ============
 
-`Contributors <https://github.com/apriha/lineage/graphs/contributors>`_ to
-``lineage`` are listed below.
+`Contributors <https://github.com/apriha/snps/graphs/contributors>`_ to
+``snps`` are listed below.
 
 Core Developers
 ---------------

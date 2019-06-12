@@ -8,7 +8,7 @@ pytest = "*"
 pytest-cov = "*"
 
 [packages]
-lineage = {editable = true,path = "."}
+snps = {editable = true,path = "."}
 
 [requires]
 python_version = "3.7"

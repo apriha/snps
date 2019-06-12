@@ -7,7 +7,7 @@ little bit helps, and credit will always be given.
 Bug reports
 -----------
 
-When `reporting a bug <https://github.com/apriha/lineage/issues>`_ please include:
+When `reporting a bug <https://github.com/apriha/snps/issues>`_ please include:
 
 * Your operating system name and version.
 * Any details about your local setup that might be helpful in troubleshooting.
@@ -16,13 +16,13 @@ When `reporting a bug <https://github.com/apriha/lineage/issues>`_ please includ
 Documentation improvements
 --------------------------
 
-``lineage`` could always use more documentation, whether as part of the official ``lineage``
+``snps`` could always use more documentation, whether as part of the official ``snps``
 docs, in docstrings, or even on the web in blog posts, articles, and such.
 
 Feature requests and feedback
 -----------------------------
 
-The best way to send feedback is to file an issue at https://github.com/apriha/lineage/issues.
+The best way to send feedback is to file an issue at https://github.com/apriha/snps/issues.
 
 If you are proposing a feature:
 
@@ -33,13 +33,13 @@ If you are proposing a feature:
 Development
 -----------
 
-To set up ``lineage`` for local development:
+To set up ``snps`` for local development:
 
-1. Fork `lineage <https://github.com/apriha/lineage>`_
+1. Fork `snps <https://github.com/apriha/snps>`_
    (look for the "Fork" button).
 2. Clone your fork locally::
 
-    git clone git@github.com:your_name_here/lineage.git
+    git clone git@github.com:your_name_here/snps.git
 
 3. Create a branch for local development::
 
@@ -52,7 +52,7 @@ To set up ``lineage`` for local development:
 
 5. When you're done making changes, run all the tests with::
 
-    pipenv run pytest --cov=lineage tests
+    pipenv run pytest --cov=snps tests
 
 6. Commit your changes and push your branch to GitHub::
 

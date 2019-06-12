@@ -40,7 +40,7 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 sys.path.insert(0, os.path.abspath("../"))
 
-import lineage
+import snps
 
 # https://samnicholls.net/2016/06/15/how-to-sphinx-readthedocs/
 
@@ -77,8 +77,8 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = "lineage"
-copyright = "2017, Andrew Riha"
+project = "snps"
+copyright = "2019, Andrew Riha"
 author = "Andrew Riha"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -86,7 +86,7 @@ author = "Andrew Riha"
 # built documents.
 #
 # The short X.Y version.
-version = lineage.__version__
+version = snps.__version__
 
 # The full version, including alpha/beta/rc tags.
 release = version
@@ -147,7 +147,7 @@ html_sidebars = {
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "lineagedoc"
+htmlhelp_basename = "snpsdoc"
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -171,7 +171,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, "lineage.tex", "lineage Documentation", "Andrew Riha", "manual")
+    (master_doc, "snps.tex", "snps Documentation", "Andrew Riha", "manual")
 ]
 
 
@@ -179,7 +179,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "lineage", "lineage Documentation", [author], 1)]
+man_pages = [(master_doc, "snps", "snps Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -190,10 +190,10 @@ man_pages = [(master_doc, "lineage", "lineage Documentation", [author], 1)]
 texinfo_documents = [
     (
         master_doc,
-        "lineage",
-        "lineage Documentation",
+        "snps",
+        "snps Documentation",
         author,
-        "lineage",
+        "snps",
         "One line description of project.",
         "Miscellaneous",
     )

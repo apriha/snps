@@ -671,6 +671,9 @@ class Writer:
         chrom = task["chrom"]
         snps = task["snps"]
 
+        if len(snps.loc[snps["genotype"].notnull()]) == 0:
+            return {"contig": "", "vcf": pd.DataFrame()}
+
         seqs = resources.get_reference_sequences(assembly, [chrom])
         seq = seqs[chrom]
 

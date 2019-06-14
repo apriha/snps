@@ -9,7 +9,7 @@
  TAACAAAAAATTTCCAC     CAA          ACC     CCC                   CCTCCCCCGCTTCTGGC
  CACAGCACTTAAACACA     TCT          CTG     CCA                   AACCCCAAAAACAAAGA
 
-|build| |codecov| |docs| |pypi| |python|
+|build| |codecov| |docs| |pypi| |python| |downloads|
 
 snps
 ====
@@ -198,3 +198,5 @@ nucleotides from `GRCh38 mitochondrial DNA <https://www.ncbi.nlm.nih.gov/nuccore
    :target: https://pypi.python.org/pypi/snps
 .. |python| image:: https://img.shields.io/pypi/pyversions/lineage.svg
    :target: https://www.python.org
+.. |downloads| image:: https://pepy.tech/badge/snps
+   :target: https://pepy.tech/project/snps

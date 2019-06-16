@@ -266,18 +266,18 @@ class SNPs:
 
         References
         -----
-        ..[1] National Center for Biotechnology Information, Variation Services, RefSNP,
-          https://api.ncbi.nlm.nih.gov/variation/v0/
-        ..[2] Yates et. al. (doi:10.1093/bioinformatics/btu613),
-          http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613
-        ..[3] Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
-        ..[4] Sherry ST, Ward MH, Kholodov M, Baker J, Phan L, Smigielski EM, Sirotkin K.
-          dbSNP: the NCBI database of genetic variation. Nucleic Acids Res. 2001 Jan 1;
-          29(1):308-11.
-        ..[5] Database of Single Nucleotide Polymorphisms (dbSNP). Bethesda (MD): National Center
-          for Biotechnology Information, National Library of Medicine. dbSNP accession: rs28736870,
-          rs113313554, and rs758419898 (dbSNP Build ID: 151). Available from:
-          http://www.ncbi.nlm.nih.gov/SNP/
+        .. [1] National Center for Biotechnology Information, Variation Services, RefSNP,
+           https://api.ncbi.nlm.nih.gov/variation/v0/
+        .. [2] Yates et. al. (doi:10.1093/bioinformatics/btu613),
+           `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
+        .. [3] Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
+        .. [4] Sherry ST, Ward MH, Kholodov M, Baker J, Phan L, Smigielski EM, Sirotkin K.
+           dbSNP: the NCBI database of genetic variation. Nucleic Acids Res. 2001 Jan 1;
+           29(1):308-11.
+        .. [5] Database of Single Nucleotide Polymorphisms (dbSNP). Bethesda (MD): National Center
+           for Biotechnology Information, National Library of Medicine. dbSNP accession:
+           rs28736870, rs113313554, and rs758419898 (dbSNP Build ID: 151). Available from:
+           http://www.ncbi.nlm.nih.gov/SNP/
         """
         rest_client = EnsemblRestClient(
             server="https://api.ncbi.nlm.nih.gov", reqs_per_sec=1
@@ -348,15 +348,16 @@ class SNPs:
 
         References
         ----------
-        ..[1] Yates et. al. (doi:10.1093/bioinformatics/btu613),
-          http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613
-        ..[2] Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
-        ..[3] Sherry ST, Ward MH, Kholodov M, Baker J, Phan L, Smigielski EM, Sirotkin K.
-          dbSNP: the NCBI database of genetic variation. Nucleic Acids Res. 2001 Jan 1;29(1):308-11.
-        ..[4] Database of Single Nucleotide Polymorphisms (dbSNP). Bethesda (MD): National Center
-          for Biotechnology Information, National Library of Medicine. dbSNP accession: rs3094315,
-          rs11928389, rs2500347, rs964481, and rs2341354 (dbSNP Build ID: 151). Available from:
-          http://www.ncbi.nlm.nih.gov/SNP/
+        .. [1] Yates et. al. (doi:10.1093/bioinformatics/btu613),
+           `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
+        .. [2] Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
+        .. [3] Sherry ST, Ward MH, Kholodov M, Baker J, Phan L, Smigielski EM, Sirotkin K.
+           dbSNP: the NCBI database of genetic variation. Nucleic Acids Res. 2001
+           Jan 1;29(1):308-11.
+        .. [4] Database of Single Nucleotide Polymorphisms (dbSNP). Bethesda (MD): National Center
+           for Biotechnology Information, National Library of Medicine. dbSNP accession: rs3094315,
+           rs11928389, rs2500347, rs964481, and rs2341354 (dbSNP Build ID: 151). Available from:
+           http://www.ncbi.nlm.nih.gov/SNP/
         """
 
         def lookup_build_with_snp_pos(pos, s):
@@ -586,8 +587,8 @@ class SNPs:
 
         References
         ----------
-        ..[1] Ensembl, Assembly Map Endpoint,
-          http://rest.ensembl.org/documentation/info/assembly_map
+        .. [1] Ensembl, Assembly Map Endpoint,
+           http://rest.ensembl.org/documentation/info/assembly_map
         """
         chromosomes_remapped = []
         chromosomes_not_remapped = []

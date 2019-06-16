@@ -6,9 +6,9 @@ Modified from https://github.com/Ensembl/ensembl-rest/wiki/Example-Python-Client
 
 References
 ----------
-..[1] Yates et. al. (doi:10.1093/bioinformatics/btu613),
-  http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613
-..[2] Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
+.. [1] Yates et. al. (doi:10.1093/bioinformatics/btu613),
+   `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
+.. [2] Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
 
 """
 

@@ -552,8 +552,8 @@ class Writer:
 
         References
         ----------
-        ..[1] The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
-          https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        .. [1] The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
+           https://samtools.github.io/hts-specs/VCFv4.2.pdf
 
         Returns
         -------

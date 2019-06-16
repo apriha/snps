@@ -41,7 +41,7 @@ import pandas as pd
 from snps import SNPs
 
 
-class BaseLineageTestCase(TestCase):
+class BaseSNPsTestCase(TestCase):
     def setUp(self):
         self.del_output_dir_helper()
 

@@ -2,14 +2,14 @@
 
 References
 ----------
-..[1] International Human Genome Sequencing Consortium. Initial sequencing and
-  analysis of the human genome. Nature. 2001 Feb 15;409(6822):860-921.
-  http://dx.doi.org/10.1038/35057062
-..[2] hg19 (GRCh37): Hiram Clawson, Brooke Rhead, Pauline Fujita, Ann Zweig, Katrina
-  Learned, Donna Karolchik and Robert Kuhn, https://genome.ucsc.edu/cgi-bin/hgGateway?db=hg19
-..[3] Yates et. al. (doi:10.1093/bioinformatics/btu613),
-  http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613
-..[4] Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
+.. [1] International Human Genome Sequencing Consortium. Initial sequencing and
+   analysis of the human genome. Nature. 2001 Feb 15;409(6822):860-921.
+   http://dx.doi.org/10.1038/35057062
+.. [2] hg19 (GRCh37): Hiram Clawson, Brooke Rhead, Pauline Fujita, Ann Zweig, Katrina
+   Learned, Donna Karolchik and Robert Kuhn, https://genome.ucsc.edu/cgi-bin/hgGateway?db=hg19
+.. [3] Yates et. al. (doi:10.1093/bioinformatics/btu613),
+   `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
+.. [4] Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
 
 """
 
@@ -181,9 +181,9 @@ class Resources(metaclass=Singleton):
 
         References
         ----------
-        ..[1] Greshake B, Bayer PE, Rausch H, Reda J (2014), "openSNP-A Crowdsourced Web Resource
-          for Personal Genomics," PLOS ONE, 9(3): e89204,
-          https://doi.org/10.1371/journal.pone.0089204
+        .. [1] Greshake B, Bayer PE, Rausch H, Reda J (2014), "openSNP-A Crowdsourced Web Resource
+           for Personal Genomics," PLOS ONE, 9(3): e89204,
+           https://doi.org/10.1371/journal.pone.0089204
         """
         paths = []
         paths.append(
@@ -314,28 +314,28 @@ class Resources(metaclass=Singleton):
 
         References
         ----------
-        ..[1] Daniel R. Zerbino, Premanand Achuthan, Wasiu Akanni, M. Ridwan Amode,
-          Daniel Barrell, Jyothish Bhai, Konstantinos Billis, Carla Cummins, Astrid Gall,
-          Carlos García Giro´n, Laurent Gil, Leo Gordon, Leanne Haggerty, Erin Haskell,
-          Thibaut Hourlier, Osagie G. Izuogu, Sophie H. Janacek, Thomas Juettemann,
-          Jimmy Kiang To, Matthew R. Laird, Ilias Lavidas, Zhicheng Liu, Jane E. Loveland,
-          Thomas Maurel, William McLaren, Benjamin Moore, Jonathan Mudge, Daniel N. Murphy,
-          Victoria Newman, Michael Nuhn, Denye Ogeh, Chuang Kee Ong, Anne Parker,
-          Mateus Patricio, Harpreet Singh Riat, Helen Schuilenburg, Dan Sheppard,
-          Helen Sparrow, Kieron Taylor, Anja Thormann, Alessandro Vullo, Brandon Walts,
-          Amonida Zadissa, Adam Frankish, Sarah E. Hunt, Myrto Kostadima, Nicholas Langridge,
-          Fergal J. Martin, Matthieu Muffato, Emily Perry, Magali Ruffier, Dan M. Staines,
-          Stephen J. Trevanion, Bronwen L. Aken, Fiona Cunningham, Andrew Yates, Paul Flicek
-          Ensembl 2018.
-          PubMed PMID: 29155950.
-          doi:10.1093/nar/gkx1098
-        ..[2] NCBI 36, Oct 2005, Ensembl release 54, Database version: 54.36p
-        ..[3] GRCh37.p13 (Genome Reference Consortium Human Reference 37),
-          INSDC Assembly GCA_000001405.14, Feb 2009, Ensembl GRCh37 release 96, Database
-          version: 96.37
-        ..[4] GRCh38.p12 (Genome Reference Consortium Human Build 38),
-          INSDC Assembly GCA_000001405.27, Dec 2013, Ensembl release 96, Database
-          version: 96.38
+        .. [1] Daniel R. Zerbino, Premanand Achuthan, Wasiu Akanni, M. Ridwan Amode,
+           Daniel Barrell, Jyothish Bhai, Konstantinos Billis, Carla Cummins, Astrid Gall,
+           Carlos García Giro´n, Laurent Gil, Leo Gordon, Leanne Haggerty, Erin Haskell,
+           Thibaut Hourlier, Osagie G. Izuogu, Sophie H. Janacek, Thomas Juettemann,
+           Jimmy Kiang To, Matthew R. Laird, Ilias Lavidas, Zhicheng Liu, Jane E. Loveland,
+           Thomas Maurel, William McLaren, Benjamin Moore, Jonathan Mudge, Daniel N. Murphy,
+           Victoria Newman, Michael Nuhn, Denye Ogeh, Chuang Kee Ong, Anne Parker,
+           Mateus Patricio, Harpreet Singh Riat, Helen Schuilenburg, Dan Sheppard,
+           Helen Sparrow, Kieron Taylor, Anja Thormann, Alessandro Vullo, Brandon Walts,
+           Amonida Zadissa, Adam Frankish, Sarah E. Hunt, Myrto Kostadima, Nicholas Langridge,
+           Fergal J. Martin, Matthieu Muffato, Emily Perry, Magali Ruffier, Dan M. Staines,
+           Stephen J. Trevanion, Bronwen L. Aken, Fiona Cunningham, Andrew Yates, Paul Flicek
+           Ensembl 2018.
+           PubMed PMID: 29155950.
+           doi:10.1093/nar/gkx1098
+        .. [2] NCBI 36, Oct 2005, Ensembl release 54, Database version: 54.36p
+        .. [3] GRCh37.p13 (Genome Reference Consortium Human Reference 37),
+           INSDC Assembly GCA_000001405.14, Feb 2009, Ensembl GRCh37 release 96, Database
+           version: 96.37
+        .. [4] GRCh38.p12 (Genome Reference Consortium Human Build 38),
+           INSDC Assembly GCA_000001405.27, Dec 2013, Ensembl release 96, Database
+           version: 96.38
         """
         release = ""
 
@@ -409,10 +409,10 @@ class Resources(metaclass=Singleton):
 
         References
         ----------
-        ..[1] Ensembl, Assembly Information Endpoint,
-          https://rest.ensembl.org/documentation/info/assembly_info
-        ..[2] Ensembl, Assembly Map Endpoint,
-          http://rest.ensembl.org/documentation/info/assembly_map
+        .. [1] Ensembl, Assembly Information Endpoint,
+           https://rest.ensembl.org/documentation/info/assembly_info
+        .. [2] Ensembl, Assembly Map Endpoint,
+           http://rest.ensembl.org/documentation/info/assembly_map
 
         """
 
@@ -610,8 +610,8 @@ class ReferenceSequence:
 
         References
         ----------
-        ..[1] The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
-          https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        .. [1] The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
+           https://samtools.github.io/hts-specs/VCFv4.2.pdf
         """
         self._ID = ID
         self._url = url

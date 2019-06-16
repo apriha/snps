@@ -36,10 +36,10 @@ import os
 import pandas as pd
 
 from snps import SNPs
-from tests import BaseLineageTestCase
+from tests import BaseSNPsTestCase
 
 
-class TestSnps(BaseLineageTestCase):
+class TestSnps(BaseSNPsTestCase):
     def setUp(self):
         self.snps_GRCh38 = SNPs("tests/input/GRCh38.csv")
         self.snps = SNPs("tests/input/chromosomes.csv")

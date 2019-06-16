@@ -9,7 +9,7 @@
  TAACAAAAAATTTCCAC     CAA          ACC     CCC                   CCTCCCCCGCTTCTGGC
  CACAGCACTTAAACACA     TCT          CTG     CCA                   AACCCCAAAAACAAAGA
 
-|build| |codecov| |docs| |pypi| |python|
+|build| |codecov| |docs| |pypi| |python| |downloads|
 
 snps
 ====
@@ -178,14 +178,11 @@ Documentation
 -------------
 Documentation is available `here <https://snps.readthedocs.io/>`_.
 
-Origins
--------
-Initial ``snps`` capability was developed as part of `lineage <https://github.com/apriha/lineage>`_.
-
 Acknowledgements
 ----------------
-Thanks to Mike Agostino, Padma Reddy, and `openSNP <https://opensnp.org>`_. Logo composed of
-nucleotides from `GRCh38 mitochondrial DNA <https://www.ncbi.nlm.nih.gov/nuccore/NC_012920.1>`_.
+Thanks to Mike Agostino, Padma Reddy, `openSNP <https://opensnp.org>`_, and
+`Open Humans <https://www.openhumans.org>`_. Logo composed of nucleotides from
+`GRCh38 mitochondrial DNA <https://www.ncbi.nlm.nih.gov/nuccore/NC_012920.1>`_.
 
 .. https://github.com/rtfd/readthedocs.org/blob/master/docs/badges.rst
 .. |build| image:: https://travis-ci.org/apriha/snps.svg?branch=master
@@ -196,5 +193,7 @@ nucleotides from `GRCh38 mitochondrial DNA <https://www.ncbi.nlm.nih.gov/nuccore
    :target: https://snps.readthedocs.io/
 .. |pypi| image:: https://img.shields.io/pypi/v/snps.svg
    :target: https://pypi.python.org/pypi/snps
-.. |python| image:: https://img.shields.io/pypi/pyversions/lineage.svg
+.. |python| image:: https://img.shields.io/pypi/pyversions/snps.svg
    :target: https://www.python.org
+.. |downloads| image:: https://pepy.tech/badge/snps
+   :target: https://pepy.tech/project/snps

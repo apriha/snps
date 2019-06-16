@@ -43,10 +43,10 @@ import pandas as pd
 
 from snps.resources import Resources, ReferenceSequence
 from snps import SNPs, SNPsCollection
-from tests import BaseLineageTestCase
+from tests import BaseSNPsTestCase
 
 
-class TestIndividual(BaseLineageTestCase):
+class TestIndividual(BaseSNPsTestCase):
     def generic_snps(self):
         return self.create_snp_df(
             rsid=["rs1", "rs2", "rs3", "rs4", "rs5", "rs6", "rs7", "rs8"],

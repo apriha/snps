@@ -40,10 +40,10 @@ from atomicwrites import atomic_write
 import numpy as np
 
 from snps.resources import Resources, ReferenceSequence
-from tests import BaseLineageTestCase
+from tests import BaseSNPsTestCase
 
 
-class TestResources(BaseLineageTestCase):
+class TestResources(BaseSNPsTestCase):
     def setUp(self):
         self.resource = Resources(resources_dir="resources")
         self.del_output_dir_helper()

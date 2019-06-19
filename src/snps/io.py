@@ -100,6 +100,8 @@ class Reader:
                 return self.read_generic_csv(file)
             elif "vcf" in comments.lower():
                 return self.read_vcf(file)
+            elif ("Genes for Good" in comments) | ("PLINK" in comments):
+                return self.read_genes_for_good(file)
             else:
                 return pd.DataFrame(), ""
         except Exception as err:
@@ -321,6 +323,37 @@ class Reader:
         )
 
         return df, "MyHeritage"
+
+    @staticmethod
+    def read_genes_for_good(file):
+        """ Read and parse Genes For Good file.
+
+        https://genesforgood.sph.umich.edu/readme/readme1.2.txt
+
+        Parameters
+        ----------
+        file : str
+            path to file
+
+        Returns
+        -------
+        pandas.DataFrame
+            genetic data normalized for use with `snps`
+        str
+            name of data source
+        """
+
+        df = pd.read_csv(
+            file,
+            comment="#",
+            sep="\t",
+            na_values="--",
+            names=["rsid", "chrom", "pos", "genotype"],
+            index_col=0,
+            dtype={"chrom": object},
+        )
+
+        return df, "GenesForGood"
 
     @staticmethod
     def read_lineage_csv(file, comments):

@@ -503,7 +503,7 @@ class Reader:
 class Writer:
     """ Class for writing SNPs to files. """
 
-    def __init__(self, snps=None, filename="", vcf=False, sep=","):
+    def __init__(self, snps=None, filename="", vcf=False, sep=",", header=True):
         """ Initialize a `Writer`.
 
         Parameters
@@ -519,6 +519,7 @@ class Writer:
         self._filename = filename
         self._vcf = vcf
         self._sep = sep
+        self._header = header
 
     def __call__(self):
         if self._vcf:
@@ -527,7 +528,7 @@ class Writer:
             return self._write_csv()
 
     @classmethod
-    def write_file(cls, snps=None, filename="", vcf=False, sep=","):
+    def write_file(cls, snps=None, filename="", vcf=False, sep=",", header=True):
         """ Save SNPs to file.
 
         Parameters
@@ -544,7 +545,7 @@ class Writer:
         str
             path to file in output directory if SNPs were saved, else empty str
         """
-        w = cls(snps=snps, filename=filename, vcf=vcf, sep=sep)
+        w = cls(snps=snps, filename=filename, vcf=vcf, sep=sep, header=header)
         return w()
 
     def _write_csv(self):
@@ -572,12 +573,17 @@ class Writer:
                 self._snps.chromosomes_summary,
             )
         )
+        if self._header:
+            header = ["chromosome", "position", "genotype"]
+        else:
+            header = False
+
         return save_df_as_csv(
             self._snps._snps,
             self._snps._output_dir,
             filename,
             comment=comment,
-            header=["chromosome", "position", "genotype"],
+            header=header,
             sep=self._sep
         )
 

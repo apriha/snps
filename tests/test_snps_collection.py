@@ -409,7 +409,8 @@ class TestIndividual(BaseSNPsTestCase):
         pd.testing.assert_series_equal(sc.snps["genotype"], expected["genotype"])
 
     def test_save_snps(self):
-        s = SNPs("tests/input/GRCh37.csv")
+        snps = SNPs("tests/input/GRCh37.csv")
+        import pdb; pdb.set_trace()
         assert os.path.relpath(s.save_snps()) == "output/generic_GRCh37.csv"
         s_saved = SNPs("output/generic_GRCh37.csv")
         pd.testing.assert_frame_equal(s_saved.snps, self.snps_GRCh37())

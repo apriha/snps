@@ -527,7 +527,7 @@ class Writer:
             return self._write_csv()
 
     @classmethod
-    def write_file(cls, snps=None, filename="", vcf=False, sep=','):
+    def write_file(cls, snps=None, filename="", vcf=False, sep=","):
         """ Save SNPs to file.
 
         Parameters

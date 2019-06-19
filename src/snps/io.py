@@ -346,7 +346,7 @@ class Reader:
         df = pd.read_csv(
             file,
             comment="#",
-            sep='\t',
+            sep="\t",
             na_values="--",
             names=["rsid", "chrom", "pos", "genotype"],
             index_col=0,

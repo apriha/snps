@@ -28,8 +28,10 @@ Name            GitHub
 Anatoli Babenia `@abitrolly`_
 Kevin Arvai     `@arvkevi`_
 Yoan Bouzin     `@Tuisto59`_
+Will Jones      `@willgdjones`_
 =============== =============
 
 .. _@abitrolly: https://github.com/abitrolly
 .. _@arvkevi: https://github.com/arvkevi
 .. _@Tuisto59: https://github.com/Tuisto59
+.. _@willgdjones: https://github.com/willgdjones

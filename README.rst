@@ -181,7 +181,7 @@ Documentation is available `here <https://snps.readthedocs.io/>`_.
 
 Acknowledgements
 ----------------
-Thanks to Mike Agostino, Padma Reddy, `openSNP <https://opensnp.org>`_, and
+Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org>`_, and
 `Open Humans <https://www.openhumans.org>`_. Logo composed of nucleotides from
 `GRCh38 mitochondrial DNA <https://www.ncbi.nlm.nih.gov/nuccore/NC_012920.1>`_.
 

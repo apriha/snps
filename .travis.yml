@@ -1,5 +1,5 @@
 # https://github.com/sympy/sympy/blob/master/.travis.yml
-# https://github.com/codecov/example-python
+# https://github.com/coveralls-clients/coveralls-python
 # https://docs.travis-ci.com
 # https://stackoverflow.com/a/3237883
 # https://stackoverflow.com/a/5688592
@@ -8,7 +8,7 @@ language: python
 
 before_install:
   - pip install --upgrade pip setuptools wheel
-  - pip install pytest-cov codecov awscli
+  - pip install pytest-cov coveralls awscli
 
 install:
   - pip install .
@@ -44,7 +44,7 @@ script:
   - pytest --cov=snps tests
   - |
     if [ $SELECTED_JOB == $JOB_ID ]; then
-      codecov
+      coveralls
     fi
 
 stages:

@@ -17,19 +17,20 @@ tools for reading, writing, merging, and remapping SNPs 🧬
 
 Capabilities
 ------------
-- Read raw data (genotype) files from a variety of direct-to-consumer (DTC) DNA testing companies
+- Read raw data (genotype) files from a variety of direct-to-consumer (DTC) DNA testing sources
 - Read and write VCF files for Builds 36, 37, and 38 (e.g., convert `23andMe <https://www.23andme.com>`_ to VCF)
-- Merge raw data files from different DNA testing companies, identifying discrepant SNPs in the process
+- Merge raw data files from different DNA tests, identifying discrepant SNPs in the process
 - Remap SNPs between assemblies / builds (e.g., convert SNPs from Build 36 to Build 37, etc.)
 
 Supported Genotype Files
 ------------------------
 ``snps`` supports `VCF <https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3137218/>`_ files and
-genotype files from the following DTC DNA testing companies:
+genotype files from the following DNA testing sources:
 
 - `23andMe <https://www.23andme.com>`_
 - `Ancestry <https://www.ancestry.com>`_
 - `Family Tree DNA <https://www.familytreedna.com>`_
+- `Genes for Good <https://genesforgood.sph.umich.edu>`_
 - `MyHeritage <https://www.myheritage.com>`_
 
 Dependencies
@@ -107,7 +108,7 @@ SNPs can be remapped between Build 36 (``NCBI36``), Build 37 (``GRCh37``), and B
 
 Merge Raw Data Files
 ````````````````````
-The dataset consists of raw data files from two different DNA testing companies. Let's combine
+The dataset consists of raw data files from two different DNA testing sources. Let's combine
 these files using a ``SNPsCollection``.
 
 >>> from snps import SNPsCollection

@@ -141,6 +141,12 @@ class TestIndividual(BaseSNPsTestCase):
         assert s.source == "AncestryDNA"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
+    def test_snps_genes_for_good(self):
+        # https://genesforgood.sph.umich.edu/
+        s = SNPs("tests/input/genesforgood.txt")
+        assert s.source == "GenesForGood"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
     def test_snps_myheritage(self):
         # https://www.myheritage.com
         s = SNPs("tests/input/myheritage.csv")

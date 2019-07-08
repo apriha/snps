@@ -43,12 +43,12 @@ from tests import BaseSNPsTestCase
 
 class TestSnps(BaseSNPsTestCase):
     def setUp(self):
-        # self.snps_GRCh38 = SNPs("tests/input/GRCh38.csv")
-        # self.snps = SNPs("tests/input/chromosomes.csv")
-        # self.snps_none = SNPs(None)
+        self.snps_GRCh38 = SNPs("tests/input/GRCh38.csv")
+        self.snps = SNPs("tests/input/chromosomes.csv")
+        self.snps_none = SNPs(None)
 
-        # with open("tests/input/chromosomes.csv", 'r') as f:
-        #     self.snps_buffer = SNPs(f.read().encode('utf-8'))
+        with open("tests/input/chromosomes.csv", 'r') as f:
+            self.snps_buffer = SNPs(f.read().encode('utf-8'))
 
 
         with atomic_write("tests/input/chromosomes.csv.zip", mode="wb", overwrite=True) as f:
@@ -58,19 +58,7 @@ class TestSnps(BaseSNPsTestCase):
         with open("tests/input/chromosomes.csv.zip", 'rb') as f:
             data = f.read()
             self.snps_buffer_zip = SNPs(data)
-
-
-        # with open(f, 'rb') as f_zip:
-        #     import pdb; pdb.set_trace()
-
-
-                # with zipfile.ZipFile(f_zip, "w") as f_zip2:
-                #     import pdb; pdb.set_trace()
-
-                    # f_zip.read("chromosomes.csv")
-
-
-        # self.del_output_dir_helper()
+        os.remove("tests/input/chromosomes.csv.zip")
 
     def snps_discrepant_pos(self):
         return self.create_snp_df(

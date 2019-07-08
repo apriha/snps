@@ -115,7 +115,7 @@ def create_dir(path):
 
 
 def save_df_as_csv(df, path, filename,
-                   comment="", prepend_info=True,**kwargs, atomic=True):
+                   comment="", prepend_info=True, atomic=True, **kwargs):
     """ Save dataframe to a CSV file.
 
     Parameters

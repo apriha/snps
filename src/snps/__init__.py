@@ -94,6 +94,7 @@ class SNPs:
         self._parallelizer = Parallelizer(parallelize=parallelize, processes=processes)
 
         if file:
+
             self._snps, self._source = self._read_raw_data(file)
 
             if not self._snps.empty:

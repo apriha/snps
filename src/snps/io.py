@@ -33,8 +33,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import datetime
 import os
+import io
 import gzip
 import zipfile
+import binascii
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -67,12 +70,7 @@ class Reader:
         """
         file = self._file
 
-        try:
-            if not os.path.exists(file):
-                print(file + " does not exist; skipping")
-                return pd.DataFrame(), ""
-
-            # peek into files to determine the data format
+        if isinstance(file, str) and os.path.exists(file):
             if ".zip" in file:
                 with zipfile.ZipFile(file) as z:
                     with z.open(z.namelist()[0], "r") as f:
@@ -84,28 +82,57 @@ class Reader:
                 with open(file, "r") as f:
                     first_line, comments = self._extract_comments(f, False)
 
-            if "23andMe" in first_line:
-                return self.read_23andme(file)
-            elif "Ancestry" in first_line:
-                return self.read_ancestry(file)
-            elif first_line.startswith("RSID"):
-                return self.read_ftdna(file)
-            elif "famfinder" in first_line:
-                return self.read_ftdna_famfinder(file)
-            elif "MyHeritage" in first_line:
-                return self.read_myheritage(file)
-            elif "lineage" in first_line or "snps" in first_line:
-                return self.read_lineage_csv(file, comments)
-            elif first_line.startswith("rsid"):
-                return self.read_generic_csv(file)
-            elif "vcf" in comments.lower():
-                return self.read_vcf(file)
-            elif ("Genes for Good" in comments) | ("PLINK" in comments):
-                return self.read_genes_for_good(file)
+        elif isinstance(file, bytes):
+            if self.is_zip(file):
+
+                with zipfile.ZipFile(io.BytesIO(file)) as z:
+                    namelist = z.namelist()
+                    key = 'GFG_filtered_unphased_genotypes_23andMe.txt'
+                    key_search = [key in name for name in namelist]
+
+                    if any(key_search):
+                        filename = namelist[key_search.index(True)]
+                    else:
+                        filename = namelist[0]
+
+                    with z.open(filename, "r") as f:
+                        data = f.read()
+                        file = io.BytesIO(data)
+                        first_line, comments = self._extract_comments(io.BytesIO(data), True)
+
+
+            elif self.is_gzip(file):
+                with gzip.open(io.BytesIO(file), "rt") as f:
+                    data = f.read()
+                    file = io.BytesIO(data)
+                    first_line, comments = self._extract_comments(io.BytesIO(data), False)
+
+
             else:
-                return pd.DataFrame(), ""
-        except Exception as err:
-            print(err)
+                file = io.BytesIO(file)
+                first_line, comments = self._extract_comments(deepcopy(file), True)
+
+
+        # peek into files to determine the data format
+        if "23andMe" in first_line:
+            return self.read_23andme(file)
+        elif "Ancestry" in first_line:
+            return self.read_ancestry(file)
+        elif first_line.startswith("RSID"):
+            return self.read_ftdna(file)
+        elif "famfinder" in first_line:
+            return self.read_ftdna_famfinder(file)
+        elif "MyHeritage" in first_line:
+            return self.read_myheritage(file)
+        elif "lineage" in first_line or "snps" in first_line:
+            return self.read_lineage_csv(file, comments)
+        elif first_line.startswith("rsid"):
+            return self.read_generic_csv(file)
+        elif "vcf" in comments.lower():
+            return self.read_vcf(file)
+        elif ("Genes for Good" in comments) | ("PLINK" in comments):
+            return self.read_genes_for_good(file)
+        else:
             return pd.DataFrame(), ""
 
     @classmethod
@@ -135,6 +162,16 @@ class Reader:
             line = self._read_line(f, decode)
 
         return first_line, comments
+
+    @staticmethod
+    def is_zip(bytes_data):
+        """Check whether or not a bytes_data file is a valid Zip file."""
+        return zipfile.is_zipfile(io.BytesIO(bytes_data))
+
+    @staticmethod
+    def is_gzip(bytes_data):
+        """Check whether or not a bytes_data file is a valid gzip file."""
+        return binascii.hexlify(bytes_data) == b'1f8b'
 
     @staticmethod
     def _read_line(f, decode):

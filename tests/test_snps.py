@@ -35,7 +35,9 @@ import os
 import io
 from atomicwrites import atomic_write
 import zipfile
+import gzip
 import pandas as pd
+import shutil
 
 from snps import SNPs
 from tests import BaseSNPsTestCase
@@ -50,7 +52,6 @@ class TestSnps(BaseSNPsTestCase):
         with open("tests/input/chromosomes.csv", 'r') as f:
             self.snps_buffer = SNPs(f.read().encode('utf-8'))
 
-
         with atomic_write("tests/input/chromosomes.csv.zip", mode="wb", overwrite=True) as f:
             with zipfile.ZipFile(f, "w") as f_zip:
                 f_zip.write("tests/input/chromosomes.csv", arcname="chromosomes.csv")
@@ -59,6 +60,18 @@ class TestSnps(BaseSNPsTestCase):
             data = f.read()
             self.snps_buffer_zip = SNPs(data)
         os.remove("tests/input/chromosomes.csv.zip")
+
+        with open("tests/input/chromosomes.csv", "rb") as f_in:
+            with atomic_write(
+                "tests/input/chromosomes.csv.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        with open("tests/input/chromosomes.csv.gz", 'rb') as f:
+            data = f.read()
+            self.snps_buffer_gz = SNPs(data)
+        os.remove("tests/input/chromosomes.csv.gz")
 
     def snps_discrepant_pos(self):
         return self.create_snp_df(

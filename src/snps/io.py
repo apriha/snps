@@ -100,13 +100,12 @@ class Reader:
                         file = io.BytesIO(data)
                         first_line, comments = self._extract_comments(io.BytesIO(data), True)
 
-
             elif self.is_gzip(file):
-                with gzip.open(io.BytesIO(file), "rt") as f:
+
+                with gzip.open(io.BytesIO(file), "rb") as f:
                     data = f.read()
                     file = io.BytesIO(data)
-                    first_line, comments = self._extract_comments(io.BytesIO(data), False)
-
+                    first_line, comments = self._extract_comments(io.BytesIO(data), True)
 
             else:
                 file = io.BytesIO(file)
@@ -171,7 +170,7 @@ class Reader:
     @staticmethod
     def is_gzip(bytes_data):
         """Check whether or not a bytes_data file is a valid gzip file."""
-        return binascii.hexlify(bytes_data) == b'1f8b'
+        return binascii.hexlify(bytes_data[:2]) == b'1f8b'
 
     @staticmethod
     def _read_line(f, decode):

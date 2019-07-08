@@ -410,8 +410,7 @@ class TestIndividual(BaseSNPsTestCase):
 
     def test_save_snps(self):
         snps = SNPs("tests/input/GRCh37.csv")
-        import pdb; pdb.set_trace()
-        assert os.path.relpath(s.save_snps()) == "output/generic_GRCh37.csv"
+        assert os.path.relpath(snps.save_snps()) == "output/generic_GRCh37.csv"
         s_saved = SNPs("output/generic_GRCh37.csv")
         pd.testing.assert_frame_equal(s_saved.snps, self.snps_GRCh37())
 

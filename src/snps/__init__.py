@@ -241,7 +241,8 @@ class SNPs:
         else:
             return True
 
-    def save_snps(self, filename="", vcf=False, sep=",", header=True):
+    def save_snps(self, filename="", vcf=False,
+                  sep=",", header=True, atomic=True):
         """ Save SNPs to file.
 
         Parameters
@@ -257,7 +258,7 @@ class SNPs:
             path to file in output directory if SNPs were saved, else empty str
         """
         return Writer.write_file(snps=self, filename=filename,
-                                 vcf=vcf, sep=sep, header=header)
+                                 vcf=vcf, sep=sep, header=header, atomic=atomic)
 
     def _read_raw_data(self, file):
         return Reader.read_file(file)

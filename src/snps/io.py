@@ -503,7 +503,8 @@ class Reader:
 class Writer:
     """ Class for writing SNPs to files. """
 
-    def __init__(self, snps=None, filename="", vcf=False, sep=",", header=True):
+    def __init__(self, snps=None, filename="",
+                 vcf=False, sep=",", header=True, atomic=True):
         """ Initialize a `Writer`.
 
         Parameters
@@ -520,6 +521,7 @@ class Writer:
         self._vcf = vcf
         self._sep = sep
         self._header = header
+        self._atomic = atomic
 
     def __call__(self):
         if self._vcf:
@@ -528,7 +530,8 @@ class Writer:
             return self._write_csv()
 
     @classmethod
-    def write_file(cls, snps=None, filename="", vcf=False, sep=",", header=True):
+    def write_file(cls, snps=None, filename="", vcf=False,
+                   sep=",", header=True, atomic=True):
         """ Save SNPs to file.
 
         Parameters
@@ -545,7 +548,8 @@ class Writer:
         str
             path to file in output directory if SNPs were saved, else empty str
         """
-        w = cls(snps=snps, filename=filename, vcf=vcf, sep=sep, header=header)
+        w = cls(snps=snps, filename=filename,
+                vcf=vcf, sep=sep, header=header, atomic=atomic)
         return w()
 
     def _write_csv(self):
@@ -584,7 +588,8 @@ class Writer:
             filename,
             comment=comment,
             header=header,
-            sep=self._sep
+            sep=self._sep,
+            atomic=self._atomic
         )
 
     def _write_vcf(self):

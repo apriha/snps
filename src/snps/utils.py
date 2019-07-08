@@ -114,7 +114,8 @@ def create_dir(path):
         return False
 
 
-def save_df_as_csv(df, path, filename, comment="", prepend_info=True, **kwargs):
+def save_df_as_csv(df, path, filename,
+                   comment="", prepend_info=True,**kwargs, atomic=True):
     """ Save dataframe to a CSV file.
 
     Parameters
@@ -162,10 +163,16 @@ def save_df_as_csv(df, path, filename, comment="", prepend_info=True, **kwargs):
             if "na_rep" not in kwargs:
                 kwargs["na_rep"] = "--"
 
-            with atomic_write(destination, mode="w", overwrite=True) as f:
-                f.write(s)
-                # https://stackoverflow.com/a/29233924
-                df.to_csv(f, **kwargs)
+            if atomic:
+                with atomic_write(destination, mode="w", overwrite=True) as f:
+                    f.write(s)
+                    # https://stackoverflow.com/a/29233924
+                    df.to_csv(f, **kwargs)
+
+            else:
+                with open(destination, mode="w") as f:
+                    f.write(s)
+                    df.to_csv(f, **kwargs)
 
             return destination
         except Exception as err:

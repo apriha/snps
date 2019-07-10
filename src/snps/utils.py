@@ -141,7 +141,7 @@ def save_df_as_csv(df, path, filename,
     if isinstance(df, pd.DataFrame) and len(df) > 0:
         try:
 
-            if not create_dir(path):
+            if not buffer and not create_dir(path):
                 return ""
 
             if buffer:

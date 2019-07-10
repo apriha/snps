@@ -138,7 +138,7 @@ class TestResources(BaseSNPsTestCase):
         assert seqs["MT"].chrom == "MT"
         assert (
             seqs["MT"].url
-            == "ftp://ftp.ensembl.org/pub/grch37/current/fasta/homo_sapiens/dna/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
+            == "ftp://ftp.ensembl.org/pub/grch37/release-96/fasta/homo_sapiens/dna/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
         )
         assert (
             seqs["MT"].path
@@ -189,7 +189,7 @@ class TestResources(BaseSNPsTestCase):
         assert seqs["MT"].chrom == "MT"
         assert (
             seqs["MT"].url
-            == "ftp://ftp.ensembl.org/pub/grch37/current/fasta/homo_sapiens/dna/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
+            == "ftp://ftp.ensembl.org/pub/grch37/release-96/fasta/homo_sapiens/dna/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
         )
         assert (
             seqs["MT"].path
@@ -234,7 +234,7 @@ class TestResources(BaseSNPsTestCase):
         assert seqs["MT"].chrom == "MT"
         assert (
             seqs["MT"].url
-            == "ftp://ftp.ensembl.org/pub/grch37/current/fasta/homo_sapiens/dna/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
+            == "ftp://ftp.ensembl.org/pub/grch37/release-96/fasta/homo_sapiens/dna/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz"
         )
         assert (
             seqs["MT"].path

@@ -341,7 +341,7 @@ class Resources(metaclass=Singleton):
 
         # https://www.biostars.org/p/374149/#374219
         if assembly == "GRCh37":
-            base = "ftp://ftp.ensembl.org/pub/grch37/current/fasta/homo_sapiens/dna/"
+            base = "ftp://ftp.ensembl.org/pub/grch37/release-96/fasta/homo_sapiens/dna/"
         elif assembly == "NCBI36":
             base = "ftp://ftp.ensembl.org/pub/release-54/fasta/homo_sapiens/dna/"
             release = "54."

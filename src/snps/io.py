@@ -33,8 +33,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import datetime
 import os
+import io
 import gzip
 import zipfile
+import binascii
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -47,7 +50,7 @@ from snps.utils import save_df_as_csv, clean_str
 class Reader:
     """ Class for reading and parsing raw data / genotype files. """
 
-    def __init__(self, file=""):
+    def __init__(self, file="", only_detect_source=False):
         """ Initialize a `Reader`.
 
         Parameters
@@ -56,6 +59,7 @@ class Reader:
             path to file to read
         """
         self._file = file
+        self._only_detect_source = only_detect_source
 
     def __call__(self):
         """ Read and parse a raw data / genotype file.
@@ -67,12 +71,8 @@ class Reader:
         """
         file = self._file
 
-        try:
-            if not os.path.exists(file):
-                print(file + " does not exist; skipping")
-                return pd.DataFrame(), ""
 
-            # peek into files to determine the data format
+        if isinstance(file, str) and os.path.exists(file):
             if ".zip" in file:
                 with zipfile.ZipFile(file) as z:
                     with z.open(z.namelist()[0], "r") as f:
@@ -84,32 +84,63 @@ class Reader:
                 with open(file, "r") as f:
                     first_line, comments = self._extract_comments(f, False)
 
-            if "23andMe" in first_line:
-                return self.read_23andme(file)
-            elif "Ancestry" in first_line:
-                return self.read_ancestry(file)
-            elif first_line.startswith("RSID"):
-                return self.read_ftdna(file)
-            elif "famfinder" in first_line:
-                return self.read_ftdna_famfinder(file)
-            elif "MyHeritage" in first_line:
-                return self.read_myheritage(file)
-            elif "lineage" in first_line or "snps" in first_line:
-                return self.read_lineage_csv(file, comments)
-            elif first_line.startswith("rsid"):
-                return self.read_generic_csv(file)
-            elif "vcf" in comments.lower():
-                return self.read_vcf(file)
-            elif ("Genes for Good" in comments) | ("PLINK" in comments):
-                return self.read_genes_for_good(file)
+
+        elif isinstance(file, bytes):
+            if self.is_zip(file):
+
+                with zipfile.ZipFile(io.BytesIO(file)) as z:
+                    namelist = z.namelist()
+                    key = 'GFG_filtered_unphased_genotypes_23andMe.txt'
+                    key_search = [key in name for name in namelist]
+
+                    if any(key_search):
+                        filename = namelist[key_search.index(True)]
+                    else:
+                        filename = namelist[0]
+
+                    with z.open(filename, "r") as f:
+                        data = f.read()
+                        file = io.BytesIO(data)
+                        first_line, comments = self._extract_comments(io.BytesIO(data), True)
+
+            elif self.is_gzip(file):
+
+                with gzip.open(io.BytesIO(file), "rb") as f:
+                    data = f.read()
+                    file = io.BytesIO(data)
+                    first_line, comments = self._extract_comments(io.BytesIO(data), True)
+
             else:
-                return pd.DataFrame(), ""
-        except Exception as err:
-            print(err)
+                file = io.BytesIO(file)
+                first_line, comments = self._extract_comments(deepcopy(file), True)
+
+        else:
+            return pd.DataFrame(), ""
+
+        # peek into files to determine the data format
+        if "23andMe" in first_line:
+            return self.read_23andme(file)
+        elif "Ancestry" in first_line:
+            return self.read_ancestry(file)
+        elif first_line.startswith("RSID"):
+            return self.read_ftdna(file)
+        elif "famfinder" in first_line:
+            return self.read_ftdna_famfinder(file)
+        elif "MyHeritage" in first_line:
+            return self.read_myheritage(file)
+        elif "lineage" in first_line or "snps" in first_line:
+            return self.read_lineage_csv(file, comments)
+        elif first_line.startswith("rsid"):
+            return self.read_generic_csv(file)
+        elif "vcf" in comments.lower():
+            return self.read_vcf(file)
+        elif ("Genes for Good" in comments) | ("PLINK" in comments):
+            return self.read_genes_for_good(file)
+        else:
             return pd.DataFrame(), ""
 
     @classmethod
-    def read_file(cls, file):
+    def read_file(cls, file, only_detect_source):
         """ Read `file`.
 
         Parameters
@@ -122,7 +153,7 @@ class Reader:
         tuple : (pandas.DataFrame, str)
             dataframe of parsed SNPs, detected source of SNPs
         """
-        r = cls(file)
+        r = cls(file, only_detect_source)
         return r()
 
     def _extract_comments(self, f, decode):
@@ -137,6 +168,16 @@ class Reader:
         return first_line, comments
 
     @staticmethod
+    def is_zip(bytes_data):
+        """Check whether or not a bytes_data file is a valid Zip file."""
+        return zipfile.is_zipfile(io.BytesIO(bytes_data))
+
+    @staticmethod
+    def is_gzip(bytes_data):
+        """Check whether or not a bytes_data file is a valid gzip file."""
+        return binascii.hexlify(bytes_data[:2]) == b'1f8b'
+
+    @staticmethod
     def _read_line(f, decode):
         if decode:
             # https://stackoverflow.com/a/606199
@@ -144,8 +185,7 @@ class Reader:
         else:
             return f.readline()
 
-    @staticmethod
-    def read_23andme(file):
+    def read_23andme(self, file):
         """ Read and parse 23andMe file.
 
         https://www.23andme.com
@@ -162,6 +202,10 @@ class Reader:
         str
             name of data source
         """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "23andMe"
+
         df = pd.read_csv(
             file,
             comment="#",
@@ -174,9 +218,8 @@ class Reader:
 
         return df, "23andMe"
 
-    @staticmethod
-    def read_ftdna(file):
-        """ Read and parse Family Tree DNA (FTDNA) file.
+    def read_ftdna(self, file):
+        """Read and parse Family Tree DNA (FTDNA) file.
 
         https://www.familytreedna.com
 
@@ -192,6 +235,10 @@ class Reader:
         str
             name of data source
         """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "FTDNA"
+
         df = pd.read_csv(
             file,
             skiprows=1,
@@ -212,8 +259,7 @@ class Reader:
 
         return df, "FTDNA"
 
-    @staticmethod
-    def read_ftdna_famfinder(file):
+    def read_ftdna_famfinder(self, file):
         """ Read and parse Family Tree DNA (FTDNA) "famfinder" file.
 
         https://www.familytreedna.com
@@ -230,6 +276,10 @@ class Reader:
         str
             name of data source
         """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "FTDNA"
+
         df = pd.read_csv(
             file,
             comment="#",
@@ -249,8 +299,7 @@ class Reader:
 
         return df, "FTDNA"
 
-    @staticmethod
-    def read_ancestry(file):
+    def read_ancestry(self, file):
         """ Read and parse Ancestry.com file.
 
         http://www.ancestry.com
@@ -267,6 +316,10 @@ class Reader:
         str
             name of data source
         """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "AncestryDNA"
+
         df = pd.read_csv(
             file,
             comment="#",
@@ -294,8 +347,7 @@ class Reader:
 
         return df, "AncestryDNA"
 
-    @staticmethod
-    def read_myheritage(file):
+    def read_myheritage(self, file):
         """ Read and parse MyHeritage file.
 
         https://www.myheritage.com
@@ -312,6 +364,10 @@ class Reader:
         str
             name of data source
         """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "MyHeritage"
+
         df = pd.read_csv(
             file,
             comment="#",
@@ -324,8 +380,7 @@ class Reader:
 
         return df, "MyHeritage"
 
-    @staticmethod
-    def read_genes_for_good(file):
+    def read_genes_for_good(self, file):
         """ Read and parse Genes For Good file.
 
         https://genesforgood.sph.umich.edu/readme/readme1.2.txt
@@ -341,7 +396,11 @@ class Reader:
             genetic data normalized for use with `snps`
         str
             name of data source
+
         """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "GenesForGood"
 
         df = pd.read_csv(
             file,
@@ -355,8 +414,7 @@ class Reader:
 
         return df, "GenesForGood"
 
-    @staticmethod
-    def read_lineage_csv(file, comments):
+    def read_lineage_csv(self, file, comments):
         """ Read and parse CSV file generated by lineage / snps.
 
         Parameters
@@ -373,11 +431,15 @@ class Reader:
         str
             name of data source(s)
         """
+
         source = ""
         for comment in comments.split("\n"):
             if "Source(s):" in comment:
                 source = comment.split("Source(s):")[1].strip()
                 break
+
+        if self._only_detect_source:
+            return pd.DataFrame(), source
 
         df = pd.read_csv(
             file,
@@ -391,8 +453,7 @@ class Reader:
 
         return df, source
 
-    @staticmethod
-    def read_generic_csv(file):
+    def read_generic_csv(self, file):
         """ Read and parse generic CSV file.
 
         Notes
@@ -418,6 +479,10 @@ class Reader:
         str
             name of data source
         """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "generic"
+
         df = pd.read_csv(
             file,
             skiprows=1,
@@ -429,8 +494,7 @@ class Reader:
 
         return df, "generic"
 
-    @staticmethod
-    def read_vcf(file):
+    def read_vcf(self, file):
         """ Read and parse VCF file.
 
         Notes
@@ -451,6 +515,10 @@ class Reader:
         str
             name of data source
         """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "vcf"
+
         df = pd.DataFrame(columns=["rsid", "chrom", "pos", "genotype"])
         df = df.astype(
             {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
@@ -504,7 +572,7 @@ class Writer:
     """ Class for writing SNPs to files. """
 
     def __init__(self, snps=None, filename="",
-                 vcf=False, sep=",", header=True, atomic=True):
+                 vcf=False, sep=",", header=True, atomic=True, buffer=False):
         """ Initialize a `Writer`.
 
         Parameters
@@ -522,6 +590,7 @@ class Writer:
         self._sep = sep
         self._header = header
         self._atomic = atomic
+        self._buffer = buffer
 
     def __call__(self):
         if self._vcf:
@@ -531,7 +600,7 @@ class Writer:
 
     @classmethod
     def write_file(cls, snps=None, filename="", vcf=False,
-                   sep=",", header=True, atomic=True):
+                   sep=",", header=True, atomic=True, buffer=False):
         """ Save SNPs to file.
 
         Parameters
@@ -549,7 +618,7 @@ class Writer:
             path to file in output directory if SNPs were saved, else empty str
         """
         w = cls(snps=snps, filename=filename,
-                vcf=vcf, sep=sep, header=header, atomic=atomic)
+                vcf=vcf, sep=sep, header=header, atomic=atomic, buffer=buffer)
         return w()
 
     def _write_csv(self):
@@ -589,7 +658,8 @@ class Writer:
             comment=comment,
             header=header,
             sep=self._sep,
-            atomic=self._atomic
+            atomic=self._atomic,
+            buffer=self._buffer
         )
 
     def _write_vcf(self):
@@ -710,6 +780,7 @@ class Writer:
             index=False,
             na_rep=".",
             sep="\t",
+            buffer=self._buffer
         )
 
     def _create_vcf_representation(self, task):

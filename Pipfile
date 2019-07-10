@@ -9,6 +9,7 @@ pytest-cov = "*"
 
 [packages]
 snps = {editable = true,path = "."}
+pytest-watch = "*"
 
 [requires]
 python_version = "3.7"

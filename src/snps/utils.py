@@ -105,6 +105,7 @@ def create_dir(path):
     try:
         os.makedirs(path, exist_ok=True)
     except Exception as err:
+        raise(Exception)
         print(err)
         return False
 

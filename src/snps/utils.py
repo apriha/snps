@@ -142,11 +142,7 @@ def save_df_as_csv(df, path, filename,
     if isinstance(df, pd.DataFrame) and len(df) > 0:
         try:
 
-<<<<<<< HEAD
-            if not create_dir(path):
-=======
             if not buffer and not create_dir(path):
->>>>>>> feature/accept-bytesdata
                 return ""
 
             if buffer:

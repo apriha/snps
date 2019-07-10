@@ -184,6 +184,7 @@ def save_df_as_csv(df, path, filename,
 
             return destination
         except Exception as err:
+            raise(err)
             print(err)
             return ""
     else:

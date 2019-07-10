@@ -140,7 +140,7 @@ class Reader:
             return pd.DataFrame(), ""
 
     @classmethod
-    def read_file(cls, file):
+    def read_file(cls, file, only_detect_source):
         """ Read `file`.
 
         Parameters
@@ -153,7 +153,7 @@ class Reader:
         tuple : (pandas.DataFrame, str)
             dataframe of parsed SNPs, detected source of SNPs
         """
-        r = cls(file)
+        r = cls(file, only_detect_source)
         return r()
 
     def _extract_comments(self, f, decode):

@@ -61,6 +61,7 @@ class SNPs:
     def __init__(
         self,
         file="",
+        only_detect_source=False,
         assign_par_snps=True,
         output_dir="output",
         resources_dir="resources",
@@ -85,6 +86,7 @@ class SNPs:
             processes to launch if multiprocessing
         """
         self._file = file
+        self._only_detect_source = only_detect_source
         self._snps = pd.DataFrame()
         self._source = ""
         self._build = 0
@@ -95,7 +97,7 @@ class SNPs:
 
         if file:
 
-            self._snps, self._source = self._read_raw_data(file)
+            self._snps, self._source = self._read_raw_data(file, only_detect_source)
 
             if not self._snps.empty:
                 self.sort_snps()
@@ -262,8 +264,8 @@ class SNPs:
                                  vcf=vcf, sep=sep, header=header,
                                  atomic=atomic, buffer=buffer)
 
-    def _read_raw_data(self, file):
-        return Reader.read_file(file)
+    def _read_raw_data(self, file, only_detect_source):
+        return Reader.read_file(file, only_detect_source)
 
     def _assign_par_snps(self):
         """ Assign PAR SNPs to the X or Y chromosome using SNP position.

@@ -66,7 +66,7 @@ class SNPs:
         output_dir="output",
         resources_dir="resources",
         parallelize=False,
-        processes=os.cpu_count()
+        processes=os.cpu_count(),
     ):
         """ Object used to read and parse genotype / raw data files.
 
@@ -244,8 +244,9 @@ class SNPs:
         else:
             return True
 
-    def save_snps(self, filename="", vcf=False,
-                  sep=",", header=True, atomic=True, buffer=False):
+    def save_snps(
+        self, filename="", vcf=False, sep=",", header=True, atomic=True, buffer=False
+    ):
         """ Save SNPs to file.
 
         Parameters
@@ -260,9 +261,15 @@ class SNPs:
         str
             path to file in output directory if SNPs were saved, else empty str
         """
-        return Writer.write_file(snps=self, filename=filename,
-                                 vcf=vcf, sep=sep, header=header,
-                                 atomic=atomic, buffer=buffer)
+        return Writer.write_file(
+            snps=self,
+            filename=filename,
+            vcf=vcf,
+            sep=sep,
+            header=header,
+            atomic=atomic,
+            buffer=buffer,
+        )
 
     def _read_raw_data(self, file, only_detect_source):
         return Reader.read_file(file, only_detect_source)

@@ -71,7 +71,6 @@ class Reader:
         """
         file = self._file
 
-
         if isinstance(file, str) and os.path.exists(file):
             if ".zip" in file:
                 with zipfile.ZipFile(file) as z:
@@ -84,13 +83,12 @@ class Reader:
                 with open(file, "r") as f:
                     first_line, comments = self._extract_comments(f, False)
 
-
         elif isinstance(file, bytes):
             if self.is_zip(file):
 
                 with zipfile.ZipFile(io.BytesIO(file)) as z:
                     namelist = z.namelist()
-                    key = 'GFG_filtered_unphased_genotypes_23andMe.txt'
+                    key = "GFG_filtered_unphased_genotypes_23andMe.txt"
                     key_search = [key in name for name in namelist]
 
                     if any(key_search):
@@ -101,14 +99,18 @@ class Reader:
                     with z.open(filename, "r") as f:
                         data = f.read()
                         file = io.BytesIO(data)
-                        first_line, comments = self._extract_comments(io.BytesIO(data), True)
+                        first_line, comments = self._extract_comments(
+                            io.BytesIO(data), True
+                        )
 
             elif self.is_gzip(file):
 
                 with gzip.open(io.BytesIO(file), "rb") as f:
                     data = f.read()
                     file = io.BytesIO(data)
-                    first_line, comments = self._extract_comments(io.BytesIO(data), True)
+                    first_line, comments = self._extract_comments(
+                        io.BytesIO(data), True
+                    )
 
             else:
                 file = io.BytesIO(file)
@@ -175,7 +177,7 @@ class Reader:
     @staticmethod
     def is_gzip(bytes_data):
         """Check whether or not a bytes_data file is a valid gzip file."""
-        return binascii.hexlify(bytes_data[:2]) == b'1f8b'
+        return binascii.hexlify(bytes_data[:2]) == b"1f8b"
 
     @staticmethod
     def _read_line(f, decode):
@@ -571,8 +573,16 @@ class Reader:
 class Writer:
     """ Class for writing SNPs to files. """
 
-    def __init__(self, snps=None, filename="",
-                 vcf=False, sep=",", header=True, atomic=True, buffer=False):
+    def __init__(
+        self,
+        snps=None,
+        filename="",
+        vcf=False,
+        sep=",",
+        header=True,
+        atomic=True,
+        buffer=False,
+    ):
         """ Initialize a `Writer`.
 
         Parameters
@@ -599,8 +609,16 @@ class Writer:
             return self._write_csv()
 
     @classmethod
-    def write_file(cls, snps=None, filename="", vcf=False,
-                   sep=",", header=True, atomic=True, buffer=False):
+    def write_file(
+        cls,
+        snps=None,
+        filename="",
+        vcf=False,
+        sep=",",
+        header=True,
+        atomic=True,
+        buffer=False,
+    ):
         """ Save SNPs to file.
 
         Parameters
@@ -617,8 +635,15 @@ class Writer:
         str
             path to file in output directory if SNPs were saved, else empty str
         """
-        w = cls(snps=snps, filename=filename,
-                vcf=vcf, sep=sep, header=header, atomic=atomic, buffer=buffer)
+        w = cls(
+            snps=snps,
+            filename=filename,
+            vcf=vcf,
+            sep=sep,
+            header=header,
+            atomic=atomic,
+            buffer=buffer,
+        )
         return w()
 
     def _write_csv(self):
@@ -659,7 +684,7 @@ class Writer:
             header=header,
             sep=self._sep,
             atomic=self._atomic,
-            buffer=self._buffer
+            buffer=self._buffer,
         )
 
     def _write_vcf(self):
@@ -780,7 +805,7 @@ class Writer:
             index=False,
             na_rep=".",
             sep="\t",
-            buffer=self._buffer
+            buffer=self._buffer,
         )
 
     def _create_vcf_representation(self, task):

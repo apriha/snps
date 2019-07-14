@@ -576,14 +576,7 @@ class Writer:
     """ Class for writing SNPs to files. """
 
     def __init__(
-        self,
-        snps=None,
-        filename="",
-        vcf=False,
-        sep=",",
-        header=True,
-        atomic=True,
-        buffer=False,
+        self, snps=None, filename="", vcf=False, atomic=True, buffer=False, **kwargs
     ):
         """ Initialize a `Writer`.
 
@@ -595,22 +588,19 @@ class Writer:
             filename for file to save
         vcf : bool
             flag to save file as VCF
-        sep : str
-            `sep` kwarg for `pandas.DataFrame.to_csv`
-        header : bool or list of str
-            `header` kwarg for `pandas.DataFrame.to_csv`
         atomic : bool
             atomically write output to a file on local filesystem
         buffer : bool
             write output to a memory buffer
+        **kwargs
+            additional parameters to `pandas.DataFrame.to_csv`
         """
         self._snps = snps
         self._filename = filename
         self._vcf = vcf
-        self._sep = sep
-        self._header = header
         self._atomic = atomic
         self._buffer = buffer
+        self._kwargs = kwargs
 
     def __call__(self):
         if self._vcf:
@@ -620,14 +610,7 @@ class Writer:
 
     @classmethod
     def write_file(
-        cls,
-        snps=None,
-        filename="",
-        vcf=False,
-        sep=",",
-        header=True,
-        atomic=True,
-        buffer=False,
+        cls, snps=None, filename="", vcf=False, atomic=True, buffer=False, **kwargs
     ):
         """ Save SNPs to file.
 
@@ -639,14 +622,12 @@ class Writer:
             filename for file to save
         vcf : bool
             flag to save file as VCF
-        sep : str
-            `sep` kwarg for `pandas.DataFrame.to_csv`
-        header : bool or list of str
-            `header` kwarg for `pandas.DataFrame.to_csv`
         atomic : bool
             atomically write output to a file on local filesystem
         buffer : bool
             write output to a memory buffer
+        **kwargs
+            additional parameters to `pandas.DataFrame.to_csv`
 
         Returns
         -------
@@ -657,10 +638,9 @@ class Writer:
             snps=snps,
             filename=filename,
             vcf=vcf,
-            sep=sep,
-            header=header,
             atomic=atomic,
             buffer=buffer,
+            **kwargs
         )
         return w()
 
@@ -689,20 +669,21 @@ class Writer:
                 self._snps.chromosomes_summary,
             )
         )
-        if self._header:
-            header = ["chromosome", "position", "genotype"]
+        if "header" in self._kwargs:
+            if isinstance(self._kwargs["header"], bool):
+                if self._kwargs["header"]:
+                    self._kwargs["header"] = ["chromosome", "position", "genotype"]
         else:
-            header = False
+            self._kwargs["header"] = ["chromosome", "position", "genotype"]
 
         return save_df_as_csv(
             self._snps._snps,
             self._snps._output_dir,
             filename,
             comment=comment,
-            header=header,
-            sep=self._sep,
             atomic=self._atomic,
             buffer=self._buffer,
+            **self._kwargs
         )
 
     def _write_vcf(self):
@@ -819,11 +800,11 @@ class Writer:
             filename,
             comment=comment,
             prepend_info=False,
+            buffer=self._buffer,
             header=False,
             index=False,
             na_rep=".",
             sep="\t",
-            buffer=self._buffer,
         )
 
     def _create_vcf_representation(self, task):

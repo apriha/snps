@@ -49,7 +49,10 @@ class TestResources(BaseSNPsTestCase):
         self.del_output_dir_helper()
 
     def test_get_assembly_mapping_data_bad_tar(self):
-        if os.getenv("DOWNLOADS_ENABLED"):
+        if (
+            not os.getenv("DOWNLOADS_ENABLED")
+            or os.getenv("DOWNLOADS_ENABLED") == "true"
+        ):
             with atomic_write(
                 "resources/NCBI36_GRCh37.tar.gz", mode="w", overwrite=True
             ):

@@ -72,8 +72,8 @@ class SNPs:
 
         Parameters
         ----------
-        file : str
-            path to file to load
+        file : str or bytes
+            path to file to load or bytes to load
         only_detect_source : bool
             only detect the source of the data
         assign_par_snps : bool
@@ -251,8 +251,8 @@ class SNPs:
 
         Parameters
         ----------
-        filename : str
-            filename for file to save
+        filename : str or buffer
+            filename for file to save or buffer to write to
         vcf : bool
             flag to save file as VCF
         atomic : bool

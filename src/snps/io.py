@@ -55,8 +55,8 @@ class Reader:
 
         Parameters
         ----------
-        file : str
-            path to file to read
+        file : str or bytes
+            path to file to load or bytes to load
         only_detect_source : bool
             only detect the source of the data
         """
@@ -73,6 +73,7 @@ class Reader:
         """
         file = self._file
 
+        # peek into files to determine the data format
         if isinstance(file, str) and os.path.exists(file):
             if ".zip" in file:
                 with zipfile.ZipFile(file) as z:
@@ -121,7 +122,6 @@ class Reader:
         else:
             return pd.DataFrame(), ""
 
-        # peek into files to determine the data format
         if "23andMe" in first_line:
             return self.read_23andme(file)
         elif "Ancestry" in first_line:
@@ -149,8 +149,10 @@ class Reader:
 
         Parameters
         ----------
-        file : str
-            path to file to read
+        file : str or bytes
+            path to file to load or bytes to load
+        only_detect_source : bool
+            only detect the source of the data
 
         Returns
         -------
@@ -583,9 +585,9 @@ class Writer:
         Parameters
         ----------
         snps : SNPs
-            SNPs to save to file
-        filename : str
-            filename for file to save
+            SNPs to save to file or write to buffer
+        filename : str or buffer
+            filename for file to save or buffer to write to
         vcf : bool
             flag to save file as VCF
         atomic : bool
@@ -617,9 +619,9 @@ class Writer:
         Parameters
         ----------
         snps : SNPs
-            SNPs to save to file
-        filename : str
-            filename for file to save
+            SNPs to save to file or write to buffer
+        filename : str or buffer
+            filename for file to save or buffer to write to
         vcf : bool
             flag to save file as VCF
         atomic : bool

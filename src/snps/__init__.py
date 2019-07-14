@@ -74,6 +74,8 @@ class SNPs:
         ----------
         file : str
             path to file to load
+        only_detect_source : bool
+            only detect the source of the data
         assign_par_snps : bool
             assign PAR SNPs to the X and Y chromosomes
         output_dir : str
@@ -255,6 +257,14 @@ class SNPs:
             filename for file to save
         vcf : bool
             flag to save file as VCF
+        sep : str
+            sep kwarg for `pandas.DataFrame.to_csv`
+        header : bool or list of str
+            header kwarg for `pandas.DataFrame.to_csv`
+        atomic : bool
+            atomically write output to a file on local filesystem
+        buffer : bool
+            write output to a memory buffer
 
         Returns
         -------

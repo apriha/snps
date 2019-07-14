@@ -138,6 +138,10 @@ def save_df_as_csv(
         header comment(s); one or more lines starting with '#'
     prepend_info : bool
         prepend file generation information as comments
+    atomic : bool
+        atomically write output to a file on local filesystem
+    buffer : bool
+        write output to a memory buffer
     **kwargs
         additional parameters to `pandas.DataFrame.to_csv`
 

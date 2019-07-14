@@ -57,6 +57,8 @@ class Reader:
         ----------
         file : str
             path to file to read
+        only_detect_source : bool
+            only detect the source of the data
         """
         self._file = file
         self._only_detect_source = only_detect_source
@@ -593,6 +595,14 @@ class Writer:
             filename for file to save
         vcf : bool
             flag to save file as VCF
+        sep : str
+            `sep` kwarg for `pandas.DataFrame.to_csv`
+        header : bool or list of str
+            `header` kwarg for `pandas.DataFrame.to_csv`
+        atomic : bool
+            atomically write output to a file on local filesystem
+        buffer : bool
+            write output to a memory buffer
         """
         self._snps = snps
         self._filename = filename
@@ -629,6 +639,14 @@ class Writer:
             filename for file to save
         vcf : bool
             flag to save file as VCF
+        sep : str
+            `sep` kwarg for `pandas.DataFrame.to_csv`
+        header : bool or list of str
+            `header` kwarg for `pandas.DataFrame.to_csv`
+        atomic : bool
+            atomically write output to a file on local filesystem
+        buffer : bool
+            write output to a memory buffer
 
         Returns
         -------

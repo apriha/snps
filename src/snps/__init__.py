@@ -61,6 +61,7 @@ class SNPs:
     def __init__(
         self,
         file="",
+        only_detect_source=False,
         assign_par_snps=True,
         output_dir="output",
         resources_dir="resources",
@@ -71,8 +72,10 @@ class SNPs:
 
         Parameters
         ----------
-        file : str
-            path to file to load
+        file : str or bytes
+            path to file to load or bytes to load
+        only_detect_source : bool
+            only detect the source of the data
         assign_par_snps : bool
             assign PAR SNPs to the X and Y chromosomes
         output_dir : str
@@ -85,6 +88,7 @@ class SNPs:
             processes to launch if multiprocessing
         """
         self._file = file
+        self._only_detect_source = only_detect_source
         self._snps = pd.DataFrame()
         self._source = ""
         self._build = 0
@@ -94,7 +98,8 @@ class SNPs:
         self._parallelizer = Parallelizer(parallelize=parallelize, processes=processes)
 
         if file:
-            self._snps, self._source = self._read_raw_data(file)
+
+            self._snps, self._source = self._read_raw_data(file, only_detect_source)
 
             if not self._snps.empty:
                 self.sort_snps()
@@ -241,25 +246,31 @@ class SNPs:
         else:
             return True
 
-    def save_snps(self, filename="", vcf=False):
+    def save_snps(self, filename="", vcf=False, atomic=True, **kwargs):
         """ Save SNPs to file.
 
         Parameters
         ----------
-        filename : str
-            filename for file to save
+        filename : str or buffer
+            filename for file to save or buffer to write to
         vcf : bool
             flag to save file as VCF
+        atomic : bool
+            atomically write output to a file on local filesystem
+        **kwargs
+            additional parameters to `pandas.DataFrame.to_csv`
 
         Returns
         -------
         str
             path to file in output directory if SNPs were saved, else empty str
         """
-        return Writer.write_file(snps=self, filename=filename, vcf=vcf)
+        return Writer.write_file(
+            snps=self, filename=filename, vcf=vcf, atomic=atomic, **kwargs
+        )
 
-    def _read_raw_data(self, file):
-        return Reader.read_file(file)
+    def _read_raw_data(self, file, only_detect_source):
+        return Reader.read_file(file, only_detect_source)
 
     def _assign_par_snps(self):
         """ Assign PAR SNPs to the X or Y chromosome using SNP position.

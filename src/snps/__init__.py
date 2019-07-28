@@ -246,7 +246,7 @@ class SNPs:
         else:
             return True
 
-    def save_snps(self, filename="", vcf=False, atomic=True, buffer=False, **kwargs):
+    def save_snps(self, filename="", vcf=False, atomic=True, **kwargs):
         """ Save SNPs to file.
 
         Parameters
@@ -257,8 +257,6 @@ class SNPs:
             flag to save file as VCF
         atomic : bool
             atomically write output to a file on local filesystem
-        buffer : bool
-            write output to a memory buffer
         **kwargs
             additional parameters to `pandas.DataFrame.to_csv`
 
@@ -268,12 +266,7 @@ class SNPs:
             path to file in output directory if SNPs were saved, else empty str
         """
         return Writer.write_file(
-            snps=self,
-            filename=filename,
-            vcf=vcf,
-            atomic=atomic,
-            buffer=buffer,
-            **kwargs
+            snps=self, filename=filename, vcf=vcf, atomic=atomic, **kwargs
         )
 
     def _read_raw_data(self, file, only_detect_source):

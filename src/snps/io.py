@@ -581,9 +581,7 @@ class Reader:
 class Writer:
     """ Class for writing SNPs to files. """
 
-    def __init__(
-        self, snps=None, filename="", vcf=False, atomic=True, buffer=False, **kwargs
-    ):
+    def __init__(self, snps=None, filename="", vcf=False, atomic=True, **kwargs):
         """ Initialize a `Writer`.
 
         Parameters
@@ -596,8 +594,6 @@ class Writer:
             flag to save file as VCF
         atomic : bool
             atomically write output to a file on local filesystem
-        buffer : bool
-            write output to a memory buffer
         **kwargs
             additional parameters to `pandas.DataFrame.to_csv`
         """
@@ -605,7 +601,6 @@ class Writer:
         self._filename = filename
         self._vcf = vcf
         self._atomic = atomic
-        self._buffer = buffer
         self._kwargs = kwargs
 
     def __call__(self):
@@ -615,9 +610,7 @@ class Writer:
             return self._write_csv()
 
     @classmethod
-    def write_file(
-        cls, snps=None, filename="", vcf=False, atomic=True, buffer=False, **kwargs
-    ):
+    def write_file(cls, snps=None, filename="", vcf=False, atomic=True, **kwargs):
         """ Save SNPs to file.
 
         Parameters
@@ -630,8 +623,6 @@ class Writer:
             flag to save file as VCF
         atomic : bool
             atomically write output to a file on local filesystem
-        buffer : bool
-            write output to a memory buffer
         **kwargs
             additional parameters to `pandas.DataFrame.to_csv`
 
@@ -640,14 +631,7 @@ class Writer:
         str
             path to file in output directory if SNPs were saved, else empty str
         """
-        w = cls(
-            snps=snps,
-            filename=filename,
-            vcf=vcf,
-            atomic=atomic,
-            buffer=buffer,
-            **kwargs
-        )
+        w = cls(snps=snps, filename=filename, vcf=vcf, atomic=atomic, **kwargs)
         return w()
 
     def _write_csv(self):
@@ -688,7 +672,6 @@ class Writer:
             filename,
             comment=comment,
             atomic=self._atomic,
-            buffer=self._buffer,
             **self._kwargs
         )
 
@@ -806,7 +789,6 @@ class Writer:
             filename,
             comment=comment,
             prepend_info=False,
-            buffer=self._buffer,
             header=False,
             index=False,
             na_rep=".",

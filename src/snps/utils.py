@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import datetime
+import io
 from multiprocessing import Pool
 import os
 import re
@@ -114,7 +115,9 @@ def create_dir(path):
         return False
 
 
-def save_df_as_csv(df, path, filename, comment="", prepend_info=True, **kwargs):
+def save_df_as_csv(
+    df, path, filename, comment="", prepend_info=True, atomic=True, **kwargs
+):
     """ Save dataframe to a CSV file.
 
     Parameters
@@ -123,28 +126,37 @@ def save_df_as_csv(df, path, filename, comment="", prepend_info=True, **kwargs):
         dataframe to save
     path : str
         path to directory where to save CSV file
-    filename : str
-        filename of CSV file
+    filename : str or buffer
+        filename for file to save or buffer to write to
     comment : str
         header comment(s); one or more lines starting with '#'
     prepend_info : bool
         prepend file generation information as comments
+    atomic : bool
+        atomically write output to a file on local filesystem
     **kwargs
         additional parameters to `pandas.DataFrame.to_csv`
 
     Returns
     -------
-    str
-        path to saved file, else empty str
+    str or buffer
+        path to saved file or buffer (empty str if error)
     """
+    buffer = False
+    if isinstance(filename, io.IOBase):
+        buffer = True
+
     if isinstance(df, pd.DataFrame) and len(df) > 0:
         try:
-            if not create_dir(path):
+
+            if not buffer and not create_dir(path):
                 return ""
 
-            destination = os.path.join(path, filename)
-
-            print("Saving " + os.path.relpath(destination))
+            if buffer:
+                destination = filename
+            else:
+                destination = os.path.join(path, filename)
+                print("Saving " + os.path.relpath(destination))
 
             if prepend_info:
                 s = (
@@ -162,10 +174,19 @@ def save_df_as_csv(df, path, filename, comment="", prepend_info=True, **kwargs):
             if "na_rep" not in kwargs:
                 kwargs["na_rep"] = "--"
 
-            with atomic_write(destination, mode="w", overwrite=True) as f:
-                f.write(s)
-                # https://stackoverflow.com/a/29233924
-                df.to_csv(f, **kwargs)
+            if buffer:
+                destination.write(s)
+                df.to_csv(destination, **kwargs)
+                destination.seek(0)
+            elif atomic:
+                with atomic_write(destination, mode="w", overwrite=True) as f:
+                    f.write(s)
+                    # https://stackoverflow.com/a/29233924
+                    df.to_csv(f, **kwargs)
+            else:
+                with open(destination, mode="w") as f:
+                    f.write(s)
+                    df.to_csv(f, **kwargs)
 
             return destination
         except Exception as err:

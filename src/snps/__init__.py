@@ -774,7 +774,6 @@ class SNPs:
     # https://stackoverflow.com/a/16090640
     @staticmethod
     def _natural_sort_key(s, natural_sort_re=re.compile("([0-9]+)")):
-        import pdb; pdb.set_trace()
         return [
             int(text) if text.isdigit() else text.lower()
             for text in re.split(natural_sort_re, s)

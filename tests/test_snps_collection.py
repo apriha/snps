@@ -189,6 +189,10 @@ class TestIndividual(BaseSNPsTestCase):
         s = SNPs("tests/input/NCBI36.csv")
         assert s.source == "generic"
 
+    def test_source_codigo46(self):
+        s = SNPs("tests/input/codigo46.txt")
+        assert s.source == "Codigo46"
+
     def test_snps_no_snps(self):
         s = SNPs()
         assert s.snps.empty

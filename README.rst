@@ -172,8 +172,8 @@ Documentation is available `here <https://snps.readthedocs.io/>`_.
 
 Acknowledgements
 ----------------
-Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org>`_, and
-`Open Humans <https://www.openhumans.org>`_.
+Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org>`_,
+`Open Humans <https://www.openhumans.org>`_, and `Sano Genetics <https://sanogenetics.com>`_.
 
 .. https://github.com/rtfd/readthedocs.org/blob/master/docs/badges.rst
 .. |build| image:: https://travis-ci.org/apriha/snps.svg?branch=master

@@ -185,11 +185,7 @@ class Reader:
     @staticmethod
     def is_gzip(bytes_data):
         """Check whether or not a bytes_data file is a valid gzip file."""
-<<<<<<< HEAD
-        return binascii.hexlify(bytes_data[:2]) == b'1f8b'
-=======
         return binascii.hexlify(bytes_data[:2]) == b"1f8b"
->>>>>>> origin/master
 
     @staticmethod
     def _read_line(f, decode):
@@ -585,12 +581,7 @@ class Reader:
 class Writer:
     """ Class for writing SNPs to files. """
 
-<<<<<<< HEAD
-    def __init__(self, snps=None, filename="",
-                 vcf=False, sep=",", header=True, atomic=True, buffer=False):
-=======
     def __init__(self, snps=None, filename="", vcf=False, atomic=True, **kwargs):
->>>>>>> origin/master
         """ Initialize a `Writer`.
 
         Parameters
@@ -610,11 +601,7 @@ class Writer:
         self._filename = filename
         self._vcf = vcf
         self._atomic = atomic
-<<<<<<< HEAD
-        self._buffer = buffer
-=======
         self._kwargs = kwargs
->>>>>>> origin/master
 
     def __call__(self):
         if self._vcf:
@@ -623,12 +610,7 @@ class Writer:
             return self._write_csv()
 
     @classmethod
-<<<<<<< HEAD
-    def write_file(cls, snps=None, filename="", vcf=False,
-                   sep=",", header=True, atomic=True, buffer=False):
-=======
     def write_file(cls, snps=None, filename="", vcf=False, atomic=True, **kwargs):
->>>>>>> origin/master
         """ Save SNPs to file.
 
         Parameters
@@ -649,12 +631,7 @@ class Writer:
         str
             path to file in output directory if SNPs were saved, else empty str
         """
-<<<<<<< HEAD
-        w = cls(snps=snps, filename=filename,
-                vcf=vcf, sep=sep, header=header, atomic=atomic, buffer=buffer)
-=======
         w = cls(snps=snps, filename=filename, vcf=vcf, atomic=atomic, **kwargs)
->>>>>>> origin/master
         return w()
 
     def _write_csv(self):
@@ -694,15 +671,8 @@ class Writer:
             self._snps._output_dir,
             filename,
             comment=comment,
-<<<<<<< HEAD
-            header=header,
-            sep=self._sep,
-            atomic=self._atomic,
-            buffer=self._buffer
-=======
             atomic=self._atomic,
             **self._kwargs
->>>>>>> origin/master
         )
 
     def _write_vcf(self):
@@ -822,8 +792,7 @@ class Writer:
             header=False,
             index=False,
             na_rep=".",
-            sep="\t",
-            buffer=self._buffer
+            sep="\t"
         )
 
     def _create_vcf_representation(self, task):

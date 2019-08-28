@@ -55,8 +55,10 @@ class Reader:
 
         Parameters
         ----------
-        file : str
-            path to file to read
+        file : str or bytes
+            path to file to load or bytes to load
+        only_detect_source : bool
+            only detect the source of the data
         """
         self._file = file
         self._only_detect_source = only_detect_source
@@ -71,72 +73,78 @@ class Reader:
         """
         file = self._file
 
+        try:
+            # peek into files to determine the data format
+            if isinstance(file, str) and os.path.exists(file):
+                if ".zip" in file:
+                    with zipfile.ZipFile(file) as z:
+                        with z.open(z.namelist()[0], "r") as f:
+                            first_line, comments = self._extract_comments(f, True)
+                elif ".gz" in file:
+                    with gzip.open(file, "rt") as f:
+                        first_line, comments = self._extract_comments(f, False)
+                else:
+                    with open(file, "r") as f:
+                        first_line, comments = self._extract_comments(f, False)
 
-        if isinstance(file, str) and os.path.exists(file):
-            if ".zip" in file:
-                with zipfile.ZipFile(file) as z:
-                    with z.open(z.namelist()[0], "r") as f:
-                        first_line, comments = self._extract_comments(f, True)
-            elif ".gz" in file:
-                with gzip.open(file, "rt") as f:
-                    first_line, comments = self._extract_comments(f, False)
-            else:
-                with open(file, "r") as f:
-                    first_line, comments = self._extract_comments(f, False)
+            elif isinstance(file, bytes):
+                if self.is_zip(file):
 
+                    with zipfile.ZipFile(io.BytesIO(file)) as z:
+                        namelist = z.namelist()
+                        key = "GFG_filtered_unphased_genotypes_23andMe.txt"
+                        key_search = [key in name for name in namelist]
 
-        elif isinstance(file, bytes):
-            if self.is_zip(file):
+                        if any(key_search):
+                            filename = namelist[key_search.index(True)]
+                        else:
+                            filename = namelist[0]
 
-                with zipfile.ZipFile(io.BytesIO(file)) as z:
-                    namelist = z.namelist()
-                    key = 'GFG_filtered_unphased_genotypes_23andMe.txt'
-                    key_search = [key in name for name in namelist]
+                        with z.open(filename, "r") as f:
+                            data = f.read()
+                            file = io.BytesIO(data)
+                            first_line, comments = self._extract_comments(
+                                io.BytesIO(data), True
+                            )
 
-                    if any(key_search):
-                        filename = namelist[key_search.index(True)]
-                    else:
-                        filename = namelist[0]
+                elif self.is_gzip(file):
 
-                    with z.open(filename, "r") as f:
+                    with gzip.open(io.BytesIO(file), "rb") as f:
                         data = f.read()
                         file = io.BytesIO(data)
-                        first_line, comments = self._extract_comments(io.BytesIO(data), True)
+                        first_line, comments = self._extract_comments(
+                            io.BytesIO(data), True
+                        )
 
-            elif self.is_gzip(file):
-
-                with gzip.open(io.BytesIO(file), "rb") as f:
-                    data = f.read()
-                    file = io.BytesIO(data)
-                    first_line, comments = self._extract_comments(io.BytesIO(data), True)
+                else:
+                    file = io.BytesIO(file)
+                    first_line, comments = self._extract_comments(deepcopy(file), True)
 
             else:
-                file = io.BytesIO(file)
-                first_line, comments = self._extract_comments(deepcopy(file), True)
+                return pd.DataFrame(), ""
 
-        else:
-            return pd.DataFrame(), ""
-
-        # peek into files to determine the data format
-        if "23andMe" in first_line:
-            return self.read_23andme(file)
-        elif "Ancestry" in first_line:
-            return self.read_ancestry(file)
-        elif first_line.startswith("RSID"):
-            return self.read_ftdna(file)
-        elif "famfinder" in first_line:
-            return self.read_ftdna_famfinder(file)
-        elif "MyHeritage" in first_line:
-            return self.read_myheritage(file)
-        elif "lineage" in first_line or "snps" in first_line:
-            return self.read_lineage_csv(file, comments)
-        elif first_line.startswith("rsid"):
-            return self.read_generic_csv(file)
-        elif "vcf" in comments.lower():
-            return self.read_vcf(file)
-        elif ("Genes for Good" in comments) | ("PLINK" in comments):
-            return self.read_genes_for_good(file)
-        else:
+            if "23andMe" in first_line:
+                return self.read_23andme(file)
+            elif "Ancestry" in first_line:
+                return self.read_ancestry(file)
+            elif first_line.startswith("RSID"):
+                return self.read_ftdna(file)
+            elif "famfinder" in first_line:
+                return self.read_ftdna_famfinder(file)
+            elif "MyHeritage" in first_line:
+                return self.read_myheritage(file)
+            elif "lineage" in first_line or "snps" in first_line:
+                return self.read_lineage_csv(file, comments)
+            elif first_line.startswith("rsid"):
+                return self.read_generic_csv(file)
+            elif "vcf" in comments.lower():
+                return self.read_vcf(file)
+            elif ("Genes for Good" in comments) | ("PLINK" in comments):
+                return self.read_genes_for_good(file)
+            else:
+                return pd.DataFrame(), ""
+        except Exception as err:
+            print(err)
             return pd.DataFrame(), ""
 
     @classmethod
@@ -145,8 +153,10 @@ class Reader:
 
         Parameters
         ----------
-        file : str
-            path to file to read
+        file : str or bytes
+            path to file to load or bytes to load
+        only_detect_source : bool
+            only detect the source of the data
 
         Returns
         -------
@@ -175,7 +185,11 @@ class Reader:
     @staticmethod
     def is_gzip(bytes_data):
         """Check whether or not a bytes_data file is a valid gzip file."""
+<<<<<<< HEAD
         return binascii.hexlify(bytes_data[:2]) == b'1f8b'
+=======
+        return binascii.hexlify(bytes_data[:2]) == b"1f8b"
+>>>>>>> origin/master
 
     @staticmethod
     def _read_line(f, decode):
@@ -571,26 +585,36 @@ class Reader:
 class Writer:
     """ Class for writing SNPs to files. """
 
+<<<<<<< HEAD
     def __init__(self, snps=None, filename="",
                  vcf=False, sep=",", header=True, atomic=True, buffer=False):
+=======
+    def __init__(self, snps=None, filename="", vcf=False, atomic=True, **kwargs):
+>>>>>>> origin/master
         """ Initialize a `Writer`.
 
         Parameters
         ----------
         snps : SNPs
-            SNPs to save to file
-        filename : str
-            filename for file to save
+            SNPs to save to file or write to buffer
+        filename : str or buffer
+            filename for file to save or buffer to write to
         vcf : bool
             flag to save file as VCF
+        atomic : bool
+            atomically write output to a file on local filesystem
+        **kwargs
+            additional parameters to `pandas.DataFrame.to_csv`
         """
         self._snps = snps
         self._filename = filename
         self._vcf = vcf
-        self._sep = sep
-        self._header = header
         self._atomic = atomic
+<<<<<<< HEAD
         self._buffer = buffer
+=======
+        self._kwargs = kwargs
+>>>>>>> origin/master
 
     def __call__(self):
         if self._vcf:
@@ -599,26 +623,38 @@ class Writer:
             return self._write_csv()
 
     @classmethod
+<<<<<<< HEAD
     def write_file(cls, snps=None, filename="", vcf=False,
                    sep=",", header=True, atomic=True, buffer=False):
+=======
+    def write_file(cls, snps=None, filename="", vcf=False, atomic=True, **kwargs):
+>>>>>>> origin/master
         """ Save SNPs to file.
 
         Parameters
         ----------
         snps : SNPs
-            SNPs to save to file
-        filename : str
-            filename for file to save
+            SNPs to save to file or write to buffer
+        filename : str or buffer
+            filename for file to save or buffer to write to
         vcf : bool
             flag to save file as VCF
+        atomic : bool
+            atomically write output to a file on local filesystem
+        **kwargs
+            additional parameters to `pandas.DataFrame.to_csv`
 
         Returns
         -------
         str
             path to file in output directory if SNPs were saved, else empty str
         """
+<<<<<<< HEAD
         w = cls(snps=snps, filename=filename,
                 vcf=vcf, sep=sep, header=header, atomic=atomic, buffer=buffer)
+=======
+        w = cls(snps=snps, filename=filename, vcf=vcf, atomic=atomic, **kwargs)
+>>>>>>> origin/master
         return w()
 
     def _write_csv(self):
@@ -646,20 +682,27 @@ class Writer:
                 self._snps.chromosomes_summary,
             )
         )
-        if self._header:
-            header = ["chromosome", "position", "genotype"]
+        if "header" in self._kwargs:
+            if isinstance(self._kwargs["header"], bool):
+                if self._kwargs["header"]:
+                    self._kwargs["header"] = ["chromosome", "position", "genotype"]
         else:
-            header = False
+            self._kwargs["header"] = ["chromosome", "position", "genotype"]
 
         return save_df_as_csv(
             self._snps._snps,
             self._snps._output_dir,
             filename,
             comment=comment,
+<<<<<<< HEAD
             header=header,
             sep=self._sep,
             atomic=self._atomic,
             buffer=self._buffer
+=======
+            atomic=self._atomic,
+            **self._kwargs
+>>>>>>> origin/master
         )
 
     def _write_vcf(self):
@@ -684,7 +727,7 @@ class Writer:
         comment = (
             "##fileformat=VCFv4.2\n"
             "##fileDate={}\n"
-            '##source="{}; snps v{}; https://github.com/apriha/snps"\n'.format(
+            '##source="{}; snps v{}; https://pypi.org/project/snps/"\n'.format(
                 datetime.datetime.utcnow().strftime("%Y%m%d"),
                 self._snps._source,
                 snps.__version__,

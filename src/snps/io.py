@@ -504,10 +504,7 @@ class Reader:
         df.dropna(inplace=True)
 
         df = df.astype({"chrom": object, "pos": np.int64})
-
-
-        import pdb; pdb.set_trace()
-
+        df = df[["rsid", "chrom", "pos", "genotype"]]
 
         return df, "Codigo46"
 

@@ -37,6 +37,7 @@ import io
 import gzip
 import zipfile
 import binascii
+import requests
 from copy import deepcopy
 
 import numpy as np
@@ -463,28 +464,50 @@ class Reader:
             return pd.DataFrame(), "Codigo46"
 
 
+        res = requests.get('https://sano-public.s3.eu-west-2.amazonaws.com/codigo_rsid_map.txt.gz')
+        codigo_rsid_map_gz = res.content
+        with gzip.open(io.BytesIO(codigo_rsid_map_gz), 'rb') as f:
+            codigo_rsid_map = f.read().decode('utf-8')
+        codigo_rsid_map = dict((x.split('\t')[0], x.split('\t')[1]) for x in codigo_rsid_map.split('\n')[:-1])
+
+        res = requests.get('https://sano-public.s3.eu-west-2.amazonaws.com/codigo_chrpos_map.txt.gz')
+        codigo_chrpos_map_gz = res.content
+        with gzip.open(io.BytesIO(codigo_chrpos_map_gz), 'rb') as f:
+            codigo_chrpos_map = f.read().decode('utf-8')
+        codigo_chrpos_map = dict((x.split('\t')[0], x.split('\t')[1] + ':' + x.split('\t')[2] ) for x in codigo_chrpos_map.split('\n')[:-1])
+
+
+
         df = pd.read_csv(
             io.StringIO(data),
             sep="\t",
             na_values="--"
         )
 
-        def extract_chrom(x):
-            split_x = x.split(":")[0]
-            if len(split_x) == 2:
-                return split_x[0]
-            else:
-                return '0'
+        def map_codigo_rsids(x):
+            return codigo_rsid_map.get(x)
 
-        def extract_pos(x):
-            split_x = x.split(":")[0]
-            if len(split_x) == 2:
-                return split_x[1]
-            else:
-                return '--'
+        def map_codigo_chr(x):
+            chrpos = codigo_chrpos_map.get(x)
+            return chrpos.split(':')[0] if chrpos else None
 
-        df['chrom'] = df['SNP Name'].apply(extract_chrom)
-        df['pos'] = df['SNP Name'].apply(extract_pos)
+        def map_codigo_pos(x):
+            chrpos = codigo_chrpos_map.get(x)
+            return chrpos.split(':')[1] if chrpos else None
+
+
+        df['rsid'] = df['SNP Name'].apply(map_codigo_rsids)
+        df['chrom'] = df['SNP Name'].apply(map_codigo_chr)
+        df['pos'] = df['SNP Name'].apply(map_codigo_pos)
+        df['genotype'] = df['Allele1 - Plus'] + df['Allele1 - Plus']
+
+        df.dropna(inplace=True)
+
+        df = df.astype({"chrom": object, "pos": np.int64})
+
+
+        import pdb; pdb.set_trace()
+
 
         return df, "Codigo46"
 

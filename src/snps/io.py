@@ -505,6 +505,7 @@ class Reader:
 
         df = df.astype({"chrom": object, "pos": np.int64})
         df = df[["rsid", "chrom", "pos", "genotype"]]
+        df.set_index(["rsid"], inplace=True)
 
         return df, "Codigo46"
 

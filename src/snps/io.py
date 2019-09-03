@@ -499,7 +499,7 @@ class Reader:
         df['rsid'] = df['SNP Name'].apply(map_codigo_rsids)
         df['chrom'] = df['SNP Name'].apply(map_codigo_chr)
         df['pos'] = df['SNP Name'].apply(map_codigo_pos)
-        df['genotype'] = df['Allele1 - Plus'] + df['Allele1 - Plus']
+        df['genotype'] = df['Allele1 - Plus'] + df['Allele2 - Plus']
 
         df.dropna(inplace=True)
 

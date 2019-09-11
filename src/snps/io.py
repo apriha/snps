@@ -119,7 +119,9 @@ class Reader:
 
                 else:
                     file = io.BytesIO(file)
-                    first_line, comments, data = self._extract_comments(deepcopy(file), True)
+                    first_line, comments, data = self._extract_comments(
+                        deepcopy(file), True
+                    )
 
             else:
                 return pd.DataFrame(), ""
@@ -134,6 +136,8 @@ class Reader:
                 return self.read_ftdna_famfinder(file)
             elif "MyHeritage" in first_line:
                 return self.read_myheritage(file)
+            elif "Living DNA" in first_line:
+                return self.read_livingdna(file)
             elif "lineage" in first_line or "snps" in first_line:
                 return self.read_lineage_csv(file, comments)
             elif first_line.startswith("rsid"):
@@ -174,7 +178,6 @@ class Reader:
         first_line = line
         comments = ""
         data = ""
-
 
         if first_line.startswith("#"):
             while line.startswith("#"):
@@ -409,6 +412,39 @@ class Reader:
 
         return df, "MyHeritage"
 
+    def read_livingdna(self, file):
+        """ Read and parse LivingDNA file.
+
+        https://livingdna.com/
+
+        Parameters
+        ----------
+        file : str
+            path to file
+
+        Returns
+        -------
+        pandas.DataFrame
+            genetic data normalized for use with `snps`
+        str
+            name of data source
+        """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "LivingDNA"
+
+        df = pd.read_csv(
+            file,
+            comment="#",
+            sep="\t",
+            na_values="--",
+            names=["rsid", "chrom", "pos", "genotype"],
+            index_col=0,
+            dtype={"chrom": object},
+        )
+
+        return df, "LivingDNA"
+
     def read_genes_for_good(self, file):
         """ Read and parse Genes For Good file.
 
@@ -463,43 +499,44 @@ class Reader:
         if self._only_detect_source:
             return pd.DataFrame(), "Codigo46"
 
-
-        res = requests.get('https://sano-public.s3.eu-west-2.amazonaws.com/codigo_rsid_map.txt.gz')
-        codigo_rsid_map_gz = res.content
-        with gzip.open(io.BytesIO(codigo_rsid_map_gz), 'rb') as f:
-            codigo_rsid_map = f.read().decode('utf-8')
-        codigo_rsid_map = dict((x.split('\t')[0], x.split('\t')[1]) for x in codigo_rsid_map.split('\n')[:-1])
-
-        res = requests.get('https://sano-public.s3.eu-west-2.amazonaws.com/codigo_chrpos_map.txt.gz')
-        codigo_chrpos_map_gz = res.content
-        with gzip.open(io.BytesIO(codigo_chrpos_map_gz), 'rb') as f:
-            codigo_chrpos_map = f.read().decode('utf-8')
-        codigo_chrpos_map = dict((x.split('\t')[0], x.split('\t')[1] + ':' + x.split('\t')[2] ) for x in codigo_chrpos_map.split('\n')[:-1])
-
-
-
-        df = pd.read_csv(
-            io.StringIO(data),
-            sep="\t",
-            na_values="--"
+        res = requests.get(
+            "https://sano-public.s3.eu-west-2.amazonaws.com/codigo_rsid_map.txt.gz"
         )
+        codigo_rsid_map_gz = res.content
+        with gzip.open(io.BytesIO(codigo_rsid_map_gz), "rb") as f:
+            codigo_rsid_map = f.read().decode("utf-8")
+        codigo_rsid_map = dict(
+            (x.split("\t")[0], x.split("\t")[1]) for x in codigo_rsid_map.split("\n")[:-1]
+        )
+
+        res = requests.get(
+            "https://sano-public.s3.eu-west-2.amazonaws.com/codigo_chrpos_map.txt.gz"
+        )
+        codigo_chrpos_map_gz = res.content
+        with gzip.open(io.BytesIO(codigo_chrpos_map_gz), "rb") as f:
+            codigo_chrpos_map = f.read().decode("utf-8")
+        codigo_chrpos_map = dict(
+            (x.split("\t")[0], x.split("\t")[1] + ":" + x.split("\t")[2])
+            for x in codigo_chrpos_map.split("\n")[:-1]
+        )
+
+        df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
 
         def map_codigo_rsids(x):
             return codigo_rsid_map.get(x)
 
         def map_codigo_chr(x):
             chrpos = codigo_chrpos_map.get(x)
-            return chrpos.split(':')[0] if chrpos else None
+            return chrpos.split(":")[0] if chrpos else None
 
         def map_codigo_pos(x):
             chrpos = codigo_chrpos_map.get(x)
-            return chrpos.split(':')[1] if chrpos else None
+            return chrpos.split(":")[1] if chrpos else None
 
-
-        df['rsid'] = df['SNP Name'].apply(map_codigo_rsids)
-        df['chrom'] = df['SNP Name'].apply(map_codigo_chr)
-        df['pos'] = df['SNP Name'].apply(map_codigo_pos)
-        df['genotype'] = df['Allele1 - Plus'] + df['Allele2 - Plus']
+        df["rsid"] = df["SNP Name"].apply(map_codigo_rsids)
+        df["chrom"] = df["SNP Name"].apply(map_codigo_chr)
+        df["pos"] = df["SNP Name"].apply(map_codigo_pos)
+        df["genotype"] = df["Allele1 - Plus"] + df["Allele2 - Plus"]
 
         df.dropna(inplace=True)
 
@@ -654,9 +691,7 @@ class Reader:
                     "genotype": genotype,
                 }
                 # append the record to the DataFrame
-                df = df.append(
-                    pd.DataFrame([record_info]), ignore_index=True, sort=False
-                )
+                df = df.append(pd.DataFrame([record_info]), ignore_index=True, sort=False)
 
         df.set_index("rsid", inplace=True, drop=True)
 
@@ -877,7 +912,7 @@ class Writer:
             header=False,
             index=False,
             na_rep=".",
-            sep="\t"
+            sep="\t",
         )
 
     def _create_vcf_representation(self, task):
@@ -949,9 +984,9 @@ class Writer:
 
         temp = df.loc[df["genotype"].notnull()]
 
-        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
-            self._compute_genotype
-        )(temp["REF"], temp["ALT"], temp["genotype"])
+        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(self._compute_genotype)(
+            temp["REF"], temp["ALT"], temp["genotype"]
+        )
 
         df.loc[df["SAMPLE"].isnull(), "SAMPLE"] = "./."
 
@@ -978,8 +1013,6 @@ class Writer:
             alleles.extend(alt.split(","))
 
         if len(genotype) == 2:
-            return "{}/{}".format(
-                alleles.index(genotype[0]), alleles.index(genotype[1])
-            )
+            return "{}/{}".format(alleles.index(genotype[0]), alleles.index(genotype[1]))
         else:
             return "{}".format(alleles.index(genotype[0]))

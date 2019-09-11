@@ -66,14 +66,16 @@ class SNPs:
         output_dir="output",
         resources_dir="resources",
         parallelize=False,
-        processes=os.cpu_count()
+        processes=os.cpu_count(),
     ):
         """ Object used to read and parse genotype / raw data files.
 
         Parameters
         ----------
-        file : str
-            path to file to load
+        file : str or bytes
+            path to file to load or bytes to load
+        only_detect_source : bool
+            only detect the source of the data
         assign_par_snps : bool
             assign PAR SNPs to the X and Y chromosomes
         output_dir : str
@@ -244,25 +246,28 @@ class SNPs:
         else:
             return True
 
-    def save_snps(self, filename="", vcf=False,
-                  sep=",", header=True, atomic=True, buffer=False):
+    def save_snps(self, filename="", vcf=False, atomic=True, **kwargs):
         """ Save SNPs to file.
 
         Parameters
         ----------
-        filename : str
-            filename for file to save
+        filename : str or buffer
+            filename for file to save or buffer to write to
         vcf : bool
             flag to save file as VCF
+        atomic : bool
+            atomically write output to a file on local filesystem
+        **kwargs
+            additional parameters to `pandas.DataFrame.to_csv`
 
         Returns
         -------
         str
             path to file in output directory if SNPs were saved, else empty str
         """
-        return Writer.write_file(snps=self, filename=filename,
-                                 vcf=vcf, sep=sep, header=header,
-                                 atomic=atomic, buffer=buffer)
+        return Writer.write_file(
+            snps=self, filename=filename, vcf=vcf, atomic=atomic, **kwargs
+        )
 
     def _read_raw_data(self, file, only_detect_source):
         return Reader.read_file(file, only_detect_source)

@@ -189,6 +189,10 @@ class TestIndividual(BaseSNPsTestCase):
         s = SNPs("tests/input/NCBI36.csv")
         assert s.source == "generic"
 
+    def test_source_codigo46(self):
+        s = SNPs("tests/input/codigo46.txt")
+        assert s.source == "Codigo46"
+
     def test_snps_no_snps(self):
         s = SNPs()
         assert s.snps.empty
@@ -601,7 +605,10 @@ class TestIndividual(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(s.snps, self.snps_GRCh38())
 
     def test_remap_snps_37_to_38_with_PAR_SNP(self):
-        if os.getenv("DOWNLOADS_ENABLED"):
+        if (
+            not os.getenv("DOWNLOADS_ENABLED")
+            or os.getenv("DOWNLOADS_ENABLED") == "true"
+        ):
             s = SNPs("tests/input/GRCh37_PAR.csv")
             assert s.snp_count == 3
             chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)

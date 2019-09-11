@@ -6,10 +6,12 @@ verify_ssl = true
 [dev-packages]
 pytest = "*"
 pytest-cov = "*"
+pytest-watch = "*"
 
 [packages]
 snps = {editable = true,path = "."}
 pytest-watch = "*"
+requests = "*"
 
 [requires]
 python_version = "3.7"

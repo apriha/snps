@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import datetime
+import io
 from multiprocessing import Pool
 import os
 import re
@@ -114,8 +115,9 @@ def create_dir(path):
         return False
 
 
-def save_df_as_csv(df, path, filename,
-                   comment="", prepend_info=True, atomic=True, buffer=False, **kwargs):
+def save_df_as_csv(
+    df, path, filename, comment="", prepend_info=True, atomic=True, **kwargs
+):
     """ Save dataframe to a CSV file.
 
     Parameters
@@ -124,20 +126,26 @@ def save_df_as_csv(df, path, filename,
         dataframe to save
     path : str
         path to directory where to save CSV file
-    filename : str
-        filename of CSV file
+    filename : str or buffer
+        filename for file to save or buffer to write to
     comment : str
         header comment(s); one or more lines starting with '#'
     prepend_info : bool
         prepend file generation information as comments
+    atomic : bool
+        atomically write output to a file on local filesystem
     **kwargs
         additional parameters to `pandas.DataFrame.to_csv`
 
     Returns
     -------
-    str
-        path to saved file, else empty str
+    str or buffer
+        path to saved file or buffer (empty str if error)
     """
+    buffer = False
+    if isinstance(filename, io.IOBase):
+        buffer = True
+
     if isinstance(df, pd.DataFrame) and len(df) > 0:
         try:
 
@@ -149,7 +157,6 @@ def save_df_as_csv(df, path, filename,
             else:
                 destination = os.path.join(path, filename)
                 print("Saving " + os.path.relpath(destination))
-
 
             if prepend_info:
                 s = (

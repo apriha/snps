@@ -1,13 +1,4 @@
-::
-
- GATCACAGGTCTATCAC     CCTATTAACCACTCAC     GGGAGCTCTCCATGCAT     TTGGTATTTTCGTCTGG
- GGGGTATGCACGCGATA     GCATTGCGAGACGCTG     GAGCCGGAGCACCCTAT     GTCGCAGTATCTGTCTT
- TGA                   TTC          CTG     CCT           CAT     CCT
- ATTATTTATCGCACCTA     CGT          TCA     ATATTACAGGCGAACAT     ACTTACTAAAGTGTGTT
- AATTAATTAATGCTTGT     AGG          ACA     TAATAATAACAATTGAA     TGTCTGCACAGCCACTT
-               TCC     ACA          CAG     ACA                                 TCA
- TAACAAAAAATTTCCAC     CAA          ACC     CCC                   CCTCCCCCGCTTCTGGC
- CACAGCACTTAAACACA     TCT          CTG     CCA                   AACCCCAAAAACAAAGA
+.. image:: https://raw.githubusercontent.com/apriha/snps/master/docs/images/snps_banner.png
 
 |build| |codecov| |docs| |pypi| |python| |downloads|
 
@@ -181,9 +172,8 @@ Documentation is available `here <https://snps.readthedocs.io/>`_.
 
 Acknowledgements
 ----------------
-Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org>`_, and
-`Open Humans <https://www.openhumans.org>`_. Logo composed of nucleotides from
-`GRCh38 mitochondrial DNA <https://www.ncbi.nlm.nih.gov/nuccore/NC_012920.1>`_.
+Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org>`_,
+`Open Humans <https://www.openhumans.org>`_, and `Sano Genetics <https://sanogenetics.com>`_.
 
 .. https://github.com/rtfd/readthedocs.org/blob/master/docs/badges.rst
 .. |build| image:: https://travis-ci.org/apriha/snps.svg?branch=master

@@ -51,7 +51,7 @@ from snps.utils import save_df_as_csv, clean_str
 class Reader:
     """ Class for reading and parsing raw data / genotype files. """
 
-    def __init__(self, file="", only_detect_source=False):
+    def __init__(self, file="", only_detect_source=False, resources=None):
         """ Initialize a `Reader`.
 
         Parameters
@@ -60,9 +60,12 @@ class Reader:
             path to file to load or bytes to load
         only_detect_source : bool
             only detect the source of the data
+        resources : Resources
+            instance of Resources
         """
         self._file = file
         self._only_detect_source = only_detect_source
+        self._resources=resources
 
     def __call__(self):
         """ Read and parse a raw data / genotype file.
@@ -155,7 +158,7 @@ class Reader:
             return pd.DataFrame(), ""
 
     @classmethod
-    def read_file(cls, file, only_detect_source):
+    def read_file(cls, file, only_detect_source, resources):
         """ Read `file`.
 
         Parameters
@@ -164,13 +167,15 @@ class Reader:
             path to file to load or bytes to load
         only_detect_source : bool
             only detect the source of the data
+        resources : Resources
+            instance of Resources
 
         Returns
         -------
         tuple : (pandas.DataFrame, str)
             dataframe of parsed SNPs, detected source of SNPs
         """
-        r = cls(file, only_detect_source)
+        r = cls(file, only_detect_source, resources)
         return r()
 
     def _extract_comments(self, f, decode):

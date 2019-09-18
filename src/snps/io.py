@@ -37,7 +37,6 @@ import io
 import gzip
 import zipfile
 import binascii
-import requests
 from copy import deepcopy
 
 import numpy as np
@@ -65,7 +64,7 @@ class Reader:
         """
         self._file = file
         self._only_detect_source = only_detect_source
-        self._resources=resources
+        self._resources = resources
 
     def __call__(self):
         """ Read and parse a raw data / genotype file.
@@ -487,6 +486,8 @@ class Reader:
     def read_codigo46(self, data):
         """ Read and parse Codigo46 files.
 
+        https://codigo46.com.mx
+
         Parameters
         ----------
         data : str
@@ -504,39 +505,19 @@ class Reader:
         if self._only_detect_source:
             return pd.DataFrame(), "Codigo46"
 
-        res = requests.get(
-            "https://sano-public.s3.eu-west-2.amazonaws.com/codigo_rsid_map.txt.gz"
-        )
-        codigo_rsid_map_gz = res.content
-        with gzip.open(io.BytesIO(codigo_rsid_map_gz), "rb") as f:
-            codigo_rsid_map = f.read().decode("utf-8")
-        codigo_rsid_map = dict(
-            (x.split("\t")[0], x.split("\t")[1])
-            for x in codigo_rsid_map.split("\n")[:-1]
-        )
-
-        res = requests.get(
-            "https://sano-public.s3.eu-west-2.amazonaws.com/codigo_chrpos_map.txt.gz"
-        )
-        codigo_chrpos_map_gz = res.content
-        with gzip.open(io.BytesIO(codigo_chrpos_map_gz), "rb") as f:
-            codigo_chrpos_map = f.read().decode("utf-8")
-        codigo_chrpos_map = dict(
-            (x.split("\t")[0], x.split("\t")[1] + ":" + x.split("\t")[2])
-            for x in codigo_chrpos_map.split("\n")[:-1]
-        )
+        codigo46_resources = self._resources.get_codigo46_resources()
 
         df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
 
         def map_codigo_rsids(x):
-            return codigo_rsid_map.get(x)
+            return codigo46_resources["rsid_map"].get(x)
 
         def map_codigo_chr(x):
-            chrpos = codigo_chrpos_map.get(x)
+            chrpos = codigo46_resources["chrpos_map"].get(x)
             return chrpos.split(":")[0] if chrpos else None
 
         def map_codigo_pos(x):
-            chrpos = codigo_chrpos_map.get(x)
+            chrpos = codigo46_resources["chrpos_map"].get(x)
             return chrpos.split(":")[1] if chrpos else None
 
         df["rsid"] = df["SNP Name"].apply(map_codigo_rsids)

@@ -77,6 +77,7 @@ class Resources(metaclass=Singleton):
         self._resources_dir = os.path.abspath(resources_dir)
         self._ensembl_rest_client = EnsemblRestClient()
         self._reference_sequences = {}
+        self._codigo46_resources = {}
 
     def get_reference_sequences(
         self,
@@ -233,6 +234,21 @@ class Resources(metaclass=Singleton):
         for assembly in ("NCBI36", "GRCh37", "GRCh38"):
             self.get_reference_sequences(assembly=assembly, **kwargs)
         return self._reference_sequences
+
+    def get_codigo46_resources(self):
+        """ Get resources for reading Codigo46 files.
+
+        https://codigo46.com.mx
+
+        Returns
+        -------
+        dict
+        """
+        if not self._codigo46_resources:
+            self._codigo46_resources = self._load_codigo46_resources(
+                self._get_path_codigo46_rsid_map(), self._get_path_codigo46_chrpos_map()
+            )
+        return self._codigo46_resources
 
     @staticmethod
     def _write_data_to_gzip(f, data):
@@ -514,6 +530,43 @@ class Resources(metaclass=Singleton):
             return False
 
         return True
+
+    def _load_codigo46_resources(self, rsid_map, chrpos_map):
+        try:
+            d = {}
+
+            with gzip.open(rsid_map, "rb") as f:
+                codigo_rsid_map = f.read().decode("utf-8")
+
+            d["rsid_map"] = dict(
+                (x.split("\t")[0], x.split("\t")[1])
+                for x in codigo_rsid_map.split("\n")[:-1]
+            )
+
+            with gzip.open(chrpos_map, "rb") as f:
+                codigo_chrpos_map = f.read().decode("utf-8")
+
+            d["chrpos_map"] = dict(
+                (x.split("\t")[0], x.split("\t")[1] + ":" + x.split("\t")[2])
+                for x in codigo_chrpos_map.split("\n")[:-1]
+            )
+
+            return d
+        except Exception as err:
+            print(err)
+            return {}
+
+    def _get_path_codigo46_rsid_map(self):
+        return self._download_file(
+            "https://sano-public.s3.eu-west-2.amazonaws.com/codigo_rsid_map.txt.gz",
+            "codigo46_rsid_map.txt.gz",
+        )
+
+    def _get_path_codigo46_chrpos_map(self):
+        return self._download_file(
+            "https://sano-public.s3.eu-west-2.amazonaws.com/codigo_chrpos_map.txt.gz",
+            "codigo46_chrpos_map.txt.gz",
+        )
 
     def _download_file(self, url, filename, compress=False, timeout=30):
         """ Download a file to the resources folder.

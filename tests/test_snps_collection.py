@@ -154,7 +154,7 @@ class TestIndividual(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
     def test_snps_livingdna(self):
-        # https://www.myheritage.com
+        # https://livingdna.com
         s = SNPs("tests/input/livingdna.csv")
         assert s.source == "LivingDNA"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
@@ -196,6 +196,7 @@ class TestIndividual(BaseSNPsTestCase):
         assert s.source == "generic"
 
     def test_source_codigo46(self):
+        # https://codigo46.com.mx
         s = SNPs("tests/input/codigo46.txt")
         assert s.source == "Codigo46"
 

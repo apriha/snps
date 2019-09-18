@@ -506,7 +506,8 @@ class Reader:
         with gzip.open(io.BytesIO(codigo_rsid_map_gz), "rb") as f:
             codigo_rsid_map = f.read().decode("utf-8")
         codigo_rsid_map = dict(
-            (x.split("\t")[0], x.split("\t")[1]) for x in codigo_rsid_map.split("\n")[:-1]
+            (x.split("\t")[0], x.split("\t")[1])
+            for x in codigo_rsid_map.split("\n")[:-1]
         )
 
         res = requests.get(
@@ -691,7 +692,9 @@ class Reader:
                     "genotype": genotype,
                 }
                 # append the record to the DataFrame
-                df = df.append(pd.DataFrame([record_info]), ignore_index=True, sort=False)
+                df = df.append(
+                    pd.DataFrame([record_info]), ignore_index=True, sort=False
+                )
 
         df.set_index("rsid", inplace=True, drop=True)
 
@@ -984,9 +987,9 @@ class Writer:
 
         temp = df.loc[df["genotype"].notnull()]
 
-        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(self._compute_genotype)(
-            temp["REF"], temp["ALT"], temp["genotype"]
-        )
+        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
+            self._compute_genotype
+        )(temp["REF"], temp["ALT"], temp["genotype"])
 
         df.loc[df["SAMPLE"].isnull(), "SAMPLE"] = "./."
 
@@ -1013,6 +1016,8 @@ class Writer:
             alleles.extend(alt.split(","))
 
         if len(genotype) == 2:
-            return "{}/{}".format(alleles.index(genotype[0]), alleles.index(genotype[1]))
+            return "{}/{}".format(
+                alleles.index(genotype[0]), alleles.index(genotype[1])
+            )
         else:
             return "{}".format(alleles.index(genotype[0]))

@@ -188,7 +188,6 @@ def save_df_as_csv(
                     f.write(s)
                     df.to_csv(f, **kwargs)
 
-
             return destination
         except Exception as err:
             print(err)

@@ -217,6 +217,7 @@ class Resources(metaclass=Singleton):
             resources[source + "_" + target] = self.get_assembly_mapping_data(
                 source, target
             )
+        resources["codigo46_resources"] = self.get_codigo46_resources()
         return resources
 
     def get_all_reference_sequences(self, **kwargs):

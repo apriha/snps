@@ -153,6 +153,29 @@ class TestIndividual(BaseSNPsTestCase):
         assert s.source == "MyHeritage"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
+    def test_snps_codigo46(self):
+        # https://codigo46.com.mx
+
+        with open("tests/resources/codigo46_rsid_map.txt", "rb") as f_in:
+            with atomic_write(
+                "tests/resources/codigo46_rsid_map.txt.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        with open("tests/resources/codigo46_chrpos_map.txt", "rb") as f_in:
+            with atomic_write(
+                "tests/resources/codigo46_chrpos_map.txt.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        s = SNPs("tests/input/codigo46.txt", resources_dir="tests/resources/")
+        assert s.source == "Codigo46"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        os.remove("tests/resources/codigo46_rsid_map.txt.gz")
+        os.remove("tests/resources/codigo46_chrpos_map.txt.gz")
+
     def test_snps_livingdna(self):
         # https://livingdna.com
         s = SNPs("tests/input/livingdna.csv")
@@ -194,11 +217,6 @@ class TestIndividual(BaseSNPsTestCase):
     def test_source_generic(self):
         s = SNPs("tests/input/NCBI36.csv")
         assert s.source == "generic"
-
-    def test_source_codigo46(self):
-        # https://codigo46.com.mx
-        s = SNPs("tests/input/codigo46.txt")
-        assert s.source == "Codigo46"
 
     def test_snps_no_snps(self):
         s = SNPs()

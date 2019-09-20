@@ -106,11 +106,13 @@ ENV/
 
 # snps
 output/
-resources/
+resources/*
 
 # snps tests
 tests/output/
-tests/resources/
+tests/resources/*
+!tests/resources/codigo46_chrpos_map.txt
+!tests/resources/codigo46_rsid_map.txt
 tests/input/23andme.txt.zip
 tests/input/discrepant_snps[12].csv
 tests/input/empty.txt

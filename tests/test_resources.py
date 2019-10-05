@@ -68,6 +68,11 @@ class TestResources(BaseSNPsTestCase):
         )
         assert len(assembly_mapping_data) == 25
 
+    def test_get_codigo46_resources(self):
+        codigo46_resources = self.resource.get_codigo46_resources()
+        assert len(codigo46_resources["rsid_map"]) == 618541
+        assert len(codigo46_resources["chrpos_map"]) == 665609
+
     def test_get_all_resources(self):
         resources = self.resource.get_all_resources()
         for k, v in resources.items():

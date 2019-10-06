@@ -50,7 +50,7 @@ from snps.utils import save_df_as_csv, clean_str
 class Reader:
     """ Class for reading and parsing raw data / genotype files. """
 
-    def __init__(self, file="", only_detect_source=False):
+    def __init__(self, file="", only_detect_source=False, resources=None):
         """ Initialize a `Reader`.
 
         Parameters
@@ -59,9 +59,12 @@ class Reader:
             path to file to load or bytes to load
         only_detect_source : bool
             only detect the source of the data
+        resources : Resources
+            instance of Resources
         """
         self._file = file
         self._only_detect_source = only_detect_source
+        self._resources = resources
 
     def __call__(self):
         """ Read and parse a raw data / genotype file.
@@ -79,13 +82,13 @@ class Reader:
                 if ".zip" in file:
                     with zipfile.ZipFile(file) as z:
                         with z.open(z.namelist()[0], "r") as f:
-                            first_line, comments = self._extract_comments(f, True)
+                            first_line, comments, data = self._extract_comments(f, True)
                 elif ".gz" in file:
                     with gzip.open(file, "rt") as f:
-                        first_line, comments = self._extract_comments(f, False)
+                        first_line, comments, data = self._extract_comments(f, False)
                 else:
                     with open(file, "r") as f:
-                        first_line, comments = self._extract_comments(f, False)
+                        first_line, comments, data = self._extract_comments(f, False)
 
             elif isinstance(file, bytes):
                 if self.is_zip(file):
@@ -103,7 +106,7 @@ class Reader:
                         with z.open(filename, "r") as f:
                             data = f.read()
                             file = io.BytesIO(data)
-                            first_line, comments = self._extract_comments(
+                            first_line, comments, data = self._extract_comments(
                                 io.BytesIO(data), True
                             )
 
@@ -112,13 +115,15 @@ class Reader:
                     with gzip.open(io.BytesIO(file), "rb") as f:
                         data = f.read()
                         file = io.BytesIO(data)
-                        first_line, comments = self._extract_comments(
+                        first_line, comments, data = self._extract_comments(
                             io.BytesIO(data), True
                         )
 
                 else:
                     file = io.BytesIO(file)
-                    first_line, comments = self._extract_comments(deepcopy(file), True)
+                    first_line, comments, data = self._extract_comments(
+                        deepcopy(file), True
+                    )
 
             else:
                 return pd.DataFrame(), ""
@@ -133,6 +138,8 @@ class Reader:
                 return self.read_ftdna_famfinder(file)
             elif "MyHeritage" in first_line:
                 return self.read_myheritage(file)
+            elif "Living DNA" in first_line:
+                return self.read_livingdna(file)
             elif "lineage" in first_line or "snps" in first_line:
                 return self.read_lineage_csv(file, comments)
             elif first_line.startswith("rsid"):
@@ -141,6 +148,8 @@ class Reader:
                 return self.read_vcf(file)
             elif ("Genes for Good" in comments) | ("PLINK" in comments):
                 return self.read_genes_for_good(file)
+            elif "CODIGO46" in comments:
+                return self.read_codigo46(data)
             else:
                 return pd.DataFrame(), ""
         except Exception as err:
@@ -148,7 +157,7 @@ class Reader:
             return pd.DataFrame(), ""
 
     @classmethod
-    def read_file(cls, file, only_detect_source):
+    def read_file(cls, file, only_detect_source, resources):
         """ Read `file`.
 
         Parameters
@@ -157,25 +166,42 @@ class Reader:
             path to file to load or bytes to load
         only_detect_source : bool
             only detect the source of the data
+        resources : Resources
+            instance of Resources
 
         Returns
         -------
         tuple : (pandas.DataFrame, str)
             dataframe of parsed SNPs, detected source of SNPs
         """
-        r = cls(file, only_detect_source)
+        r = cls(file, only_detect_source, resources)
         return r()
 
     def _extract_comments(self, f, decode):
         line = self._read_line(f, decode)
         first_line = line
         comments = ""
+        data = ""
 
-        while line.startswith("#"):
-            comments += line
+        if first_line.startswith("#"):
+            while line.startswith("#"):
+                comments += line
+                line = self._read_line(f, decode)
+            while line:
+                data += line
+                line = self._read_line(f, decode)
+
+        elif first_line.startswith("[Header]"):
+            while not line.startswith("[Data]"):
+                comments += line
+                line = self._read_line(f, decode)
+            # Ignore the [Data] row
             line = self._read_line(f, decode)
+            while line:
+                data += line
+                line = self._read_line(f, decode)
 
-        return first_line, comments
+        return first_line, comments, data
 
     @staticmethod
     def is_zip(bytes_data):
@@ -390,6 +416,39 @@ class Reader:
 
         return df, "MyHeritage"
 
+    def read_livingdna(self, file):
+        """ Read and parse LivingDNA file.
+
+        https://livingdna.com/
+
+        Parameters
+        ----------
+        file : str
+            path to file
+
+        Returns
+        -------
+        pandas.DataFrame
+            genetic data normalized for use with `snps`
+        str
+            name of data source
+        """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "LivingDNA"
+
+        df = pd.read_csv(
+            file,
+            comment="#",
+            sep="\t",
+            na_values="--",
+            names=["rsid", "chrom", "pos", "genotype"],
+            index_col=0,
+            dtype={"chrom": object},
+        )
+
+        return df, "LivingDNA"
+
     def read_genes_for_good(self, file):
         """ Read and parse Genes For Good file.
 
@@ -423,6 +482,54 @@ class Reader:
         )
 
         return df, "GenesForGood"
+
+    def read_codigo46(self, data):
+        """ Read and parse Codigo46 files.
+
+        https://codigo46.com.mx
+
+        Parameters
+        ----------
+        data : str
+            data string
+
+        Returns
+        -------
+        pandas.DataFrame
+            genetic data normalized for use with `snps`
+        str
+            name of data source
+
+        """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "Codigo46"
+
+        codigo46_resources = self._resources.get_codigo46_resources()
+
+        df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
+
+        def map_codigo_rsids(x):
+            return codigo46_resources["rsid_map"].get(x)
+
+        def map_codigo_chr(x):
+            chrpos = codigo46_resources["chrpos_map"].get(x)
+            return chrpos.split(":")[0] if chrpos else None
+
+        def map_codigo_pos(x):
+            chrpos = codigo46_resources["chrpos_map"].get(x)
+            return chrpos.split(":")[1] if chrpos else None
+
+        df["rsid"] = df["SNP Name"].apply(map_codigo_rsids)
+        df["chrom"] = df["SNP Name"].apply(map_codigo_chr)
+        df["pos"] = df["SNP Name"].apply(map_codigo_pos)
+        df["genotype"] = df["Allele1 - Plus"] + df["Allele2 - Plus"]
+
+        df = df.astype({"chrom": object, "pos": np.int64})
+        df = df[["rsid", "chrom", "pos", "genotype"]]
+        df.set_index(["rsid"], inplace=True)
+
+        return df, "Codigo46"
 
     def read_lineage_csv(self, file, comments):
         """ Read and parse CSV file generated by lineage / snps.

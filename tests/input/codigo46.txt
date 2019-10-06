@@ -1,0 +1,12 @@
+[Header]
+Content		CODIGO46.bpm
+[Data]
+SNP Name	Sample ID	Allele1 - Plus	Allele2 - Plus
+1:101	123	A	A
+1:102	123	C	C
+1:103	123	G	G
+1:104	123	T	T
+1:105	123	--	--
+1:106	123	G	C
+1:107	123	T	C
+1:108	123	A	T

@@ -391,9 +391,7 @@ class SNPs:
 
         for rsid in rsids:
             if rsid in self._snps.index:
-                build = lookup_build_with_snp_pos(
-                    self._snps.loc[rsid].pos, df.loc[rsid]
-                )
+                build = lookup_build_with_snp_pos(self._snps.loc[rsid].pos, df.loc[rsid])
 
             if build:
                 break
@@ -502,8 +500,7 @@ class SNPs:
             if y_snps > 0:
                 y_snps_not_null = len(
                     self._snps.loc[
-                        (self._snps["chrom"] == "Y")
-                        & (self._snps["genotype"].notnull())
+                        (self._snps["chrom"] == "Y") & (self._snps["genotype"].notnull())
                     ]
                 )
 
@@ -998,9 +995,7 @@ class SNPsCollection(SNPs):
             if not self._name:
                 filename = "{}.csv".format(discrepant_snps_type)
             else:
-                filename = "{}_{}.csv".format(
-                    clean_str(self._name), discrepant_snps_type
-                )
+                filename = "{}_{}.csv".format(clean_str(self._name), discrepant_snps_type)
 
         return save_df_as_csv(
             df,

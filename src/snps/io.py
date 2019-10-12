@@ -140,6 +140,8 @@ class Reader:
                 return self.read_myheritage(file)
             elif "Living DNA" in first_line:
                 return self.read_livingdna(file)
+            elif "SNP Name	rsID	Sample.ID	Allele1...Top" in first_line:
+                return self.read_mapmygenome(file)
             elif "lineage" in first_line or "snps" in first_line:
                 return self.read_lineage_csv(file, comments)
             elif first_line.startswith("rsid"):
@@ -449,6 +451,44 @@ class Reader:
 
         return df, "LivingDNA"
 
+    def read_mapmygenome(self, file):
+        """ Read and parse LivingDNA file.
+
+        https://livingdna.com/
+
+        Parameters
+        ----------
+        file : str
+            path to file
+
+        Returns
+        -------
+        pandas.DataFrame
+            genetic data normalized for use with `snps`
+        str
+            name of data source
+        """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "MapMyGenome"
+
+        df = pd.read_csv(
+            file,
+            comment="#",
+            sep="\t",
+            na_values="--",
+            header=0,
+            index_col=1,
+            dtype={"Chr": object},
+        )
+
+        df["genotype"] = df["Allele1...Top"] + df["Allele2...Top"]
+        df.rename(columns={"Chr": "chrom", "Position": "pos"}, inplace=True)
+        df.index.name = "rsid"
+        df = df[["chrom", "pos", "genotype"]]
+
+        return df, "MapMyGenome"
+
     def read_genes_for_good(self, file):
         """ Read and parse Genes For Good file.
 
@@ -676,9 +716,7 @@ class Reader:
                     "genotype": genotype,
                 }
                 # append the record to the DataFrame
-                df = df.append(
-                    pd.DataFrame([record_info]), ignore_index=True, sort=False
-                )
+                df = df.append(pd.DataFrame([record_info]), ignore_index=True, sort=False)
 
         df.set_index("rsid", inplace=True, drop=True)
 
@@ -971,9 +1009,9 @@ class Writer:
 
         temp = df.loc[df["genotype"].notnull()]
 
-        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
-            self._compute_genotype
-        )(temp["REF"], temp["ALT"], temp["genotype"])
+        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(self._compute_genotype)(
+            temp["REF"], temp["ALT"], temp["genotype"]
+        )
 
         df.loc[df["SAMPLE"].isnull(), "SAMPLE"] = "./."
 
@@ -1000,8 +1038,6 @@ class Writer:
             alleles.extend(alt.split(","))
 
         if len(genotype) == 2:
-            return "{}/{}".format(
-                alleles.index(genotype[0]), alleles.index(genotype[1])
-            )
+            return "{}/{}".format(alleles.index(genotype[0]), alleles.index(genotype[1]))
         else:
             return "{}".format(alleles.index(genotype[0]))

@@ -452,9 +452,9 @@ class Reader:
         return df, "LivingDNA"
 
     def read_mapmygenome(self, file):
-        """ Read and parse LivingDNA file.
+        """ Read and parse MapMyGenome file.
 
-        https://livingdna.com/
+        https://mapmygenome.in
 
         Parameters
         ----------

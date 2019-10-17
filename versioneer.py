@@ -277,6 +277,7 @@ https://creativecommons.org/publicdomain/zero/1.0/ .
 
 from __future__ import print_function
 
+
 try:
     import configparser
 except ImportError:
@@ -287,6 +288,9 @@ import os
 import re
 import subprocess
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class VersioneerConfig:
@@ -327,7 +331,7 @@ def get_root():
         me_dir = os.path.normcase(os.path.splitext(me)[0])
         vsr_dir = os.path.normcase(os.path.splitext(versioneer_py)[0])
         if me_dir != vsr_dir:
-            print(
+            logger.debug(
                 "Warning: build in %s is using versioneer.py from %s"
                 % (os.path.dirname(me), versioneer_py)
             )
@@ -409,20 +413,20 @@ def run_command(commands, args, cwd=None, verbose=False, hide_stderr=False, env=
             if e.errno == errno.ENOENT:
                 continue
             if verbose:
-                print("unable to run %s" % dispcmd)
-                print(e)
+                logger.debug("unable to run %s" % dispcmd)
+                logger.debug(e)
             return None, None
     else:
         if verbose:
-            print("unable to find command, tried %s" % (commands,))
+            logger.debug("unable to find command, tried %s" % (commands,))
         return None, None
     stdout = p.communicate()[0].strip()
     if sys.version_info[0] >= 3:
         stdout = stdout.decode()
     if p.returncode != 0:
         if verbose:
-            print("unable to run %s (error)" % dispcmd)
-            print("stdout was %s" % stdout)
+            logger.debug("unable to run %s (error)" % dispcmd)
+            logger.debug("stdout was %s" % stdout)
         return None, p.returncode
     return stdout, p.returncode
 
@@ -517,20 +521,20 @@ def run_command(commands, args, cwd=None, verbose=False, hide_stderr=False,
             if e.errno == errno.ENOENT:
                 continue
             if verbose:
-                print("unable to run %%s" %% dispcmd)
-                print(e)
+                logger.debug("unable to run %%s" %% dispcmd)
+                logger.debug(e)
             return None, None
     else:
         if verbose:
-            print("unable to find command, tried %%s" %% (commands,))
+            logger.debug("unable to find command, tried %%s" %% (commands,))
         return None, None
     stdout = p.communicate()[0].strip()
     if sys.version_info[0] >= 3:
         stdout = stdout.decode()
     if p.returncode != 0:
         if verbose:
-            print("unable to run %%s (error)" %% dispcmd)
-            print("stdout was %%s" %% stdout)
+            logger.debug("unable to run %%s (error)" %% dispcmd)
+            logger.debug("stdout was %%s" %% stdout)
         return None, p.returncode
     return stdout, p.returncode
 
@@ -555,7 +559,7 @@ def versions_from_parentdir(parentdir_prefix, root, verbose):
             root = os.path.dirname(root)  # up a level
 
     if verbose:
-        print("Tried directories %%s but none started with prefix %%s" %%
+        logger.debug("Tried directories %%s but none started with prefix %%s" %%
               (str(rootdirs), parentdir_prefix))
     raise NotThisMethod("rootdir doesn't start with parentdir_prefix")
 
@@ -606,7 +610,7 @@ def git_versions_from_keywords(keywords, tag_prefix, verbose):
     refnames = keywords["refnames"].strip()
     if refnames.startswith("$Format"):
         if verbose:
-            print("keywords are unexpanded, not using")
+            logger.debug("keywords are unexpanded, not using")
         raise NotThisMethod("unexpanded keywords, not a git-archive tarball")
     refs = set([r.strip() for r in refnames.strip("()").split(",")])
     # starting in git-1.8.3, tags are listed as "tag: foo-1.0" instead of
@@ -623,22 +627,22 @@ def git_versions_from_keywords(keywords, tag_prefix, verbose):
         # "stabilization", as well as "HEAD" and "master".
         tags = set([r for r in refs if re.search(r'\d', r)])
         if verbose:
-            print("discarding '%%s', no digits" %% ",".join(refs - tags))
+            logger.debug("discarding '%%s', no digits" %% ",".join(refs - tags))
     if verbose:
-        print("likely tags: %%s" %% ",".join(sorted(tags)))
+        logger.debug("likely tags: %%s" %% ",".join(sorted(tags)))
     for ref in sorted(tags):
         # sorting will prefer e.g. "2.0" over "2.0rc1"
         if ref.startswith(tag_prefix):
             r = ref[len(tag_prefix):]
             if verbose:
-                print("picking %%s" %% r)
+                logger.debug("picking %%s" %% r)
             return {"version": r,
                     "full-revisionid": keywords["full"].strip(),
                     "dirty": False, "error": None,
                     "date": date}
     # no suitable tags, so version is "0+unknown", but full hex is still there
     if verbose:
-        print("no suitable tags, using unknown + full revision id")
+        logger.debug("no suitable tags, using unknown + full revision id")
     return {"version": "0+unknown",
             "full-revisionid": keywords["full"].strip(),
             "dirty": False, "error": "no suitable tags", "date": None}
@@ -660,7 +664,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
                           hide_stderr=True)
     if rc != 0:
         if verbose:
-            print("Directory %%s not under git control" %% root)
+            logger.debug("Directory %%s not under git control" %% root)
         raise NotThisMethod("'git rev-parse --git-dir' returned error")
 
     # if there is a tag matching tag_prefix, this yields TAG-NUM-gHEX[-dirty]
@@ -709,7 +713,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
         if not full_tag.startswith(tag_prefix):
             if verbose:
                 fmt = "tag '%%s' doesn't start with prefix '%%s'"
-                print(fmt %% (full_tag, tag_prefix))
+                logger.debug(fmt %% (full_tag, tag_prefix))
             pieces["error"] = ("tag '%%s' doesn't start with prefix '%%s'"
                                %% (full_tag, tag_prefix))
             return pieces
@@ -998,7 +1002,7 @@ def git_versions_from_keywords(keywords, tag_prefix, verbose):
     refnames = keywords["refnames"].strip()
     if refnames.startswith("$Format"):
         if verbose:
-            print("keywords are unexpanded, not using")
+            logger.debug("keywords are unexpanded, not using")
         raise NotThisMethod("unexpanded keywords, not a git-archive tarball")
     refs = set([r.strip() for r in refnames.strip("()").split(",")])
     # starting in git-1.8.3, tags are listed as "tag: foo-1.0" instead of
@@ -1015,15 +1019,15 @@ def git_versions_from_keywords(keywords, tag_prefix, verbose):
         # "stabilization", as well as "HEAD" and "master".
         tags = set([r for r in refs if re.search(r"\d", r)])
         if verbose:
-            print("discarding '%s', no digits" % ",".join(refs - tags))
+            logger.debug("discarding '%s', no digits" % ",".join(refs - tags))
     if verbose:
-        print("likely tags: %s" % ",".join(sorted(tags)))
+        logger.debug("likely tags: %s" % ",".join(sorted(tags)))
     for ref in sorted(tags):
         # sorting will prefer e.g. "2.0" over "2.0rc1"
         if ref.startswith(tag_prefix):
             r = ref[len(tag_prefix) :]
             if verbose:
-                print("picking %s" % r)
+                logger.debug("picking %s" % r)
             return {
                 "version": r,
                 "full-revisionid": keywords["full"].strip(),
@@ -1033,7 +1037,7 @@ def git_versions_from_keywords(keywords, tag_prefix, verbose):
             }
     # no suitable tags, so version is "0+unknown", but full hex is still there
     if verbose:
-        print("no suitable tags, using unknown + full revision id")
+        logger.debug("no suitable tags, using unknown + full revision id")
     return {
         "version": "0+unknown",
         "full-revisionid": keywords["full"].strip(),
@@ -1058,7 +1062,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
     out, rc = run_command(GITS, ["rev-parse", "--git-dir"], cwd=root, hide_stderr=True)
     if rc != 0:
         if verbose:
-            print("Directory %s not under git control" % root)
+            logger.debug("Directory %s not under git control" % root)
         raise NotThisMethod("'git rev-parse --git-dir' returned error")
 
     # if there is a tag matching tag_prefix, this yields TAG-NUM-gHEX[-dirty]
@@ -1115,7 +1119,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
         if not full_tag.startswith(tag_prefix):
             if verbose:
                 fmt = "tag '%s' doesn't start with prefix '%s'"
-                print(fmt % (full_tag, tag_prefix))
+                logger.debug(fmt % (full_tag, tag_prefix))
             pieces["error"] = "tag '%s' doesn't start with prefix '%s'" % (
                 full_tag,
                 tag_prefix,
@@ -1136,9 +1140,7 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
         pieces["distance"] = int(count_out)  # total number of commits
 
     # commit date: see ISO-8601 comment in git_versions_from_keywords()
-    date = run_command(GITS, ["show", "-s", "--format=%ci", "HEAD"], cwd=root)[
-        0
-    ].strip()
+    date = run_command(GITS, ["show", "-s", "--format=%ci", "HEAD"], cwd=root)[0].strip()
     pieces["date"] = date.strip().replace(" ", "T", 1).replace(" ", "", 1)
 
     return pieces
@@ -1206,7 +1208,7 @@ def versions_from_parentdir(parentdir_prefix, root, verbose):
             root = os.path.dirname(root)  # up a level
 
     if verbose:
-        print(
+        logger.debug(
             "Tried directories %s but none started with prefix %s"
             % (str(rootdirs), parentdir_prefix)
         )
@@ -1257,7 +1259,7 @@ def write_to_version_file(filename, versions):
     with open(filename, "w") as f:
         f.write(SHORT_VERSION_PY % contents)
 
-    print("set %s to '%s'" % (filename, versions["version"]))
+    logger.debug("set %s to '%s'" % (filename, versions["version"]))
 
 
 def plus_or_dot(pieces):
@@ -1454,9 +1456,7 @@ def get_versions(verbose=False):
     handlers = HANDLERS.get(cfg.VCS)
     assert handlers, "unrecognized VCS '%s'" % cfg.VCS
     verbose = verbose or cfg.verbose
-    assert (
-        cfg.versionfile_source is not None
-    ), "please set versioneer.versionfile_source"
+    assert cfg.versionfile_source is not None, "please set versioneer.versionfile_source"
     assert cfg.tag_prefix is not None, "please set versioneer.tag_prefix"
 
     versionfile_abs = os.path.join(root, cfg.versionfile_source)
@@ -1474,7 +1474,7 @@ def get_versions(verbose=False):
             keywords = get_keywords_f(versionfile_abs)
             ver = from_keywords_f(keywords, cfg.tag_prefix, verbose)
             if verbose:
-                print("got version from expanded keyword %s" % ver)
+                logger.debug("got version from expanded keyword %s" % ver)
             return ver
         except NotThisMethod:
             pass
@@ -1482,7 +1482,7 @@ def get_versions(verbose=False):
     try:
         ver = versions_from_file(versionfile_abs)
         if verbose:
-            print("got version from file %s %s" % (versionfile_abs, ver))
+            logger.debug("got version from file %s %s" % (versionfile_abs, ver))
         return ver
     except NotThisMethod:
         pass
@@ -1493,7 +1493,7 @@ def get_versions(verbose=False):
             pieces = from_vcs_f(cfg.tag_prefix, root, verbose)
             ver = render(pieces, cfg.style)
             if verbose:
-                print("got version from VCS %s" % ver)
+                logger.debug("got version from VCS %s" % ver)
             return ver
         except NotThisMethod:
             pass
@@ -1502,13 +1502,13 @@ def get_versions(verbose=False):
         if cfg.parentdir_prefix:
             ver = versions_from_parentdir(cfg.parentdir_prefix, root, verbose)
             if verbose:
-                print("got version from parentdir %s" % ver)
+                logger.debug("got version from parentdir %s" % ver)
             return ver
     except NotThisMethod:
         pass
 
     if verbose:
-        print("unable to compute version")
+        logger.debug("unable to compute version")
 
     return {
         "version": "0+unknown",
@@ -1559,12 +1559,12 @@ def get_cmdclass():
 
         def run(self):
             vers = get_versions(verbose=True)
-            print("Version: %s" % vers["version"])
-            print(" full-revisionid: %s" % vers.get("full-revisionid"))
-            print(" dirty: %s" % vers.get("dirty"))
-            print(" date: %s" % vers.get("date"))
+            logger.debug("Version: %s" % vers["version"])
+            logger.debug(" full-revisionid: %s" % vers.get("full-revisionid"))
+            logger.debug(" dirty: %s" % vers.get("dirty"))
+            logger.debug(" date: %s" % vers.get("date"))
             if vers["error"]:
-                print(" error: %s" % vers["error"])
+                logger.debug(" error: %s" % vers["error"])
 
     cmds["version"] = cmd_version
 
@@ -1599,7 +1599,7 @@ def get_cmdclass():
             # it with an updated value
             if cfg.versionfile_build:
                 target_versionfile = os.path.join(self.build_lib, cfg.versionfile_build)
-                print("UPDATING %s" % target_versionfile)
+                logger.debug("UPDATING %s" % target_versionfile)
                 write_to_version_file(target_versionfile, versions)
 
     cmds["build_py"] = cmd_build_py
@@ -1620,7 +1620,7 @@ def get_cmdclass():
                 cfg = get_config_from_root(root)
                 versions = get_versions()
                 target_versionfile = cfg.versionfile_source
-                print("UPDATING %s" % target_versionfile)
+                logger.debug("UPDATING %s" % target_versionfile)
                 write_to_version_file(target_versionfile, versions)
 
                 _build_exe.run(self)
@@ -1653,7 +1653,7 @@ def get_cmdclass():
                 cfg = get_config_from_root(root)
                 versions = get_versions()
                 target_versionfile = cfg.versionfile_source
-                print("UPDATING %s" % target_versionfile)
+                logger.debug("UPDATING %s" % target_versionfile)
                 write_to_version_file(target_versionfile, versions)
 
                 _py2exe.run(self)
@@ -1696,10 +1696,8 @@ def get_cmdclass():
             # (remembering that it may be a hardlink) and replace it with an
             # updated value
             target_versionfile = os.path.join(base_dir, cfg.versionfile_source)
-            print("UPDATING %s" % target_versionfile)
-            write_to_version_file(
-                target_versionfile, self._versioneer_generated_versions
-            )
+            logger.debug("UPDATING %s" % target_versionfile)
+            write_to_version_file(target_versionfile, self._versioneer_generated_versions)
 
     cmds["sdist"] = cmd_sdist
 
@@ -1761,13 +1759,13 @@ def do_setup():
         configparser.NoOptionError,
     ) as e:
         if isinstance(e, (EnvironmentError, configparser.NoSectionError)):
-            print("Adding sample versioneer config to setup.cfg", file=sys.stderr)
+            logger.debug("Adding sample versioneer config to setup.cfg", file=sys.stderr)
             with open(os.path.join(root, "setup.cfg"), "a") as f:
                 f.write(SAMPLE_CONFIG)
-        print(CONFIG_ERROR, file=sys.stderr)
+        logger.debug(CONFIG_ERROR, file=sys.stderr)
         return 1
 
-    print(" creating %s" % cfg.versionfile_source)
+    logger.debug(" creating %s" % cfg.versionfile_source)
     with open(cfg.versionfile_source, "w") as f:
         LONG = LONG_VERSION_PY[cfg.VCS]
         f.write(
@@ -1789,13 +1787,13 @@ def do_setup():
         except EnvironmentError:
             old = ""
         if INIT_PY_SNIPPET not in old:
-            print(" appending to %s" % ipy)
+            logger.debug(" appending to %s" % ipy)
             with open(ipy, "a") as f:
                 f.write(INIT_PY_SNIPPET)
         else:
-            print(" %s unmodified" % ipy)
+            logger.debug(" %s unmodified" % ipy)
     else:
-        print(" %s doesn't exist, ok" % ipy)
+        logger.debug(" %s doesn't exist, ok" % ipy)
         ipy = None
 
     # Make sure both the top-level "versioneer.py" and versionfile_source
@@ -1817,20 +1815,19 @@ def do_setup():
     # it might give some false negatives. Appending redundant 'include'
     # lines is safe, though.
     if "versioneer.py" not in simple_includes:
-        print(" appending 'versioneer.py' to MANIFEST.in")
+        logger.debug(" appending 'versioneer.py' to MANIFEST.in")
         with open(manifest_in, "a") as f:
             f.write("include versioneer.py\n")
     else:
-        print(" 'versioneer.py' already in MANIFEST.in")
+        logger.debug(" 'versioneer.py' already in MANIFEST.in")
     if cfg.versionfile_source not in simple_includes:
-        print(
-            " appending versionfile_source ('%s') to MANIFEST.in"
-            % cfg.versionfile_source
+        logger.debug(
+            " appending versionfile_source ('%s') to MANIFEST.in" % cfg.versionfile_source
         )
         with open(manifest_in, "a") as f:
             f.write("include %s\n" % cfg.versionfile_source)
     else:
-        print(" versionfile_source already in MANIFEST.in")
+        logger.debug(" versionfile_source already in MANIFEST.in")
 
     # Make VCS-specific changes. For git, this means creating/changing
     # .gitattributes to mark _version.py for export-subst keyword
@@ -1857,21 +1854,21 @@ def scan_setup_py():
             if "versioneer.versionfile_source" in line:
                 setters = True
     if len(found) != 3:
-        print("")
-        print("Your setup.py appears to be missing some important items")
-        print("(but I might be wrong). Please make sure it has something")
-        print("roughly like the following:")
-        print("")
-        print(" import versioneer")
-        print(" setup( version=versioneer.get_version(),")
-        print("        cmdclass=versioneer.get_cmdclass(),  ...)")
-        print("")
+        logger.debug("")
+        logger.debug("Your setup.py appears to be missing some important items")
+        logger.debug("(but I might be wrong). Please make sure it has something")
+        logger.debug("roughly like the following:")
+        logger.debug("")
+        logger.debug(" import versioneer")
+        logger.debug(" setup( version=versioneer.get_version(),")
+        logger.debug("        cmdclass=versioneer.get_cmdclass(),  ...)")
+        logger.debug("")
         errors += 1
     if setters:
-        print("You should remove lines like 'versioneer.VCS = ' and")
-        print("'versioneer.versionfile_source = ' . This configuration")
-        print("now lives in setup.cfg, and should be removed from setup.py")
-        print("")
+        logger.debug("You should remove lines like 'versioneer.VCS = ' and")
+        logger.debug("'versioneer.versionfile_source = ' . This configuration")
+        logger.debug("now lives in setup.cfg, and should be removed from setup.py")
+        logger.debug("")
         errors += 1
     return errors
 

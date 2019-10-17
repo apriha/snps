@@ -46,6 +46,10 @@ import vcf
 import snps
 from snps.utils import save_df_as_csv, clean_str
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Reader:
     """ Class for reading and parsing raw data / genotype files. """
@@ -155,7 +159,7 @@ class Reader:
             else:
                 return pd.DataFrame(), ""
         except Exception as err:
-            print(err)
+            logger.debug(err)
             return pd.DataFrame(), ""
 
     @classmethod
@@ -452,7 +456,7 @@ class Reader:
         return df, "LivingDNA"
 
     def read_mapmygenome(self, file):
-        """ Read and parse MapMyGenome file.
+        """ Read and parse Mapmygenome file.
 
         https://mapmygenome.in
 
@@ -470,7 +474,7 @@ class Reader:
         """
 
         if self._only_detect_source:
-            return pd.DataFrame(), "MapMyGenome"
+            return pd.DataFrame(), "Mapmygenome"
 
         df = pd.read_csv(
             file,
@@ -487,7 +491,7 @@ class Reader:
         df.index.name = "rsid"
         df = df[["chrom", "pos", "genotype"]]
 
-        return df, "MapMyGenome"
+        return df, "Mapmygenome"
 
     def read_genes_for_good(self, file):
         """ Read and parse Genes For Good file.
@@ -687,7 +691,7 @@ class Reader:
 
             # snps does not yet support multi-sample vcf.
             if len(vcf_reader.samples) > 1:
-                print(
+                logger.debug(
                     "Multiple samples detected in the vcf file, please use a single sample vcf."
                 )
                 return df, "vcf"
@@ -717,7 +721,9 @@ class Reader:
                     "genotype": genotype,
                 }
                 # append the record to the DataFrame
-                df = df.append(pd.DataFrame([record_info]), ignore_index=True, sort=False)
+                df = df.append(
+                    pd.DataFrame([record_info]), ignore_index=True, sort=False
+                )
 
         df.set_index("rsid", inplace=True, drop=True)
 
@@ -1010,9 +1016,9 @@ class Writer:
 
         temp = df.loc[df["genotype"].notnull()]
 
-        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(self._compute_genotype)(
-            temp["REF"], temp["ALT"], temp["genotype"]
-        )
+        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
+            self._compute_genotype
+        )(temp["REF"], temp["ALT"], temp["genotype"])
 
         df.loc[df["SAMPLE"].isnull(), "SAMPLE"] = "./."
 
@@ -1039,6 +1045,8 @@ class Writer:
             alleles.extend(alt.split(","))
 
         if len(genotype) == 2:
-            return "{}/{}".format(alleles.index(genotype[0]), alleles.index(genotype[1]))
+            return "{}/{}".format(
+                alleles.index(genotype[0]), alleles.index(genotype[1])
+            )
         else:
             return "{}".format(alleles.index(genotype[0]))

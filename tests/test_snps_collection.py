@@ -102,7 +102,9 @@ class TestIndividual(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
     def test_snps_23andme_zip(self):
-        with atomic_write("tests/input/23andme.txt.zip", mode="wb", overwrite=True) as f:
+        with atomic_write(
+            "tests/input/23andme.txt.zip", mode="wb", overwrite=True
+        ) as f:
             with zipfile.ZipFile(f, "w") as f_zip:
                 # https://stackoverflow.com/a/16104667
                 f_zip.write("tests/input/23andme.txt", arcname="23andme.txt")
@@ -189,9 +191,9 @@ class TestIndividual(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
     def test_snps_mapmygenome(self):
-        # https://livingdna.com
+        # https://mapmygenome.in
         s = SNPs("tests/input/mapmygenome.txt")
-        assert s.source == "MapMyGenome"
+        assert s.source == "Mapmygenome"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
     def test_snps_vcf(self):
@@ -297,7 +299,9 @@ class TestIndividual(BaseSNPsTestCase):
         assert s.sex == "Male"
 
     def test_sex_not_determined(self):
-        s = self.simulate_snps(chrom="1", pos_start=1, pos_max=249250621, pos_step=10000)
+        s = self.simulate_snps(
+            chrom="1", pos_start=1, pos_max=249250621, pos_step=10000
+        )
         assert s.sex == ""
 
     def test_discrepant_positions(self):
@@ -640,7 +644,10 @@ class TestIndividual(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(s.snps, self.snps_GRCh38())
 
     def test_remap_snps_37_to_38_with_PAR_SNP(self):
-        if not os.getenv("DOWNLOADS_ENABLED") or os.getenv("DOWNLOADS_ENABLED") == "true":
+        if (
+            not os.getenv("DOWNLOADS_ENABLED")
+            or os.getenv("DOWNLOADS_ENABLED") == "true"
+        ):
             s = SNPs("tests/input/GRCh37_PAR.csv")
             assert s.snp_count == 3
             chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)

@@ -62,6 +62,10 @@ import numpy as np
 from snps.ensembl import EnsemblRestClient
 from snps.utils import create_dir, Singleton
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Resources(metaclass=Singleton):
     """ Object used to manage resources required by `snps`. """
@@ -131,7 +135,7 @@ class Resources(metaclass=Singleton):
         valid_assemblies = ["NCBI36", "GRCh37", "GRCh38"]
 
         if assembly not in valid_assemblies:
-            print("Invalid assembly")
+            logger.debug("Invalid assembly")
             return {}
 
         if not self._reference_chroms_available(assembly, chroms):
@@ -297,7 +301,7 @@ class Resources(metaclass=Singleton):
 
             return assembly_mapping_data
         except Exception as err:
-            print(err)
+            logger.debug(err)
             return {}
 
     def _get_paths_reference_sequences(
@@ -465,21 +469,19 @@ class Resources(metaclass=Singleton):
         ]
 
         assembly_mapping_data = source_assembly + "_" + target_assembly
-        destination = os.path.join(
-            self._resources_dir, assembly_mapping_data + ".tar.gz"
-        )
+        destination = os.path.join(self._resources_dir, assembly_mapping_data + ".tar.gz")
 
         if not os.path.exists(destination) or not self._all_chroms_in_tar(
             chroms, destination
         ):
-            print("Downloading {}".format(os.path.relpath(destination)))
+            logger.debug("Downloading {}".format(os.path.relpath(destination)))
 
             try:
                 self._download_assembly_mapping_data(
                     destination, chroms, source_assembly, target_assembly, retries
                 )
             except Exception as err:
-                print(err)
+                logger.debug(err)
                 return ""
 
         return destination
@@ -507,9 +509,7 @@ class Resources(metaclass=Singleton):
 
                     if response is not None:
                         # open temp file, save json response to file, close temp file
-                        with tempfile.NamedTemporaryFile(
-                            delete=False, mode="w"
-                        ) as f_tmp:
+                        with tempfile.NamedTemporaryFile(delete=False, mode="w") as f_tmp:
                             json.dump(response, f_tmp)
 
                         # add temp file to archive
@@ -527,7 +527,7 @@ class Resources(metaclass=Singleton):
                 if chrom + ".json" not in members:
                     return False
         except Exception as err:
-            print(err)
+            logger.debug(err)
             return False
 
         return True
@@ -554,7 +554,7 @@ class Resources(metaclass=Singleton):
 
             return d
         except Exception as err:
-            print(err)
+            logger.debug(err)
             return {}
 
     def _get_path_codigo46_rsid_map(self):
@@ -613,7 +613,7 @@ class Resources(metaclass=Singleton):
                     else:
                         f.write(data)
             except urllib.error.URLError as err:
-                print(err)
+                logger.debug(err)
                 destination = ""
                 # try HTTP if an FTP error occurred
                 if "ftp://" in url:
@@ -624,7 +624,7 @@ class Resources(metaclass=Singleton):
                         timeout=timeout,
                     )
             except Exception as err:
-                print(err)
+                logger.debug(err)
                 return ""
 
         return destination
@@ -638,7 +638,7 @@ class Resources(metaclass=Singleton):
         path : str
             path to file being downloaded
         """
-        print("Downloading " + os.path.relpath(path))
+        logger.debug("Downloading " + os.path.relpath(path))
 
 
 class ReferenceSequence:

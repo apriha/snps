@@ -24,6 +24,7 @@ genotype files from the following DNA testing sources:
 - `Family Tree DNA <https://www.familytreedna.com>`_
 - `Genes for Good <https://genesforgood.sph.umich.edu>`_
 - `LivingDNA <https://livingdna.com>`_
+- `Mapmygenome <https://mapmygenome.in>`_
 - `MyHeritage <https://www.myheritage.com>`_
 
 Dependencies

@@ -190,6 +190,12 @@ class TestIndividual(BaseSNPsTestCase):
         assert s.source == "LivingDNA"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
+    def test_snps_mapmygenome(self):
+        # https://mapmygenome.in
+        s = SNPs("tests/input/mapmygenome.txt")
+        assert s.source == "Mapmygenome"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
     def test_snps_vcf(self):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,

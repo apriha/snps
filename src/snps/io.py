@@ -140,6 +140,8 @@ class Reader:
                 return self.read_myheritage(file)
             elif "Living DNA" in first_line:
                 return self.read_livingdna(file)
+            elif "SNP Name	rsID	Sample.ID	Allele1...Top" in first_line:
+                return self.read_mapmygenome(file)
             elif "lineage" in first_line or "snps" in first_line:
                 return self.read_lineage_csv(file, comments)
             elif first_line.startswith("rsid"):
@@ -448,6 +450,44 @@ class Reader:
         )
 
         return df, "LivingDNA"
+
+    def read_mapmygenome(self, file):
+        """ Read and parse Mapmygenome file.
+
+        https://mapmygenome.in
+
+        Parameters
+        ----------
+        file : str
+            path to file
+
+        Returns
+        -------
+        pandas.DataFrame
+            genetic data normalized for use with `snps`
+        str
+            name of data source
+        """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "Mapmygenome"
+
+        df = pd.read_csv(
+            file,
+            comment="#",
+            sep="\t",
+            na_values="--",
+            header=0,
+            index_col=1,
+            dtype={"Chr": object},
+        )
+
+        df["genotype"] = df["Allele1...Top"] + df["Allele2...Top"]
+        df.rename(columns={"Chr": "chrom", "Position": "pos"}, inplace=True)
+        df.index.name = "rsid"
+        df = df[["chrom", "pos", "genotype"]]
+
+        return df, "Mapmygenome"
 
     def read_genes_for_good(self, file):
         """ Read and parse Genes For Good file.

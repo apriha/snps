@@ -452,7 +452,7 @@ class Reader:
         return df, "LivingDNA"
 
     def read_mapmygenome(self, file):
-        """ Read and parse MapMyGenome file.
+        """ Read and parse Mapmygenome file.
 
         https://mapmygenome.in
 
@@ -470,7 +470,7 @@ class Reader:
         """
 
         if self._only_detect_source:
-            return pd.DataFrame(), "MapMyGenome"
+            return pd.DataFrame(), "Mapmygenome"
 
         df = pd.read_csv(
             file,
@@ -487,7 +487,7 @@ class Reader:
         df.index.name = "rsid"
         df = df[["chrom", "pos", "genotype"]]
 
-        return df, "MapMyGenome"
+        return df, "Mapmygenome"
 
     def read_genes_for_good(self, file):
         """ Read and parse Genes For Good file.

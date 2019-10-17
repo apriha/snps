@@ -191,9 +191,9 @@ class TestIndividual(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
     def test_snps_mapmygenome(self):
-        # https://livingdna.com
+        # https://mapmygenome.in
         s = SNPs("tests/input/mapmygenome.txt")
-        assert s.source == "MapMyGenome"
+        assert s.source == "Mapmygenome"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
     def test_snps_vcf(self):

@@ -456,7 +456,7 @@ class Reader:
         return df, "LivingDNA"
 
     def read_mapmygenome(self, file):
-        """ Read and parse MapMyGenome file.
+        """ Read and parse Mapmygenome file.
 
         https://mapmygenome.in
 
@@ -474,7 +474,7 @@ class Reader:
         """
 
         if self._only_detect_source:
-            return pd.DataFrame(), "MapMyGenome"
+            return pd.DataFrame(), "Mapmygenome"
 
         df = pd.read_csv(
             file,
@@ -491,7 +491,7 @@ class Reader:
         df.index.name = "rsid"
         df = df[["chrom", "pos", "genotype"]]
 
-        return df, "MapMyGenome"
+        return df, "Mapmygenome"
 
     def read_genes_for_good(self, file):
         """ Read and parse Genes For Good file.
@@ -720,7 +720,9 @@ class Reader:
                     "genotype": genotype,
                 }
                 # append the record to the DataFrame
-                df = df.append(pd.DataFrame([record_info]), ignore_index=True, sort=False)
+                df = df.append(
+                    pd.DataFrame([record_info]), ignore_index=True, sort=False
+                )
 
         df.set_index("rsid", inplace=True, drop=True)
 
@@ -1013,9 +1015,9 @@ class Writer:
 
         temp = df.loc[df["genotype"].notnull()]
 
-        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(self._compute_genotype)(
-            temp["REF"], temp["ALT"], temp["genotype"]
-        )
+        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
+            self._compute_genotype
+        )(temp["REF"], temp["ALT"], temp["genotype"])
 
         df.loc[df["SAMPLE"].isnull(), "SAMPLE"] = "./."
 
@@ -1042,6 +1044,8 @@ class Writer:
             alleles.extend(alt.split(","))
 
         if len(genotype) == 2:
-            return "{}/{}".format(alleles.index(genotype[0]), alleles.index(genotype[1]))
+            return "{}/{}".format(
+                alleles.index(genotype[0]), alleles.index(genotype[1])
+            )
         else:
             return "{}".format(alleles.index(genotype[0]))

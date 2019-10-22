@@ -67,7 +67,6 @@ class SNPs:
         resources_dir="resources",
         parallelize=False,
         processes=os.cpu_count(),
-        low_memory=False,
         rsids=[],
     ):
         """ Object used to read and parse genotype / raw data files.
@@ -88,6 +87,8 @@ class SNPs:
             utilize multiprocessing to speedup calculations
         processes : int
             processes to launch if multiprocessing
+        rsids : list
+            rsids to extract if loading a large file
         """
         self._file = file
         self._only_detect_source = only_detect_source
@@ -101,7 +102,9 @@ class SNPs:
 
         if file:
 
-            self._snps, self._source = self._read_raw_data(file, only_detect_source)
+            self._snps, self._source = self._read_raw_data(
+                file, only_detect_source, rsids
+            )
 
             if not self._snps.empty:
                 self.sort_snps()
@@ -271,10 +274,8 @@ class SNPs:
             snps=self, filename=filename, vcf=vcf, atomic=atomic, **kwargs
         )
 
-    def _read_raw_data(self, file, only_detect_source, low_memory, rsids):
-        return Reader.read_file(
-            file, only_detect_source, self._resources, low_memory, rsids
-        )
+    def _read_raw_data(self, file, only_detect_source, rsids):
+        return Reader.read_file(file, only_detect_source, self._resources, rsids)
 
     def _assign_par_snps(self):
         """ Assign PAR SNPs to the X or Y chromosome using SNP position.

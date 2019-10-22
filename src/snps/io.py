@@ -50,14 +50,7 @@ from snps.utils import save_df_as_csv, clean_str
 class Reader:
     """ Class for reading and parsing raw data / genotype files. """
 
-    def __init__(
-        self,
-        file="",
-        only_detect_source=False,
-        resources=None,
-        low_memory=False,
-        _rsids=[],
-    ):
+    def __init__(self, file="", only_detect_source=False, resources=None, rsids=[]):
         """ Initialize a `Reader`.
 
         Parameters
@@ -72,6 +65,7 @@ class Reader:
         self._file = file
         self._only_detect_source = only_detect_source
         self._resources = resources
+        self._rsids = rsids
 
     def __call__(self):
         """ Read and parse a raw data / genotype file.
@@ -166,7 +160,7 @@ class Reader:
             return pd.DataFrame(), ""
 
     @classmethod
-    def read_file(cls, file, only_detect_source, resources):
+    def read_file(cls, file, only_detect_source, resources, rsids):
         """ Read `file`.
 
         Parameters
@@ -685,36 +679,54 @@ class Reader:
 
         df = pd.DataFrame(columns=["rsid", "chrom", "pos", "genotype"])
 
-        if self._low_memory:
+        if isinstance(file, io.BytesIO):
             rows = []
-            assert self._rsids, "You must specify the rsids to retrieve"
-            with io.TextIOWrapper(io.BufferedReader(gzip.open(io.BytesIO(file)))) as file:
+            first_four_bytes = file.read(4)
+            file.seek(0)
+
+            if self.is_gzip(first_four_bytes):
+                f = gzip.open(file)
+            else:
+                f = file
+
+            with io.TextIOWrapper(io.BufferedReader(f)) as file:
+
                 for line in file:
-                    if line.startswith("#"):
+
+                    line_strip = line.strip("\n")
+                    if line_strip.startswith("#"):
                         continue
-                    rsid = line.split("\t")[2]
-                    if rsid in self._rsids:
-                        line_split = line.split("\t")
-                        ref = line_split[3]
-                        alt = line_split[4]
-                        zygote = line_split[9]
-                        if zygote.split(":")[0] == "0|0":
-                            allele = ref + ref
-                        elif (
-                            zygote.split(":")[0] == "1|0" or zygote.split(":")[0] == "0|1"
-                        ):
-                            allele = ref + alt
-                        elif zygote.split(":")[0] == "1|1":
-                            allele = alt + alt
-                        else:
-                            print("Error in determining zygote")
-                        record_array = [
-                            rsid,
-                            "{}".format(rsid[0]).strip("chr"),
-                            rsid[1],
-                            allele,
-                        ]
-                        rows.append(record_array)
+                    rsid = line_strip.split("\t")[2]
+                    if rsid == ".":
+                        continue
+                    if self._rsids:
+                        if rsid in self._rsids:
+                            continue
+
+                    line_split = line_strip.split("\t")
+                    ref = line_split[3]
+                    alt = line_split[4]
+                    zygote = line_split[9]
+                    zygote = zygote.split(":")[0]
+
+                    ref_alt = [ref] + alt.split(",")
+                    zygote1, zygote2 = (
+                        zygote.replace("|", " ").replace("/", " ").split(" ")
+                    )
+                    if zygote1 == zygote2 and zygote1 == ".":
+                        allele = np.nan
+                    else:
+
+                        allele = ref_alt[int(zygote1)] + ref_alt[int(zygote2)]
+
+                    record_array = [
+                        rsid,
+                        "{}".format(line_split[0]).strip("chr"),
+                        line_split[1],
+                        allele,
+                    ]
+                    rows.append(record_array)
+
             df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
             df = df.astype(
                 {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
@@ -727,7 +739,6 @@ class Reader:
         else:
             mode = "rb" if file.endswith(".gz") else "r"
             with open(file, mode) as f:
-
                 vcf_reader = vcf.Reader(f)
 
                 # snps does not yet support multi-sample vcf.
@@ -738,6 +749,7 @@ class Reader:
                     return df, "vcf"
 
                 rows = []
+
                 for i, record in enumerate(vcf_reader):
                     # assign null genotypes if either allele is None
                     # Could capture full genotype, if REF is None, but genotype is 1/1 or

@@ -177,7 +177,7 @@ class Reader:
         tuple : (pandas.DataFrame, str)
             dataframe of parsed SNPs, detected source of SNPs
         """
-        r = cls(file, only_detect_source, resources)
+        r = cls(file, only_detect_source, resources, rsids)
         return r()
 
     def _extract_comments(self, f, decode):
@@ -700,7 +700,7 @@ class Reader:
                     if rsid == ".":
                         continue
                     if self._rsids:
-                        if rsid in self._rsids:
+                        if rsid not in self._rsids:
                             continue
 
                     line_split = line_strip.split("\t")

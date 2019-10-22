@@ -120,7 +120,7 @@ class SNPs:
                     self._assign_par_snps()
 
     def __repr__(self):
-        return "SNPs({!r})".format(self._file)
+        return "SNPs({!r})".format(self._file[0:50])
 
     @property
     def source(self):

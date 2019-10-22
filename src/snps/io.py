@@ -50,7 +50,14 @@ from snps.utils import save_df_as_csv, clean_str
 class Reader:
     """ Class for reading and parsing raw data / genotype files. """
 
-    def __init__(self, file="", only_detect_source=False, resources=None):
+    def __init__(
+        self,
+        file="",
+        only_detect_source=False,
+        resources=None,
+        low_memory=False,
+        _rsids=[],
+    ):
         """ Initialize a `Reader`.
 
         Parameters
@@ -678,54 +685,93 @@ class Reader:
 
         df = pd.DataFrame(columns=["rsid", "chrom", "pos", "genotype"])
 
-        mode = "rb" if file.endswith(".gz") else "r"
-
-        with open(file, mode) as f:
-
-            vcf_reader = vcf.Reader(f)
-
-            # snps does not yet support multi-sample vcf.
-            if len(vcf_reader.samples) > 1:
-                print(
-                    "Multiple samples detected in the vcf file, please use a single sample vcf."
-                )
-                return df, "vcf"
-
+        if self._low_memory:
             rows = []
-            for i, record in enumerate(vcf_reader):
-                # assign null genotypes if either allele is None
-                # Could capture full genotype, if REF is None, but genotype is 1/1 or
-                # if ALT is None, but genotype is 0/0
-                if record.REF is None or record.ALT[0] is None:
-                    genotype = np.nan
-                # skip SNPs with missing rsIDs.
-                elif record.ID is None:
-                    continue
-                # skip insertions and deletions
-                elif len(record.REF) > 1 or len(record.ALT[0]) > 1:
-                    continue
-                else:
-                    alleles = record.genotype(vcf_reader.samples[0]).gt_bases
-                    a1 = alleles[0]
-                    a2 = alleles[-1]
-                    genotype = "{}{}".format(a1, a2)
+            assert self._rsids, "You must specify the rsids to retrieve"
+            with io.TextIOWrapper(io.BufferedReader(gzip.open(io.BytesIO(file)))) as file:
+                for line in file:
+                    if line.startswith("#"):
+                        continue
+                    rsid = line.split("\t")[2]
+                    if rsid in self._rsids:
+                        line_split = line.split("\t")
+                        ref = line_split[3]
+                        alt = line_split[4]
+                        zygote = line_split[9]
+                        if zygote.split(":")[0] == "0|0":
+                            allele = ref + ref
+                        elif (
+                            zygote.split(":")[0] == "1|0" or zygote.split(":")[0] == "0|1"
+                        ):
+                            allele = ref + alt
+                        elif zygote.split(":")[0] == "1|1":
+                            allele = alt + alt
+                        else:
+                            print("Error in determining zygote")
+                        record_array = [
+                            rsid,
+                            "{}".format(rsid[0]).strip("chr"),
+                            rsid[1],
+                            allele,
+                        ]
+                        rows.append(record_array)
+            df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
+            df = df.astype(
+                {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
+            )
 
-                record_array = [
-                    record.ID,
-                    "{}".format(record.CHROM).strip("chr"),
-                    record.POS,
-                    genotype,
-                ]
-                rows.append(record_array)
+            df.set_index("rsid", inplace=True, drop=True)
 
-        df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
-        df = df.astype(
-            {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
-        )
+            return df, "vcf"
 
-        df.set_index("rsid", inplace=True, drop=True)
+        else:
+            mode = "rb" if file.endswith(".gz") else "r"
+            with open(file, mode) as f:
 
-        return df, "vcf"
+                vcf_reader = vcf.Reader(f)
+
+                # snps does not yet support multi-sample vcf.
+                if len(vcf_reader.samples) > 1:
+                    print(
+                        "Multiple samples detected in the vcf file, please use a single sample vcf."
+                    )
+                    return df, "vcf"
+
+                rows = []
+                for i, record in enumerate(vcf_reader):
+                    # assign null genotypes if either allele is None
+                    # Could capture full genotype, if REF is None, but genotype is 1/1 or
+                    # if ALT is None, but genotype is 0/0
+                    if record.REF is None or record.ALT[0] is None:
+                        genotype = np.nan
+                    # skip SNPs with missing rsIDs.
+                    elif record.ID is None:
+                        continue
+                    # skip insertions and deletions
+                    elif len(record.REF) > 1 or len(record.ALT[0]) > 1:
+                        continue
+                    else:
+                        alleles = record.genotype(vcf_reader.samples[0]).gt_bases
+                        a1 = alleles[0]
+                        a2 = alleles[-1]
+                        genotype = "{}{}".format(a1, a2)
+
+                    record_array = [
+                        record.ID,
+                        "{}".format(record.CHROM).strip("chr"),
+                        record.POS,
+                        genotype,
+                    ]
+                    rows.append(record_array)
+
+            df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
+            df = df.astype(
+                {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
+            )
+
+            df.set_index("rsid", inplace=True, drop=True)
+
+            return df, "vcf"
 
 
 class Writer:

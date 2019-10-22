@@ -569,7 +569,7 @@ class Reader:
         df["chrom"] = df["SNP Name"].apply(map_codigo_chr)
         df["pos"] = df["SNP Name"].apply(map_codigo_pos)
         df["genotype"] = df["Allele1 - Plus"] + df["Allele2 - Plus"]
-        df.dropna(inplace=True)
+        df.dropna(subset=["rsid"], inplace=True)
 
         df = df.astype({"chrom": object, "pos": np.int64})
         df = df[["rsid", "chrom", "pos", "genotype"]]

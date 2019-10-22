@@ -202,6 +202,13 @@ class TestIndividual(BaseSNPsTestCase):
         assert s.source == "vcf"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
+    def test_snps_unannotated_vcf(self):
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        s = SNPs("tests/input/unannotated_testvcf.vcf")
+        assert s.unannotated
+
     def test_snps_vcf_buffer(self):
         with open("tests/input/testvcf.vcf", "r") as f:
             self.snps_vcf_buffer = SNPs(f.read().encode("utf-8"))

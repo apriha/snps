@@ -776,6 +776,7 @@ class Reader:
                     ]
                     rows.append(record_array)
 
+            df.unannotated = i > 0 and len(df) == 0
             df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
             df = df.astype(
                 {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}

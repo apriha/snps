@@ -430,6 +430,16 @@ class SNPs:
 
         return len(self._snps)
 
+    def unannotated(self):
+        """ Indicates if file is unannotated.
+
+        Returns
+        -------
+        Bool
+        """
+
+        return self._snps.unannotated
+
     def get_chromosomes(self):
         """ Get the chromosomes of SNPs.
 

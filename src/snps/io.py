@@ -682,11 +682,11 @@ class Reader:
             return pd.DataFrame(), "vcf"
 
         df = pd.DataFrame(columns=["rsid", "chrom", "pos", "genotype"])
-        df = df.astype(
-            {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
-        )
 
-        with open(file, "r") as f:
+        mode = "rb" if file.endswith(".gz") else "r"
+
+        with open(file, mode) as f:
+
             vcf_reader = vcf.Reader(f)
 
             # snps does not yet support multi-sample vcf.
@@ -696,6 +696,7 @@ class Reader:
                 )
                 return df, "vcf"
 
+            rows = []
             for i, record in enumerate(vcf_reader):
                 # assign null genotypes if either allele is None
                 # Could capture full genotype, if REF is None, but genotype is 1/1 or
@@ -714,16 +715,18 @@ class Reader:
                     a2 = alleles[-1]
                     genotype = "{}{}".format(a1, a2)
 
-                record_info = {
-                    "rsid": record.ID,
-                    "chrom": "{}".format(record.CHROM).strip("chr"),
-                    "pos": record.POS,
-                    "genotype": genotype,
-                }
-                # append the record to the DataFrame
-                df = df.append(
-                    pd.DataFrame([record_info]), ignore_index=True, sort=False
-                )
+                record_array = [
+                    record.ID,
+                    "{}".format(record.CHROM).strip("chr"),
+                    record.POS,
+                    genotype,
+                ]
+                rows.append(record_array)
+
+        df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
+        df = df.astype(
+            {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
+        )
 
         df.set_index("rsid", inplace=True, drop=True)
 
@@ -1016,9 +1019,9 @@ class Writer:
 
         temp = df.loc[df["genotype"].notnull()]
 
-        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
-            self._compute_genotype
-        )(temp["REF"], temp["ALT"], temp["genotype"])
+        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(self._compute_genotype)(
+            temp["REF"], temp["ALT"], temp["genotype"]
+        )
 
         df.loc[df["SAMPLE"].isnull(), "SAMPLE"] = "./."
 
@@ -1045,8 +1048,6 @@ class Writer:
             alleles.extend(alt.split(","))
 
         if len(genotype) == 2:
-            return "{}/{}".format(
-                alleles.index(genotype[0]), alleles.index(genotype[1])
-            )
+            return "{}/{}".format(alleles.index(genotype[0]), alleles.index(genotype[1]))
         else:
             return "{}".format(alleles.index(genotype[0]))

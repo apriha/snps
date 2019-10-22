@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 class Reader:
     """ Class for reading and parsing raw data / genotype files. """
 
-    def __init__(self, file="", only_detect_source=False, resources=None):
+    def __init__(self, file="", only_detect_source=False, resources=None, rsids=[]):
         """ Initialize a `Reader`.
 
         Parameters
@@ -69,6 +69,7 @@ class Reader:
         self._file = file
         self._only_detect_source = only_detect_source
         self._resources = resources
+        self._rsids = rsids
 
     def __call__(self):
         """ Read and parse a raw data / genotype file.
@@ -163,7 +164,7 @@ class Reader:
             return pd.DataFrame(), ""
 
     @classmethod
-    def read_file(cls, file, only_detect_source, resources):
+    def read_file(cls, file, only_detect_source, resources, rsids):
         """ Read `file`.
 
         Parameters
@@ -180,7 +181,7 @@ class Reader:
         tuple : (pandas.DataFrame, str)
             dataframe of parsed SNPs, detected source of SNPs
         """
-        r = cls(file, only_detect_source, resources)
+        r = cls(file, only_detect_source, resources, rsids)
         return r()
 
     def _extract_comments(self, f, decode):
@@ -683,54 +684,112 @@ class Reader:
 
         df = pd.DataFrame(columns=["rsid", "chrom", "pos", "genotype"])
 
-        mode = "rb" if file.endswith(".gz") else "r"
-
-        with open(file, mode) as f:
-
-            vcf_reader = vcf.Reader(f)
-
-            # snps does not yet support multi-sample vcf.
-            if len(vcf_reader.samples) > 1:
-                logger.debug(
-                    "Multiple samples detected in the vcf file, please use a single sample vcf."
-                )
-                return df, "vcf"
-
+        if isinstance(file, io.BytesIO):
             rows = []
-            for i, record in enumerate(vcf_reader):
-                # assign null genotypes if either allele is None
-                # Could capture full genotype, if REF is None, but genotype is 1/1 or
-                # if ALT is None, but genotype is 0/0
-                if record.REF is None or record.ALT[0] is None:
-                    genotype = np.nan
-                # skip SNPs with missing rsIDs.
-                elif record.ID is None:
-                    continue
-                # skip insertions and deletions
-                elif len(record.REF) > 1 or len(record.ALT[0]) > 1:
-                    continue
-                else:
-                    alleles = record.genotype(vcf_reader.samples[0]).gt_bases
-                    a1 = alleles[0]
-                    a2 = alleles[-1]
-                    genotype = "{}{}".format(a1, a2)
+            first_four_bytes = file.read(4)
+            file.seek(0)
 
-                record_array = [
-                    record.ID,
-                    "{}".format(record.CHROM).strip("chr"),
-                    record.POS,
-                    genotype,
-                ]
-                rows.append(record_array)
+            if self.is_gzip(first_four_bytes):
+                f = gzip.open(file)
+            else:
+                f = file
 
-        df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
-        df = df.astype(
-            {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
-        )
+            with io.TextIOWrapper(io.BufferedReader(f)) as file:
 
-        df.set_index("rsid", inplace=True, drop=True)
+                for line in file:
 
-        return df, "vcf"
+                    line_strip = line.strip("\n")
+                    if line_strip.startswith("#"):
+                        continue
+                    rsid = line_strip.split("\t")[2]
+                    if rsid == ".":
+                        continue
+                    if self._rsids:
+                        if rsid not in self._rsids:
+                            continue
+
+                    line_split = line_strip.split("\t")
+                    ref = line_split[3]
+                    alt = line_split[4]
+                    zygote = line_split[9]
+                    zygote = zygote.split(":")[0]
+
+                    ref_alt = [ref] + alt.split(",")
+                    zygote1, zygote2 = (
+                        zygote.replace("|", " ").replace("/", " ").split(" ")
+                    )
+                    if zygote1 == zygote2 and zygote1 == ".":
+                        allele = np.nan
+                    else:
+
+                        allele = ref_alt[int(zygote1)] + ref_alt[int(zygote2)]
+
+                    record_array = [
+                        rsid,
+                        "{}".format(line_split[0]).strip("chr"),
+                        line_split[1],
+                        allele,
+                    ]
+                    rows.append(record_array)
+
+            df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
+            df = df.astype(
+                {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
+            )
+
+            df.set_index("rsid", inplace=True, drop=True)
+
+            return df, "vcf"
+
+        else:
+            mode = "rb" if file.endswith(".gz") else "r"
+            with open(file, mode) as f:
+                vcf_reader = vcf.Reader(f)
+
+                # snps does not yet support multi-sample vcf.
+                if len(vcf_reader.samples) > 1:
+                    print(
+                        "Multiple samples detected in the vcf file, please use a single sample vcf."
+                    )
+                    return df, "vcf"
+
+                rows = []
+
+                for i, record in enumerate(vcf_reader):
+                    # assign null genotypes if either allele is None
+                    # Could capture full genotype, if REF is None, but genotype is 1/1 or
+                    # if ALT is None, but genotype is 0/0
+                    if record.REF is None or record.ALT[0] is None:
+                        genotype = np.nan
+                    # skip SNPs with missing rsIDs.
+                    elif record.ID is None:
+                        continue
+                    # skip insertions and deletions
+                    elif len(record.REF) > 1 or len(record.ALT[0]) > 1:
+                        continue
+                    else:
+                        alleles = record.genotype(vcf_reader.samples[0]).gt_bases
+                        a1 = alleles[0]
+                        a2 = alleles[-1]
+                        genotype = "{}{}".format(a1, a2)
+
+                    record_array = [
+                        record.ID,
+                        "{}".format(record.CHROM).strip("chr"),
+                        record.POS,
+                        genotype,
+                    ]
+                    rows.append(record_array)
+
+            df.unannotated = i > 0 and len(df) == 0
+            df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
+            df = df.astype(
+                {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
+            )
+
+            df.set_index("rsid", inplace=True, drop=True)
+
+            return df, "vcf"
 
 
 class Writer:

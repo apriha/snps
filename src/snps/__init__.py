@@ -71,6 +71,7 @@ class SNPs:
         resources_dir="resources",
         parallelize=False,
         processes=os.cpu_count(),
+        rsids=[],
     ):
         """ Object used to read and parse genotype / raw data files.
 
@@ -90,6 +91,8 @@ class SNPs:
             utilize multiprocessing to speedup calculations
         processes : int
             processes to launch if multiprocessing
+        rsids : list
+            rsids to extract if loading a large file
         """
         self._file = file
         self._only_detect_source = only_detect_source
@@ -103,7 +106,9 @@ class SNPs:
 
         if file:
 
-            self._snps, self._source = self._read_raw_data(file, only_detect_source)
+            self._snps, self._source = self._read_raw_data(
+                file, only_detect_source, rsids
+            )
 
             if not self._snps.empty:
                 self.sort_snps()
@@ -119,7 +124,7 @@ class SNPs:
                     self._assign_par_snps()
 
     def __repr__(self):
-        return "SNPs({!r})".format(self._file)
+        return "SNPs({!r})".format(self._file[0:50])
 
     @property
     def source(self):
@@ -273,8 +278,8 @@ class SNPs:
             snps=self, filename=filename, vcf=vcf, atomic=atomic, **kwargs
         )
 
-    def _read_raw_data(self, file, only_detect_source):
-        return Reader.read_file(file, only_detect_source, self._resources)
+    def _read_raw_data(self, file, only_detect_source, rsids):
+        return Reader.read_file(file, only_detect_source, self._resources, rsids)
 
     def _assign_par_snps(self):
         """ Assign PAR SNPs to the X or Y chromosome using SNP position.
@@ -395,9 +400,7 @@ class SNPs:
 
         for rsid in rsids:
             if rsid in self._snps.index:
-                build = lookup_build_with_snp_pos(
-                    self._snps.loc[rsid].pos, df.loc[rsid]
-                )
+                build = lookup_build_with_snp_pos(self._snps.loc[rsid].pos, df.loc[rsid])
 
             if build:
                 break
@@ -430,6 +433,16 @@ class SNPs:
         """
 
         return len(self._snps)
+
+    def unannotated(self):
+        """ Indicates if file is unannotated.
+
+        Returns
+        -------
+        Bool
+        """
+
+        return self._snps.unannotated
 
     def get_chromosomes(self):
         """ Get the chromosomes of SNPs.
@@ -506,8 +519,7 @@ class SNPs:
             if y_snps > 0:
                 y_snps_not_null = len(
                     self._snps.loc[
-                        (self._snps["chrom"] == "Y")
-                        & (self._snps["genotype"].notnull())
+                        (self._snps["chrom"] == "Y") & (self._snps["genotype"].notnull())
                     ]
                 )
 
@@ -1004,9 +1016,7 @@ class SNPsCollection(SNPs):
             if not self._name:
                 filename = "{}.csv".format(discrepant_snps_type)
             else:
-                filename = "{}_{}.csv".format(
-                    clean_str(self._name), discrepant_snps_type
-                )
+                filename = "{}_{}.csv".format(clean_str(self._name), discrepant_snps_type)
 
         return save_df_as_csv(
             df,

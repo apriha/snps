@@ -102,9 +102,7 @@ class TestIndividual(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
     def test_snps_23andme_zip(self):
-        with atomic_write(
-            "tests/input/23andme.txt.zip", mode="wb", overwrite=True
-        ) as f:
+        with atomic_write("tests/input/23andme.txt.zip", mode="wb", overwrite=True) as f:
             with zipfile.ZipFile(f, "w") as f_zip:
                 # https://stackoverflow.com/a/16104667
                 f_zip.write("tests/input/23andme.txt", arcname="23andme.txt")
@@ -204,6 +202,70 @@ class TestIndividual(BaseSNPsTestCase):
         assert s.source == "vcf"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
+    def test_snps_unannotated_vcf(self):
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        s = SNPs("tests/input/unannotated_testvcf.vcf")
+        assert s.unannotated
+
+    def test_snps_vcf_buffer(self):
+        with open("tests/input/testvcf.vcf", "r") as f:
+            self.snps_vcf_buffer = SNPs(f.read().encode("utf-8"))
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        s = SNPs("tests/input/testvcf.vcf")
+        assert s.source == "vcf"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
+    def test_snps_vcf_buffer_rsids(self):
+        with open("tests/input/testvcf.vcf", "r") as f:
+            rsids = ["rs1", "rs2"]
+            df = SNPs(f.read().encode("utf-8"), rsids=rsids)
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        assert df.source == "vcf"
+        pd.testing.assert_frame_equal(df.snps, self.generic_snps().loc[rsids])
+
+    def test_snps_vcf_buffer_gz(self):
+        with open("tests/input/testvcf.vcf", "rb") as f_in:
+            with atomic_write(
+                "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        with open("tests/input/testvcf.vcf.gz", "rb") as f:
+            data = f.read()
+            s = SNPs(data)
+        os.remove("tests/input/testvcf.vcf.gz")
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        assert s.source == "vcf"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
+    def test_snps_vcf_buffer_gz_rsids(self):
+        with open("tests/input/testvcf.vcf", "rb") as f_in:
+            with atomic_write(
+                "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        with open("tests/input/testvcf.vcf.gz", "rb") as f:
+            rsids = ["rs1", "rs2"]
+            data = f.read()
+            s = SNPs(data, rsids=rsids)
+        os.remove("tests/input/testvcf.vcf.gz")
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        assert s.source == "vcf"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps().loc[rsids])
+
     def test_source_lineage_file(self):
         sc = SNPsCollection("tests/input/GRCh37.csv")
         assert sc.source == "generic"
@@ -299,9 +361,7 @@ class TestIndividual(BaseSNPsTestCase):
         assert s.sex == "Male"
 
     def test_sex_not_determined(self):
-        s = self.simulate_snps(
-            chrom="1", pos_start=1, pos_max=249250621, pos_step=10000
-        )
+        s = self.simulate_snps(chrom="1", pos_start=1, pos_max=249250621, pos_step=10000)
         assert s.sex == ""
 
     def test_discrepant_positions(self):
@@ -644,10 +704,7 @@ class TestIndividual(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(s.snps, self.snps_GRCh38())
 
     def test_remap_snps_37_to_38_with_PAR_SNP(self):
-        if (
-            not os.getenv("DOWNLOADS_ENABLED")
-            or os.getenv("DOWNLOADS_ENABLED") == "true"
-        ):
+        if not os.getenv("DOWNLOADS_ENABLED") or os.getenv("DOWNLOADS_ENABLED") == "true":
             s = SNPs("tests/input/GRCh37_PAR.csv")
             assert s.snp_count == 3
             chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)

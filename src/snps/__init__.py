@@ -323,7 +323,7 @@ class SNPs:
                                 break
 
                 except Exception as err:
-                    logger.debug(err)
+                    logger.warning(err)
 
     def _assign_snp(self, rsid, alleles, chrom):
         # only assign SNP if positions match (i.e., same build)

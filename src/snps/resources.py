@@ -301,7 +301,7 @@ class Resources(metaclass=Singleton):
 
             return assembly_mapping_data
         except Exception as err:
-            logger.debug(err)
+            logger.warning(err)
             return {}
 
     def _get_paths_reference_sequences(
@@ -481,7 +481,7 @@ class Resources(metaclass=Singleton):
                     destination, chroms, source_assembly, target_assembly, retries
                 )
             except Exception as err:
-                logger.debug(err)
+                logger.warning(err)
                 return ""
 
         return destination
@@ -527,7 +527,7 @@ class Resources(metaclass=Singleton):
                 if chrom + ".json" not in members:
                     return False
         except Exception as err:
-            logger.debug(err)
+            logger.warning(err)
             return False
 
         return True
@@ -554,7 +554,7 @@ class Resources(metaclass=Singleton):
 
             return d
         except Exception as err:
-            logger.debug(err)
+            logger.warning(err)
             return {}
 
     def _get_path_codigo46_rsid_map(self):
@@ -613,7 +613,7 @@ class Resources(metaclass=Singleton):
                     else:
                         f.write(data)
             except urllib.error.URLError as err:
-                logger.debug(err)
+                logger.warning(err)
                 destination = ""
                 # try HTTP if an FTP error occurred
                 if "ftp://" in url:
@@ -624,7 +624,7 @@ class Resources(metaclass=Singleton):
                         timeout=timeout,
                     )
             except Exception as err:
-                logger.debug(err)
+                logger.warning(err)
                 return ""
 
         return destination

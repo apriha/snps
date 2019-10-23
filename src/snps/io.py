@@ -159,7 +159,7 @@ class Reader:
             else:
                 return pd.DataFrame(), ""
         except Exception as err:
-            logger.debug(err)
+            logger.warning(err)
             return pd.DataFrame(), ""
 
     @classmethod

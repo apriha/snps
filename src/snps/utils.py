@@ -109,7 +109,7 @@ def create_dir(path):
     try:
         os.makedirs(path, exist_ok=True)
     except Exception as err:
-        logger.debug(err)
+        logger.warning(err)
         return False
 
     if os.path.exists(path):
@@ -193,7 +193,7 @@ def save_df_as_csv(
 
             return destination
         except Exception as err:
-            logger.debug(err)
+            logger.warning(err)
             return ""
     else:
         logger.debug("no data to save...")

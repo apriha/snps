@@ -83,13 +83,19 @@ class Reader:
                 if ".zip" in file:
                     with zipfile.ZipFile(file) as z:
                         with z.open(z.namelist()[0], "r") as f:
-                            first_line, comments, data = self._extract_comments(f, True)
+                            first_line, comments, data = self._extract_comments(
+                                f, True, False
+                            )
                 elif ".gz" in file:
                     with gzip.open(file, "rt") as f:
-                        first_line, comments, data = self._extract_comments(f, False)
+                        first_line, comments, data = self._extract_comments(
+                            f, False, False
+                        )
                 else:
                     with open(file, "r") as f:
-                        first_line, comments, data = self._extract_comments(f, False)
+                        first_line, comments, data = self._extract_comments(
+                            f, False, False
+                        )
 
             elif isinstance(file, bytes):
                 if self.is_zip(file):
@@ -108,7 +114,7 @@ class Reader:
                             data = f.read()
                             file = io.BytesIO(data)
                             first_line, comments, data = self._extract_comments(
-                                io.BytesIO(data), True
+                                io.BytesIO(data), True, False
                             )
 
                 elif self.is_gzip(file):
@@ -117,13 +123,13 @@ class Reader:
                         data = f.read()
                         file = io.BytesIO(data)
                         first_line, comments, data = self._extract_comments(
-                            io.BytesIO(data), True
+                            io.BytesIO(data), True, False
                         )
 
                 else:
                     file = io.BytesIO(file)
                     first_line, comments, data = self._extract_comments(
-                        deepcopy(file), True
+                        deepcopy(file), True, False
                     )
 
             else:
@@ -147,12 +153,12 @@ class Reader:
                 return self.read_lineage_csv(file, comments)
             elif first_line.startswith("rsid"):
                 return self.read_generic_csv(file)
-            elif "vcf" in comments.lower():
+            elif "vcf" in comments.lower() or "##contig" in comments.lower():
                 return self.read_vcf(file)
             elif ("Genes for Good" in comments) | ("PLINK" in comments):
                 return self.read_genes_for_good(file)
             elif "CODIGO46" in comments:
-                return self.read_codigo46(data)
+                return self.read_codigo46(file)
             else:
                 return pd.DataFrame(), ""
         except Exception as err:
@@ -180,7 +186,7 @@ class Reader:
         r = cls(file, only_detect_source, resources, rsids)
         return r()
 
-    def _extract_comments(self, f, decode):
+    def _extract_comments(self, f, decode, include_data=False):
         line = self._read_line(f, decode)
         first_line = line
         comments = ""
@@ -190,9 +196,10 @@ class Reader:
             while line.startswith("#"):
                 comments += line
                 line = self._read_line(f, decode)
-            while line:
-                data += line
-                line = self._read_line(f, decode)
+            if include_data:
+                while line:
+                    data += line
+                    line = self._read_line(f, decode)
 
         elif first_line.startswith("[Header]"):
             while not line.startswith("[Data]"):
@@ -200,10 +207,11 @@ class Reader:
                 line = self._read_line(f, decode)
             # Ignore the [Data] row
             line = self._read_line(f, decode)
-            while line:
-                data += line
-                line = self._read_line(f, decode)
-
+            if include_data:
+                while line:
+                    data += line
+                    line = self._read_line(f, decode)
+        f.seek(0)
         return first_line, comments, data
 
     @staticmethod
@@ -524,7 +532,7 @@ class Reader:
 
         return df, "GenesForGood"
 
-    def read_codigo46(self, data):
+    def read_codigo46(self, file):
         """ Read and parse Codigo46 files.
 
         https://codigo46.com.mx
@@ -547,6 +555,11 @@ class Reader:
             return pd.DataFrame(), "Codigo46"
 
         codigo46_resources = self._resources.get_codigo46_resources()
+        import pdb
+
+        pdb.set_trace()
+
+        first_line, comments, data = self._extract_comments(file, True, True)
 
         df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
 
@@ -1073,9 +1086,9 @@ class Writer:
 
         temp = df.loc[df["genotype"].notnull()]
 
-        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(self._compute_genotype)(
-            temp["REF"], temp["ALT"], temp["genotype"]
-        )
+        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
+            self._compute_genotype
+        )(temp["REF"], temp["ALT"], temp["genotype"])
 
         df.loc[df["SAMPLE"].isnull(), "SAMPLE"] = "./."
 
@@ -1102,6 +1115,8 @@ class Writer:
             alleles.extend(alt.split(","))
 
         if len(genotype) == 2:
-            return "{}/{}".format(alleles.index(genotype[0]), alleles.index(genotype[1]))
+            return "{}/{}".format(
+                alleles.index(genotype[0]), alleles.index(genotype[1])
+            )
         else:
             return "{}".format(alleles.index(genotype[0]))

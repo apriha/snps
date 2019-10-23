@@ -41,6 +41,9 @@ from atomicwrites import atomic_write
 import pandas as pd
 
 import snps
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Parallelizer:
@@ -106,7 +109,7 @@ def create_dir(path):
     try:
         os.makedirs(path, exist_ok=True)
     except Exception as err:
-        print(err)
+        logger.warning(err)
         return False
 
     if os.path.exists(path):
@@ -156,7 +159,7 @@ def save_df_as_csv(
                 destination = filename
             else:
                 destination = os.path.join(path, filename)
-                print("Saving " + os.path.relpath(destination))
+                logger.debug("Saving " + os.path.relpath(destination))
 
             if prepend_info:
                 s = (
@@ -190,10 +193,10 @@ def save_df_as_csv(
 
             return destination
         except Exception as err:
-            print(err)
+            logger.warning(err)
             return ""
     else:
-        print("no data to save...")
+        logger.debug("no data to save...")
         return ""
 
 

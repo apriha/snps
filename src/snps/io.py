@@ -555,11 +555,12 @@ class Reader:
             return pd.DataFrame(), "Codigo46"
 
         codigo46_resources = self._resources.get_codigo46_resources()
-        import pdb
 
-        pdb.set_trace()
-
-        first_line, comments, data = self._extract_comments(file, True, True)
+        if isinstance(file, str):
+            with open(file, "rb") as f:
+                first_line, comments, data = self._extract_comments(f, True, True)
+        else:
+            first_line, comments, data = self._extract_comments(file, True, True)
 
         df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
 

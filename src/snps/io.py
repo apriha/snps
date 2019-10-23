@@ -46,6 +46,10 @@ import vcf
 import snps
 from snps.utils import save_df_as_csv, clean_str
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Reader:
     """ Class for reading and parsing raw data / genotype files. """
@@ -156,7 +160,7 @@ class Reader:
             else:
                 return pd.DataFrame(), ""
         except Exception as err:
-            print(err)
+            logger.warning(err)
             return pd.DataFrame(), ""
 
     @classmethod
@@ -743,7 +747,7 @@ class Reader:
 
                 # snps does not yet support multi-sample vcf.
                 if len(vcf_reader.samples) > 1:
-                    print(
+                    logger.debug(
                         "Multiple samples detected in the vcf file, please use a single sample vcf."
                     )
                     return df, "vcf"

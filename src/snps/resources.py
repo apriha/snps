@@ -469,7 +469,9 @@ class Resources(metaclass=Singleton):
         ]
 
         assembly_mapping_data = source_assembly + "_" + target_assembly
-        destination = os.path.join(self._resources_dir, assembly_mapping_data + ".tar.gz")
+        destination = os.path.join(
+            self._resources_dir, assembly_mapping_data + ".tar.gz"
+        )
 
         if not os.path.exists(destination) or not self._all_chroms_in_tar(
             chroms, destination
@@ -509,7 +511,9 @@ class Resources(metaclass=Singleton):
 
                     if response is not None:
                         # open temp file, save json response to file, close temp file
-                        with tempfile.NamedTemporaryFile(delete=False, mode="w") as f_tmp:
+                        with tempfile.NamedTemporaryFile(
+                            delete=False, mode="w"
+                        ) as f_tmp:
                             json.dump(response, f_tmp)
 
                         # add temp file to archive

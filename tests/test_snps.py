@@ -93,6 +93,7 @@ class TestSnps(BaseSNPsTestCase):
         assert self.snps_buffer_zip.snp_count == 6
 
     def test_snp_buffer_gz(self):
+
         assert self.snps_buffer_gz.snp_count == 6
 
     def test_snp_buffer(self):
@@ -123,10 +124,7 @@ class TestSnps(BaseSNPsTestCase):
         assert not self.snps_none.build_detected
 
     def test_build_detected_PAR_snps(self):
-        if (
-            not os.getenv("DOWNLOADS_ENABLED")
-            or os.getenv("DOWNLOADS_ENABLED") == "true"
-        ):
+        if not os.getenv("DOWNLOADS_ENABLED") or os.getenv("DOWNLOADS_ENABLED") == "true":
             snps = SNPs("tests/input/GRCh37_PAR.csv")
             assert snps.build == 37
             assert snps.build_detected

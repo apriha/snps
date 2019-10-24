@@ -219,6 +219,19 @@ class SNPs:
         """
         return self.determine_sex()
 
+    @property
+    def unannotated_vcf(self):
+        """ Indicates if VCF file is unannotated.
+
+        Returns
+        -------
+        bool
+        """
+        if self.snp_count == 0 and self.source == "vcf":
+            return True
+
+        return False
+
     def get_summary(self):
         """ Get summary of ``SNPs``.
 
@@ -435,16 +448,6 @@ class SNPs:
         """
 
         return len(self._snps)
-
-    def unannotated(self):
-        """ Indicates if file is unannotated.
-
-        Returns
-        -------
-        Bool
-        """
-
-        return self._snps.unannotated
 
     def get_chromosomes(self):
         """ Get the chromosomes of SNPs.

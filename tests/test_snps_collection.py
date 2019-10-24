@@ -202,6 +202,7 @@ class TestIndividual(BaseSNPsTestCase):
         # phased snps, and snps with missing rsID
         s = SNPs("tests/input/testvcf.vcf")
         assert s.source == "vcf"
+        assert not s.unannotated_vcf
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
     def test_snps_vcf_gz(self):
@@ -224,7 +225,8 @@ class TestIndividual(BaseSNPsTestCase):
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID
         s = SNPs("tests/input/unannotated_testvcf.vcf")
-        assert s.unannotated
+        assert s.source == "vcf"
+        assert s.unannotated_vcf
 
     def test_snps_vcf_buffer(self):
         with open("tests/input/testvcf.vcf", "r") as f:

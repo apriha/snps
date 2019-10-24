@@ -755,14 +755,14 @@ class Reader:
                 rows = []
 
                 for i, record in enumerate(vcf_reader):
+                    # skip SNPs with missing rsIDs.
+                    if record.ID is None:
+                        continue
                     # assign null genotypes if either allele is None
                     # Could capture full genotype, if REF is None, but genotype is 1/1 or
                     # if ALT is None, but genotype is 0/0
-                    if record.REF is None or record.ALT[0] is None:
+                    elif record.REF is None or record.ALT[0] is None:
                         genotype = np.nan
-                    # skip SNPs with missing rsIDs.
-                    elif record.ID is None:
-                        continue
                     # skip insertions and deletions
                     elif len(record.REF) > 1 or len(record.ALT[0]) > 1:
                         continue

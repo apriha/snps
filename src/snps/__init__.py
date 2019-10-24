@@ -71,7 +71,7 @@ class SNPs:
         resources_dir="resources",
         parallelize=False,
         processes=os.cpu_count(),
-        rsids=[],
+        rsids=(),
     ):
         """ Object used to read and parse genotype / raw data files.
 
@@ -91,8 +91,8 @@ class SNPs:
             utilize multiprocessing to speedup calculations
         processes : int
             processes to launch if multiprocessing
-        rsids : list
-            rsids to extract if loading a large file
+        rsids : tuple
+            rsids to extract if loading a VCF file
         """
         self._file = file
         self._only_detect_source = only_detect_source

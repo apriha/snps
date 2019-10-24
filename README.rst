@@ -34,7 +34,6 @@ Dependencies
 - `numpy <http://www.numpy.org>`_
 - `pandas <http://pandas.pydata.org>`_
 - `atomicwrites <https://github.com/untitaker/python-atomicwrites>`_
-- `PyVCF <https://github.com/jamescasbon/PyVCF>`_
 
 Installation
 ------------

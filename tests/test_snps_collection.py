@@ -46,7 +46,7 @@ from snps import SNPs, SNPsCollection
 from tests import BaseSNPsTestCase
 
 
-class TestIndividual(BaseSNPsTestCase):
+class TestSNPsCollection(BaseSNPsTestCase):
     def generic_snps(self):
         return self.create_snp_df(
             rsid=["rs1", "rs2", "rs3", "rs4", "rs5", "rs6", "rs7", "rs8"],
@@ -230,13 +230,12 @@ class TestIndividual(BaseSNPsTestCase):
 
     def test_snps_vcf_buffer(self):
         with open("tests/input/testvcf.vcf", "r") as f:
-            self.snps_vcf_buffer = SNPs(f.read().encode("utf-8"))
+            snps_vcf_buffer = SNPs(f.read().encode("utf-8"))
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID
-        s = SNPs("tests/input/testvcf.vcf")
-        assert s.source == "vcf"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        assert snps_vcf_buffer.source == "vcf"
+        pd.testing.assert_frame_equal(snps_vcf_buffer.snps, self.generic_snps())
 
     def test_snps_vcf_buffer_rsids(self):
         with open("tests/input/testvcf.vcf", "r") as f:

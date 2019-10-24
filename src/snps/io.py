@@ -78,95 +78,60 @@ class Reader:
         file = self._file
         compression = "infer"
 
-        try:
-            # peek into files to determine the data format
-            if isinstance(file, str) and os.path.exists(file):
+        # try:
+        # peek into files to determine the data format
+        if isinstance(file, str) and os.path.exists(file):
 
-                if ".zip" in file:
-                    with zipfile.ZipFile(file) as z:
-                        with z.open(z.namelist()[0], "r") as f:
-                            first_line, comments, data = self._extract_comments(
-                                f, True, False
-                            )
-                elif ".gz" in file:
-                    with gzip.open(file, "rt") as f:
-                        first_line, comments, data = self._extract_comments(
-                            f, False, False
-                        )
-                else:
-                    with open(file, "r") as f:
-                        first_line, comments, data = self._extract_comments(
-                            f, False, False
-                        )
-
-            elif isinstance(file, bytes):
-                if self.is_zip(file):
-                    compression = "zip"
-
-                    with zipfile.ZipFile(io.BytesIO(file)) as z:
-                        namelist = z.namelist()
-                        key = "GFG_filtered_unphased_genotypes_23andMe.txt"
-                        key_search = [key in name for name in namelist]
-
-                        if any(key_search):
-                            filename = namelist[key_search.index(True)]
-                        else:
-                            filename = namelist[0]
-
-                        with z.open(filename, "r") as f:
-                            first_line, comments, data = self._extract_comments(
-                                f, True, False
-                            )
-                        file = io.BytesIO(file)
-
-                elif self.is_gzip(file):
-                    compression = "gzip"
-
-                    with gzip.open(io.BytesIO(file), "rb") as f:
+            if ".zip" in file:
+                with zipfile.ZipFile(file) as z:
+                    with z.open(z.namelist()[0], "r") as f:
                         first_line, comments, data = self._extract_comments(
                             f, True, False
                         )
-                        file = io.BytesIO(file)
-
-                else:
-                    file = io.BytesIO(file)
-                    first_line, comments, data = self._extract_comments(
-                        deepcopy(file), True, False
-                    )
-                    file.seek(0)
-
+            elif ".gz" in file:
+                with gzip.open(file, "rt") as f:
+                    first_line, comments, data = self._extract_comments(f, False, False)
             else:
-                return pd.DataFrame(), ""
+                with open(file, "r") as f:
+                    first_line, comments, data = self._extract_comments(f, False, False)
 
-            if "23andMe" in first_line:
-                return self.read_23andme(file, compression)
-            elif "Ancestry" in first_line:
-                return self.read_ancestry(file, compression)
-            elif first_line.startswith("RSID"):
-                return self.read_ftdna(file, compression)
-            elif "famfinder" in first_line:
-                return self.read_ftdna_famfinder(file, compression)
-            elif "MyHeritage" in first_line:
-                return self.read_myheritage(file, compression)
-            elif "Living DNA" in first_line:
-                return self.read_livingdna(file, compression)
-            elif "SNP Name	rsID	Sample.ID	Allele1...Top" in first_line:
-                return self.read_mapmygenome(file, compression)
-            elif "lineage" in first_line or "snps" in first_line:
-                return self.read_lineage_csv(file, comments, compression)
-            elif first_line.startswith("rsid"):
-                return self.read_generic_csv(file, compression)
-            elif "vcf" in comments.lower() or "##contig" in comments.lower():
-                return self.read_vcf(file, compression)
-            elif ("Genes for Good" in comments) | ("PLINK" in comments):
-                return self.read_genes_for_good(file, compression)
-            elif "CODIGO46" in comments:
-                return self.read_codigo46(file, compression)
-            else:
-                return pd.DataFrame(), ""
-        except Exception as err:
-            print(err)
+        elif isinstance(file, bytes):
+
+            first_line, comments, data, compression = self.handle_bytes_data(file)
+            file = io.BytesIO(file)
+
+        else:
             return pd.DataFrame(), ""
+
+        if "23andMe" in first_line:
+            return self.read_23andme(file, compression)
+        elif "Ancestry" in first_line:
+            return self.read_ancestry(file, compression)
+        elif first_line.startswith("RSID"):
+            return self.read_ftdna(file, compression)
+        elif "famfinder" in first_line:
+            return self.read_ftdna_famfinder(file, compression)
+        elif "MyHeritage" in first_line:
+            return self.read_myheritage(file, compression)
+        elif "Living DNA" in first_line:
+            return self.read_livingdna(file, compression)
+        elif "SNP Name	rsID	Sample.ID	Allele1...Top" in first_line:
+            return self.read_mapmygenome(file, compression)
+        elif "lineage" in first_line or "snps" in first_line:
+            return self.read_lineage_csv(file, comments, compression)
+        elif first_line.startswith("rsid"):
+            return self.read_generic_csv(file, compression)
+        elif "vcf" in comments.lower() or "##contig" in comments.lower():
+            return self.read_vcf(file, compression)
+        elif ("Genes for Good" in comments) | ("PLINK" in comments):
+            return self.read_genes_for_good(file, compression)
+        elif "CODIGO46" in comments:
+            return self.read_codigo46(file, compression)
+        else:
+            return pd.DataFrame(), ""
+        # except Exception as err:
+        #     print(err)
+        #     return pd.DataFrame(), ""
 
     @classmethod
     def read_file(cls, file, only_detect_source, resources, rsids):
@@ -217,6 +182,39 @@ class Reader:
         if not isinstance(f, zipfile.ZipExtFile):
             f.seek(0)
         return first_line, comments, data
+
+    def handle_bytes_data(self, file, include_data=True):
+        compression = "infer"
+        if self.is_zip(file):
+            compression = "zip"
+            with zipfile.ZipFile(io.BytesIO(file)) as z:
+                namelist = z.namelist()
+                key = "GFG_filtered_unphased_genotypes_23andMe.txt"
+                key_search = [key in name for name in namelist]
+
+                if any(key_search):
+                    filename = namelist[key_search.index(True)]
+                else:
+                    filename = namelist[0]
+
+                with z.open(filename, "r") as f:
+                    first_line, comments, data = self._extract_comments(
+                        f, True, include_data
+                    )
+
+        elif self.is_gzip(file):
+            compression = "gzip"
+
+            with gzip.open(io.BytesIO(file), "rb") as f:
+                first_line, comments, data = self._extract_comments(f, True, include_data)
+
+        else:
+            file = io.BytesIO(file)
+            first_line, comments, data = self._extract_comments(
+                deepcopy(file), True, include_data
+            )
+            file.seek(0)
+        return first_line, comments, data, compression
 
     @staticmethod
     def is_zip(bytes_data):
@@ -570,9 +568,13 @@ class Reader:
 
         if isinstance(file, str):
             with open(file, "rb") as f:
-                first_line, comments, data = self._extract_comments(f, True, True)
+                first_line, comments, data, compression = self._extract_comments(
+                    f, True, True
+                )
         else:
-            first_line, comments, data = self._extract_comments(file, True, True)
+            first_line, comments, data, compression = self.handle_bytes_data(
+                file.read(), include_data=True
+            )
 
         df = pd.read_csv(
             io.StringIO(data), sep="\t", na_values="--", compression=compression
@@ -680,8 +682,6 @@ class Reader:
             dtype={"chrom": object, "pos": np.int64},
             compression=compression,
         )
-
-        print(len(df))
 
         return df, "generic"
 

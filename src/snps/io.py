@@ -214,7 +214,8 @@ class Reader:
                 while line:
                     data += line
                     line = self._read_line(f, decode)
-        f.seek(0)
+        if not isinstance(f, zipfile.ZipExtFile):
+            f.seek(0)
         return first_line, comments, data
 
     @staticmethod

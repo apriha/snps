@@ -574,9 +574,7 @@ class Reader:
                 file.read(), include_data=True
             )
 
-        df = pd.read_csv(
-            io.StringIO(data), sep="\t", na_values="--", compression=compression
-        )
+        df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
 
         def map_codigo_rsids(x):
             return codigo46_resources["rsid_map"].get(x)

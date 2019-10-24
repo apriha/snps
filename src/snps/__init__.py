@@ -441,8 +441,7 @@ class SNPs:
         -------
         Bool
         """
-
-        return self._snps.unannotated
+        return self.snp_count == 0 and self.source == "vcf"
 
     def get_chromosomes(self):
         """ Get the chromosomes of SNPs.

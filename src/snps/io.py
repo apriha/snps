@@ -568,9 +568,7 @@ class Reader:
 
         if isinstance(file, str):
             with open(file, "rb") as f:
-                first_line, comments, data, compression = self._extract_comments(
-                    f, True, True
-                )
+                first_line, comments, data = self._extract_comments(f, True, True)
         else:
             first_line, comments, data, compression = self.handle_bytes_data(
                 file.read(), include_data=True

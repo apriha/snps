@@ -663,6 +663,19 @@ class Reader:
     def read_vcf(self, file):
         """ Read and parse VCF file.
 
+        Notes
+        -----
+        This method attempts to read and parse a VCF file or buffer, optionally
+        compressed with gzip. Some assumptions are made throughout this process:
+
+            * SNPs that are not annotated with an RSID are skipped
+            * If the VCF contains multiple samples, only the first sample is used to
+              lookup the genotype
+            * Insertions and deletions are skipped
+            * If a sample allele is not specified, the genotype is reported as NaN
+            * If a sample allele refers to a REF or ALT allele that is not specified,
+              the genotype is reported as NaN
+
         Parameters
         ----------
         file : str or bytes

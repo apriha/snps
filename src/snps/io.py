@@ -728,8 +728,14 @@ class Reader:
                     continue
 
                 zygote1, zygote2 = zygote.replace("|", " ").replace("/", " ").split(" ")
-                if zygote1 == zygote2 and zygote1 == ".":
+                if zygote1 == "." or zygote2 == ".":
                     # assign null genotypes if either allele is None
+                    genotype = np.nan
+                elif (zygote1 == "0" or zygote2 == "0") and ref == ".":
+                    # sample allele specifies REF allele, which is None
+                    genotype = np.nan
+                elif (zygote1 == "1" or zygote2 == "1") and alt == ".":
+                    # sample allele specifies ALT allele, which is None
                     genotype = np.nan
                 else:
                     # Could capture full genotype, if REF is None, but genotype is 1/1 or

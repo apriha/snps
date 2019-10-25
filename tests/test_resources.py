@@ -291,7 +291,7 @@ class TestResources(BaseSNPsTestCase):
             seq.sequence,
             np.array(
                 bytearray(
-                    "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNAGGCCGGACN",
+                    "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNAGGCCGGACNNNNNNNN",
                     encoding="utf-8",
                     errors="strict",
                 ),
@@ -299,7 +299,7 @@ class TestResources(BaseSNPsTestCase):
             ),
         )
         assert list("AGGCCGGAC") == list(map(chr, seq.sequence[100:109]))
-        assert seq.md5 == "dc86fbda2f6febd77622407beae66b9a"
+        assert seq.md5 == "6ac6176535ad0e38aba2d05d786c39b6"
         assert seq.start == 1
-        assert seq.end == 110
-        assert seq.length == 110
+        assert seq.end == 117
+        assert seq.length == 117

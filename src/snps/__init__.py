@@ -91,7 +91,7 @@ class SNPs:
             utilize multiprocessing to speedup calculations
         processes : int
             processes to launch if multiprocessing
-        rsids : tuple
+        rsids : tuple, optional
             rsids to extract if loading a VCF file
         """
         self._file = file

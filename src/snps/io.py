@@ -64,7 +64,7 @@ class Reader:
             only detect the source of the data
         resources : Resources
             instance of Resources
-        rsids : tuple
+        rsids : tuple, optional
             rsids to extract if loading a VCF file
 
         """
@@ -154,7 +154,7 @@ class Reader:
             elif first_line.startswith("rsid"):
                 return self.read_generic_csv(file)
             elif "vcf" in comments.lower():
-                return self.read_vcf(file)
+                return self.read_vcf(file, self._rsids)
             elif ("Genes for Good" in comments) | ("PLINK" in comments):
                 return self.read_genes_for_good(file)
             elif "CODIGO46" in comments:
@@ -660,7 +660,7 @@ class Reader:
 
         return df, "generic"
 
-    def read_vcf(self, file):
+    def read_vcf(self, file, rsids=()):
         """ Read and parse VCF file.
 
         Notes
@@ -680,6 +680,8 @@ class Reader:
         ----------
         file : str or bytes
             path to file or bytes to load
+        rsids : tuple, optional
+            rsids to extract if loading a VCF file
 
         Returns
         -------
@@ -692,13 +694,13 @@ class Reader:
         if self._only_detect_source:
             return pd.DataFrame(), "vcf"
 
-        if not isinstance(file, io.IOBase):
+        if not isinstance(file, io.BytesIO):
             with open(file, "rb") as f:
-                return self._parse_vcf(f)
+                return self._parse_vcf(f, rsids)
         else:
-            return self._parse_vcf(file)
+            return self._parse_vcf(file, rsids)
 
-    def _parse_vcf(self, buffer):
+    def _parse_vcf(self, buffer, rsids):
         rows = []
         first_four_bytes = buffer.read(4)
         buffer.seek(0)
@@ -719,8 +721,8 @@ class Reader:
                 # skip SNPs with missing rsIDs.
                 if rsid == ".":
                     continue
-                if self._rsids:
-                    if rsid not in self._rsids:
+                if rsids:
+                    if rsid not in rsids:
                         continue
 
                 line_split = line_strip.split("\t")

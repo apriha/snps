@@ -53,6 +53,10 @@ from snps.utils import save_df_as_csv, Parallelizer, clean_str
 # set version string with Versioneer
 from snps._version import get_versions
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 __version__ = get_versions()["version"]
 del get_versions
 
@@ -319,7 +323,7 @@ class SNPs:
                                 break
 
                 except Exception as err:
-                    print(err)
+                    logger.warning(err)
 
     def _assign_snp(self, rsid, alleles, chrom):
         # only assign SNP if positions match (i.e., same build)
@@ -607,7 +611,7 @@ class SNPs:
         snps = self.snps
 
         if snps.empty:
-            print("No SNPs to remap")
+            logger.debug("No SNPs to remap")
             return chromosomes_remapped, chromosomes_not_remapped
         else:
             chromosomes = snps["chrom"].unique()
@@ -616,7 +620,7 @@ class SNPs:
         valid_assemblies = ["NCBI36", "GRCh37", "GRCh38", 36, 37, 38]
 
         if target_assembly not in valid_assemblies:
-            print("Invalid target assembly")
+            logger.debug("Invalid target assembly")
             return chromosomes_remapped, chromosomes_not_remapped
 
         if isinstance(target_assembly, int):
@@ -655,7 +659,7 @@ class SNPs:
                     }
                 )
             else:
-                print(
+                logger.debug(
                     "Chromosome {} not remapped; "
                     "removing chromosome from SNPs for consistency".format(chrom)
                 )
@@ -712,11 +716,13 @@ class SNPs:
             mapped_region = mapping["mapped"]["seq_region_name"]
 
             if orig_region != mapped_region:
-                print("discrepant chroms")
+                logger.debug("discrepant chroms")
                 continue
 
             if orig_range_len != mapped_range_len:
-                print("discrepant coords")  # observed when mapping NCBI36 -> GRCh38
+                logger.debug(
+                    "discrepant coords"
+                )  # observed when mapping NCBI36 -> GRCh38
                 continue
 
             # find the SNPs that are being remapped for this mapping
@@ -898,7 +904,7 @@ class SNPsCollection(SNPs):
         discrepant_genotypes_threshold,
         save_output,
     ):
-        print("Loading " + os.path.relpath(file))
+        logger.debug("Loading " + os.path.relpath(file))
         discrepant_positions, discrepant_genotypes = self._add_snps(
             SNPs(file),
             discrepant_snp_positions_threshold,
@@ -1044,12 +1050,12 @@ class SNPsCollection(SNPs):
         source = [s.strip() for s in snps._source.split(",")]
 
         if not snps._build_detected:
-            print("build not detected, assuming build {}".format(snps._build))
+            logger.debug("build not detected, assuming build {}".format(snps._build))
 
         if not self._build:
             self._build = build
         elif self._build != build:
-            print(
+            logger.debug(
                 "build / assembly mismatch between current build of SNPs and SNPs being loaded"
             )
 
@@ -1073,7 +1079,7 @@ class SNPsCollection(SNPs):
                 prefix = "{}_".format(clean_str(self._name))
 
             if 0 < len(discrepant_positions) < discrepant_snp_positions_threshold:
-                print(
+                logger.debug(
                     "{} SNP positions were discrepant; keeping original positions".format(
                         str(len(discrepant_positions))
                     )
@@ -1089,7 +1095,7 @@ class SNPsCollection(SNPs):
                         ),
                     )
             elif len(discrepant_positions) >= discrepant_snp_positions_threshold:
-                print(
+                logger.debug(
                     "too many SNPs differ in position; ensure same genome build is being used"
                 )
                 return discrepant_positions, discrepant_genotypes
@@ -1138,7 +1144,7 @@ class SNPsCollection(SNPs):
             ]
 
             if 0 < len(discrepant_genotypes) < discrepant_genotypes_threshold:
-                print(
+                logger.debug(
                     "{} SNP genotypes were discrepant; marking those as null".format(
                         str(len(discrepant_genotypes))
                     )
@@ -1154,7 +1160,7 @@ class SNPsCollection(SNPs):
                         ),
                     )
             elif len(discrepant_genotypes) >= discrepant_genotypes_threshold:
-                print(
+                logger.debug(
                     "too many SNPs differ in their genotype; ensure file is for same "
                     "individual"
                 )

@@ -15,6 +15,7 @@
    README <readme>
    output_files
    snps_banner
+   snps
 
 Indices and tables
 ==================

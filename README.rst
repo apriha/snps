@@ -34,7 +34,6 @@ Dependencies
 - `numpy <http://www.numpy.org>`_
 - `pandas <http://pandas.pydata.org>`_
 - `atomicwrites <https://github.com/untitaker/python-atomicwrites>`_
-- `PyVCF <https://github.com/jamescasbon/PyVCF>`_
 
 Installation
 ------------
@@ -70,7 +69,8 @@ Load a `23andMe <https://www.23andme.com>`_ raw data file:
 >>> from snps import SNPs
 >>> s = SNPs('resources/662.23andme.340.txt.gz')
 
-The loaded SNPs are available via a ``pandas.DataFrame``:
+The ``SNPs`` class accepts a path to a file or a bytes object. A ``Reader`` class attempts to
+infer the data source and load the SNPs. The loaded SNPs are available via a ``pandas.DataFrame``:
 
 >>> df = s.snps
 >>> df.columns.values

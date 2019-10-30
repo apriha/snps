@@ -71,6 +71,7 @@ class SNPs:
         resources_dir="resources",
         parallelize=False,
         processes=os.cpu_count(),
+        rsids=(),
     ):
         """ Object used to read and parse genotype / raw data files.
 
@@ -90,6 +91,8 @@ class SNPs:
             utilize multiprocessing to speedup calculations
         processes : int
             processes to launch if multiprocessing
+        rsids : tuple, optional
+            rsids to extract if loading a VCF file
         """
         self._file = file
         self._only_detect_source = only_detect_source
@@ -103,7 +106,9 @@ class SNPs:
 
         if file:
 
-            self._snps, self._source = self._read_raw_data(file, only_detect_source)
+            self._snps, self._source = self._read_raw_data(
+                file, only_detect_source, rsids
+            )
 
             if not self._snps.empty:
                 self.sort_snps()
@@ -119,7 +124,7 @@ class SNPs:
                     self._assign_par_snps()
 
     def __repr__(self):
-        return "SNPs({!r})".format(self._file)
+        return "SNPs({!r})".format(self._file[0:50])
 
     @property
     def source(self):
@@ -214,6 +219,19 @@ class SNPs:
         """
         return self.determine_sex()
 
+    @property
+    def unannotated_vcf(self):
+        """ Indicates if VCF file is unannotated.
+
+        Returns
+        -------
+        bool
+        """
+        if self.snp_count == 0 and self.source == "vcf":
+            return True
+
+        return False
+
     def get_summary(self):
         """ Get summary of ``SNPs``.
 
@@ -273,8 +291,8 @@ class SNPs:
             snps=self, filename=filename, vcf=vcf, atomic=atomic, **kwargs
         )
 
-    def _read_raw_data(self, file, only_detect_source):
-        return Reader.read_file(file, only_detect_source, self._resources)
+    def _read_raw_data(self, file, only_detect_source, rsids):
+        return Reader.read_file(file, only_detect_source, self._resources, rsids)
 
     def _assign_par_snps(self):
         """ Assign PAR SNPs to the X or Y chromosome using SNP position.

@@ -46,13 +46,24 @@ from snps import SNPs, SNPsCollection
 from tests import BaseSNPsTestCase
 
 
-class TestIndividual(BaseSNPsTestCase):
+class TestSNPsCollection(BaseSNPsTestCase):
     def generic_snps(self):
         return self.create_snp_df(
-            rsid=["rs1", "rs2", "rs3", "rs4", "rs5", "rs6", "rs7", "rs8"],
-            chrom=["1", "1", "1", "1", "1", "1", "1", "1"],
-            pos=[101, 102, 103, 104, 105, 106, 107, 108],
+            rsid=["rs" + str(i) for i in range(1, 9)],
+            chrom=["1"] * 8,
+            pos=list(range(101, 109)),
             genotype=["AA", "CC", "GG", "TT", np.nan, "GC", "TC", "AT"],
+        )
+
+    def generic_snps_vcf(self):
+        df = self.generic_snps()
+        return df.append(
+            self.create_snp_df(
+                rsid=["rs" + str(i) for i in range(12, 18)],
+                chrom=["1"] * 6,
+                pos=list(range(112, 118)),
+                genotype=[np.nan] * 6,
+            )
         )
 
     def snps_NCBI36(self):
@@ -202,7 +213,18 @@ class TestIndividual(BaseSNPsTestCase):
         # phased snps, and snps with missing rsID
         s = SNPs("tests/input/testvcf.vcf")
         assert s.source == "vcf"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        assert not s.unannotated_vcf
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+
+    def test_snps_vcf_rsids(self):
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        rsids = ["rs1", "rs2"]
+        s = SNPs("tests/input/testvcf.vcf", rsids=rsids)
+        assert s.source == "vcf"
+        assert not s.unannotated_vcf
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf().loc[rsids])
 
     def test_snps_vcf_gz(self):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
@@ -217,7 +239,87 @@ class TestIndividual(BaseSNPsTestCase):
 
         s = SNPs("tests/input/testvcf.vcf.gz")
         assert s.source == "vcf"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+
+    def test_snps_vcf_gz_rsids(self):
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        with open("tests/input/testvcf.vcf", "rb") as f_in:
+            with atomic_write(
+                "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        rsids = ["rs1", "rs2"]
+        s = SNPs("tests/input/testvcf.vcf.gz", rsids=rsids)
+        assert s.source == "vcf"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf().loc[rsids])
+
+    def test_snps_unannotated_vcf(self):
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        s = SNPs("tests/input/unannotated_testvcf.vcf")
+        assert s.source == "vcf"
+        assert s.unannotated_vcf
+
+    def test_snps_vcf_buffer(self):
+        with open("tests/input/testvcf.vcf", "r") as f:
+            snps_vcf_buffer = SNPs(f.read().encode("utf-8"))
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        assert snps_vcf_buffer.source == "vcf"
+        pd.testing.assert_frame_equal(snps_vcf_buffer.snps, self.generic_snps_vcf())
+
+    def test_snps_vcf_buffer_rsids(self):
+        with open("tests/input/testvcf.vcf", "r") as f:
+            rsids = ["rs1", "rs2"]
+            df = SNPs(f.read().encode("utf-8"), rsids=rsids)
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        assert df.source == "vcf"
+        pd.testing.assert_frame_equal(df.snps, self.generic_snps_vcf().loc[rsids])
+
+    def test_snps_vcf_buffer_gz(self):
+        with open("tests/input/testvcf.vcf", "rb") as f_in:
+            with atomic_write(
+                "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        with open("tests/input/testvcf.vcf.gz", "rb") as f:
+            data = f.read()
+            s = SNPs(data)
+        os.remove("tests/input/testvcf.vcf.gz")
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        assert s.source == "vcf"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+
+    def test_snps_vcf_buffer_gz_rsids(self):
+        with open("tests/input/testvcf.vcf", "rb") as f_in:
+            with atomic_write(
+                "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        with open("tests/input/testvcf.vcf.gz", "rb") as f:
+            rsids = ["rs1", "rs2"]
+            data = f.read()
+            s = SNPs(data, rsids=rsids)
+        os.remove("tests/input/testvcf.vcf.gz")
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        assert s.source == "vcf"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf().loc[rsids])
 
     def test_source_lineage_file(self):
         sc = SNPsCollection("tests/input/GRCh37.csv")
@@ -490,7 +592,7 @@ class TestIndividual(BaseSNPsTestCase):
 
         assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
         s = SNPs("output/vcf_GRCh37.vcf")
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
 
     def test_save_snps_specify_file(self):
         s = SNPs("tests/input/GRCh37.csv")

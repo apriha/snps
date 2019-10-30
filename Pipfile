@@ -7,6 +7,8 @@ verify_ssl = true
 pytest = "*"
 pytest-cov = "*"
 pytest-watch = "*"
+sphinx = "*"
+sphinx-rtd-theme = "*"
 
 [packages]
 snps = {editable = true,path = "."}

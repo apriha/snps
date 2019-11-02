@@ -1,3 +1,7 @@
+""" Classes for reading and writing SNPs.
+
+"""
+
 """
 BSD 3-Clause License
 
@@ -41,16 +45,19 @@ from copy import deepcopy
 
 import numpy as np
 import pandas as pd
-import vcf
 
 import snps
 from snps.utils import save_df_as_csv, clean_str
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Reader:
     """ Class for reading and parsing raw data / genotype files. """
 
-    def __init__(self, file="", only_detect_source=False, resources=None):
+    def __init__(self, file="", only_detect_source=False, resources=None, rsids=()):
         """ Initialize a `Reader`.
 
         Parameters
@@ -61,10 +68,14 @@ class Reader:
             only detect the source of the data
         resources : Resources
             instance of Resources
+        rsids : tuple, optional
+            rsids to extract if loading a VCF file
+
         """
         self._file = file
         self._only_detect_source = only_detect_source
         self._resources = resources
+        self._rsids = rsids
 
     def __call__(self):
         """ Read and parse a raw data / genotype file.
@@ -147,7 +158,7 @@ class Reader:
             elif first_line.startswith("rsid"):
                 return self.read_generic_csv(file)
             elif "vcf" in comments.lower():
-                return self.read_vcf(file)
+                return self.read_vcf(file, self._rsids)
             elif ("Genes for Good" in comments) | ("PLINK" in comments):
                 return self.read_genes_for_good(file)
             elif "CODIGO46" in comments:
@@ -155,11 +166,11 @@ class Reader:
             else:
                 return pd.DataFrame(), ""
         except Exception as err:
-            print(err)
+            logger.warning(err)
             return pd.DataFrame(), ""
 
     @classmethod
-    def read_file(cls, file, only_detect_source, resources):
+    def read_file(cls, file, only_detect_source, resources, rsids):
         """ Read `file`.
 
         Parameters
@@ -170,13 +181,15 @@ class Reader:
             only detect the source of the data
         resources : Resources
             instance of Resources
+        rsids : tuple
+            rsids to extract if loading a VCF file
 
         Returns
         -------
         tuple : (pandas.DataFrame, str)
             dataframe of parsed SNPs, detected source of SNPs
         """
-        r = cls(file, only_detect_source, resources)
+        r = cls(file, only_detect_source, resources, rsids)
         return r()
 
     def _extract_comments(self, f, decode):
@@ -287,7 +300,6 @@ class Reader:
         )
 
         # remove incongruous data
-        df = df.drop(df.loc[df["chrom"] == "0"].index)
         df = df.drop(
             df.loc[df.index == "RSID"].index
         )  # second header for concatenated data
@@ -651,19 +663,28 @@ class Reader:
 
         return df, "generic"
 
-    def read_vcf(self, file):
+    def read_vcf(self, file, rsids=()):
         """ Read and parse VCF file.
 
         Notes
         -----
-        This function uses the PyVCF python module to parse the genotypes from VCF files:
-        https://pyvcf.readthedocs.io/en/latest/index.html
+        This method attempts to read and parse a VCF file or buffer, optionally
+        compressed with gzip. Some assumptions are made throughout this process:
 
+            * SNPs that are not annotated with an RSID are skipped
+            * If the VCF contains multiple samples, only the first sample is used to
+              lookup the genotype
+            * Insertions and deletions are skipped
+            * If a sample allele is not specified, the genotype is reported as NaN
+            * If a sample allele refers to a REF or ALT allele that is not specified,
+              the genotype is reported as NaN
 
         Parameters
         ----------
-        file : str
-            path to file
+        file : str or bytes
+            path to file or bytes to load
+        rsids : tuple, optional
+            rsids to extract if loading a VCF file
 
         Returns
         -------
@@ -676,51 +697,83 @@ class Reader:
         if self._only_detect_source:
             return pd.DataFrame(), "vcf"
 
-        df = pd.DataFrame(columns=["rsid", "chrom", "pos", "genotype"])
-        df = df.astype(
-            {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
-        )
+        if not isinstance(file, io.BytesIO):
+            with open(file, "rb") as f:
+                return self._parse_vcf(f, rsids)
+        else:
+            return self._parse_vcf(file, rsids)
 
-        with open(file, "r") as f:
-            vcf_reader = vcf.Reader(f)
+    def _parse_vcf(self, buffer, rsids):
+        rows = []
+        first_four_bytes = buffer.read(4)
+        buffer.seek(0)
 
-            # snps does not yet support multi-sample vcf.
-            if len(vcf_reader.samples) > 1:
-                print(
-                    "Multiple samples detected in the vcf file, please use a single sample vcf."
-                )
-                return df, "vcf"
+        if self.is_gzip(first_four_bytes):
+            f = gzip.open(buffer)
+        else:
+            f = buffer
 
-            for i, record in enumerate(vcf_reader):
-                # assign null genotypes if either allele is None
-                # Could capture full genotype, if REF is None, but genotype is 1/1 or
-                # if ALT is None, but genotype is 0/0
-                if record.REF is None or record.ALT[0] is None:
-                    genotype = np.nan
+        with io.TextIOWrapper(io.BufferedReader(f)) as file:
+
+            for line in file:
+
+                line_strip = line.strip("\n")
+                if line_strip.startswith("#"):
+                    continue
+                rsid = line_strip.split("\t")[2]
                 # skip SNPs with missing rsIDs.
-                elif record.ID is None:
+                if rsid == ".":
                     continue
+                if rsids:
+                    if rsid not in rsids:
+                        continue
+
+                line_split = line_strip.split("\t")
+
+                # snps does not yet support multi-sample vcf.
+                if len(line_split) > 10:
+                    logger.debug("Multiple samples detected in the vcf file")
+
+                ref = line_split[3]
+                alt = line_split[4]
+                zygote = line_split[9]
+                zygote = zygote.split(":")[0]
+
+                ref_alt = [ref] + alt.split(",")
+
                 # skip insertions and deletions
-                elif len(record.REF) > 1 or len(record.ALT[0]) > 1:
+                if sum(map(len, ref_alt)) > len(ref_alt):
                     continue
+
+                zygote1, zygote2 = zygote.replace("|", " ").replace("/", " ").split(" ")
+                if zygote1 == "." or zygote2 == ".":
+                    # assign null genotypes if either allele is None
+                    genotype = np.nan
+                elif (zygote1 == "0" or zygote2 == "0") and ref == ".":
+                    # sample allele specifies REF allele, which is None
+                    genotype = np.nan
+                elif (zygote1 == "1" or zygote2 == "1") and alt == ".":
+                    # sample allele specifies ALT allele, which is None
+                    genotype = np.nan
                 else:
-                    alleles = record.genotype(vcf_reader.samples[0]).gt_bases
-                    a1 = alleles[0]
-                    a2 = alleles[-1]
-                    genotype = "{}{}".format(a1, a2)
+                    # Could capture full genotype, if REF is None, but genotype is 1/1 or
+                    # if ALT is None, but genotype is 0/0
+                    genotype = ref_alt[int(zygote1)] + ref_alt[int(zygote2)]
 
-                record_info = {
-                    "rsid": record.ID,
-                    "chrom": "{}".format(record.CHROM).strip("chr"),
-                    "pos": record.POS,
-                    "genotype": genotype,
-                }
-                # append the record to the DataFrame
-                df = df.append(
-                    pd.DataFrame([record_info]), ignore_index=True, sort=False
-                )
+                record_array = [
+                    rsid,
+                    "{}".format(line_split[0]).strip("chr"),
+                    line_split[1],
+                    genotype,
+                ]
+                rows.append(record_array)
 
-        df.set_index("rsid", inplace=True, drop=True)
+            df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
+            df = df.astype(
+                {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
+            )
+
+            df.set_index("rsid", inplace=True, drop=True)
 
         return df, "vcf"
 
@@ -827,7 +880,7 @@ class Writer:
 
         References
         ----------
-        .. [1] The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
+        1. The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
            https://samtools.github.io/hts-specs/VCFv4.2.pdf
 
         Returns

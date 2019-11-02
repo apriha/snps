@@ -1,11 +1,19 @@
 snps package
 ============
 
+Module
+------
+
+.. automodule:: snps
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
 snps\.ensembl module
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: snps.ensembl
     :members:
@@ -13,7 +21,7 @@ snps\.ensembl module
     :show-inheritance:
 
 snps\.io module
----------------
+~~~~~~~~~~~~~~~
 
 .. automodule:: snps.io
     :members:
@@ -21,7 +29,7 @@ snps\.io module
     :show-inheritance:
 
 snps\.resources module
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: snps.resources
     :members:
@@ -29,18 +37,9 @@ snps\.resources module
     :show-inheritance:
 
 snps\.utils module
-------------------
+~~~~~~~~~~~~~~~~~~
 
 .. automodule:: snps.utils
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: snps
     :members:
     :undoc-members:
     :show-inheritance:

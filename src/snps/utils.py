@@ -80,6 +80,14 @@ class Parallelizer:
             results of each call to `f`
         """
         if self._parallelize:
+            try:
+                # https://pytest-cov.readthedocs.io/en/latest/subprocess-support.html#if-you-use-multiprocessing-pool
+                from pytest_cov.embed import cleanup_on_sigterm
+            except ImportError:
+                pass
+            else:
+                cleanup_on_sigterm()
+
             with Pool(self._processes) as p:
                 return p.map(f, tasks)
         else:

@@ -300,7 +300,6 @@ class Reader:
         )
 
         # remove incongruous data
-        df = df.drop(df.loc[df["chrom"] == "0"].index)
         df = df.drop(
             df.loc[df.index == "RSID"].index
         )  # second header for concatenated data

@@ -922,7 +922,7 @@ class SNPsCollection(SNPs):
         discrepant_genotypes_threshold,
         save_output,
     ):
-        logger.info("Loading " + os.path.relpath(file))
+        logger.info("Loading {}".format(os.path.relpath(file)))
         discrepant_positions, discrepant_genotypes = self._add_snps(
             SNPs(file),
             discrepant_snp_positions_threshold,

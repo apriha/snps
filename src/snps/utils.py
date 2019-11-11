@@ -163,7 +163,7 @@ def save_df_as_csv(
                 destination = filename
             else:
                 destination = os.path.join(path, filename)
-                logger.info("Saving " + os.path.relpath(destination))
+                logger.info("Saving {}".format(os.path.relpath(destination)))
 
             if prepend_info:
                 s = (

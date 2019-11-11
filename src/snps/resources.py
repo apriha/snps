@@ -642,7 +642,7 @@ class Resources(metaclass=Singleton):
         path : str
             path to file being downloaded
         """
-        logger.info("Downloading " + os.path.relpath(path))
+        logger.info("Downloading {}".format(os.path.relpath(path)))
 
 
 class ReferenceSequence:

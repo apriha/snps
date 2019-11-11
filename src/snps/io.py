@@ -732,7 +732,7 @@ class Reader:
 
                 # snps does not yet support multi-sample vcf.
                 if len(line_split) > 10:
-                    logger.debug("Multiple samples detected in the vcf file")
+                    logger.info("Multiple samples detected in the vcf file")
 
                 ref = line_split[3]
                 alt = line_split[4]

@@ -163,7 +163,7 @@ def save_df_as_csv(
                 destination = filename
             else:
                 destination = os.path.join(path, filename)
-                logger.debug("Saving " + os.path.relpath(destination))
+                logger.info("Saving {}".format(os.path.relpath(destination)))
 
             if prepend_info:
                 s = (
@@ -200,7 +200,7 @@ def save_df_as_csv(
             logger.warning(err)
             return ""
     else:
-        logger.debug("no data to save...")
+        logger.warning("no data to save...")
         return ""
 
 

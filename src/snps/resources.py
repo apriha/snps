@@ -135,7 +135,7 @@ class Resources(metaclass=Singleton):
         valid_assemblies = ["NCBI36", "GRCh37", "GRCh38"]
 
         if assembly not in valid_assemblies:
-            logger.debug("Invalid assembly")
+            logger.warning("Invalid assembly")
             return {}
 
         if not self._reference_chroms_available(assembly, chroms):
@@ -476,7 +476,7 @@ class Resources(metaclass=Singleton):
         if not os.path.exists(destination) or not self._all_chroms_in_tar(
             chroms, destination
         ):
-            logger.debug("Downloading {}".format(os.path.relpath(destination)))
+            logger.info("Downloading {}".format(os.path.relpath(destination)))
 
             try:
                 self._download_assembly_mapping_data(
@@ -642,7 +642,7 @@ class Resources(metaclass=Singleton):
         path : str
             path to file being downloaded
         """
-        logger.debug("Downloading " + os.path.relpath(path))
+        logger.info("Downloading " + os.path.relpath(path))
 
 
 class ReferenceSequence:

@@ -629,7 +629,7 @@ class SNPs:
         snps = self.snps
 
         if snps.empty:
-            logger.debug("No SNPs to remap")
+            logger.warning("No SNPs to remap")
             return chromosomes_remapped, chromosomes_not_remapped
         else:
             chromosomes = snps["chrom"].unique()
@@ -638,7 +638,7 @@ class SNPs:
         valid_assemblies = ["NCBI36", "GRCh37", "GRCh38", 36, 37, 38]
 
         if target_assembly not in valid_assemblies:
-            logger.debug("Invalid target assembly")
+            logger.warning("Invalid target assembly")
             return chromosomes_remapped, chromosomes_not_remapped
 
         if isinstance(target_assembly, int):
@@ -677,7 +677,7 @@ class SNPs:
                     }
                 )
             else:
-                logger.debug(
+                logger.warning(
                     "Chromosome {} not remapped; "
                     "removing chromosome from SNPs for consistency".format(chrom)
                 )
@@ -734,11 +734,11 @@ class SNPs:
             mapped_region = mapping["mapped"]["seq_region_name"]
 
             if orig_region != mapped_region:
-                logger.debug("discrepant chroms")
+                logger.warning("discrepant chroms")
                 continue
 
             if orig_range_len != mapped_range_len:
-                logger.debug(
+                logger.warning(
                     "discrepant coords"
                 )  # observed when mapping NCBI36 -> GRCh38
                 continue
@@ -922,7 +922,7 @@ class SNPsCollection(SNPs):
         discrepant_genotypes_threshold,
         save_output,
     ):
-        logger.debug("Loading " + os.path.relpath(file))
+        logger.info("Loading " + os.path.relpath(file))
         discrepant_positions, discrepant_genotypes = self._add_snps(
             SNPs(file),
             discrepant_snp_positions_threshold,
@@ -1068,12 +1068,12 @@ class SNPsCollection(SNPs):
         source = [s.strip() for s in snps._source.split(",")]
 
         if not snps._build_detected:
-            logger.debug("build not detected, assuming build {}".format(snps._build))
+            logger.warning("build not detected, assuming build {}".format(snps._build))
 
         if not self._build:
             self._build = build
         elif self._build != build:
-            logger.debug(
+            logger.warning(
                 "build / assembly mismatch between current build of SNPs and SNPs being loaded"
             )
 
@@ -1097,7 +1097,7 @@ class SNPsCollection(SNPs):
                 prefix = "{}_".format(clean_str(self._name))
 
             if 0 < len(discrepant_positions) < discrepant_snp_positions_threshold:
-                logger.debug(
+                logger.warning(
                     "{} SNP positions were discrepant; keeping original positions".format(
                         str(len(discrepant_positions))
                     )
@@ -1113,7 +1113,7 @@ class SNPsCollection(SNPs):
                         ),
                     )
             elif len(discrepant_positions) >= discrepant_snp_positions_threshold:
-                logger.debug(
+                logger.warning(
                     "too many SNPs differ in position; ensure same genome build is being used"
                 )
                 return discrepant_positions, discrepant_genotypes
@@ -1162,7 +1162,7 @@ class SNPsCollection(SNPs):
             ]
 
             if 0 < len(discrepant_genotypes) < discrepant_genotypes_threshold:
-                logger.debug(
+                logger.warning(
                     "{} SNP genotypes were discrepant; marking those as null".format(
                         str(len(discrepant_genotypes))
                     )
@@ -1178,7 +1178,7 @@ class SNPsCollection(SNPs):
                         ),
                     )
             elif len(discrepant_genotypes) >= discrepant_genotypes_threshold:
-                logger.debug(
+                logger.warning(
                     "too many SNPs differ in their genotype; ensure file is for same "
                     "individual"
                 )

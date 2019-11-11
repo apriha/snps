@@ -937,7 +937,7 @@ class SNPsCollection(SNPs):
             discrepant_genotypes, sort=True
         )
 
-    def save_snps(self, filename="", vcf=False):
+    def save_snps(self, filename="", vcf=False, atomic=True, **kwargs):
         """ Save SNPs to file.
 
         Parameters
@@ -946,6 +946,10 @@ class SNPsCollection(SNPs):
             filename for file to save
         vcf : bool
             flag to save file as VCF
+        atomic : bool
+            atomically write output to a file on local filesystem
+        **kwargs
+            additional parameters to `pandas.DataFrame.to_csv`
 
         Returns
         -------
@@ -964,7 +968,7 @@ class SNPsCollection(SNPs):
                 ext = ".csv"
 
             filename = "{}{}{}".format(prefix, self.assembly, ext)
-        return super().save_snps(filename=filename, vcf=vcf)
+        return super().save_snps(filename=filename, vcf=vcf, atomic=atomic, **kwargs)
 
     def save_discrepant_positions(self, filename=""):
         """ Save SNPs with discrepant positions to file.

@@ -473,9 +473,7 @@ class Resources(metaclass=Singleton):
             self._resources_dir, assembly_mapping_data + ".tar.gz"
         )
 
-        if not os.path.exists(destination) or not self._all_chroms_in_tar(
-            chroms, destination
-        ):
+        if not os.path.exists(destination):
             logger.info("Downloading {}".format(os.path.relpath(destination)))
 
             try:
@@ -521,20 +519,6 @@ class Resources(metaclass=Singleton):
 
                         # remove temp file
                         os.remove(f_tmp.name)
-
-    def _all_chroms_in_tar(self, chroms, filename):
-        try:
-            with tarfile.open(filename, "r") as tar:
-                members = tar.getnames()
-
-            for chrom in chroms:
-                if chrom + ".json" not in members:
-                    return False
-        except Exception as err:
-            logger.warning(err)
-            return False
-
-        return True
 
     def _load_codigo46_resources(self, rsid_map, chrpos_map):
         try:

@@ -48,20 +48,6 @@ class TestResources(BaseSNPsTestCase):
         self.resource = Resources(resources_dir="resources")
         self.del_output_dir_helper()
 
-    def test_get_assembly_mapping_data_bad_tar(self):
-        if (
-            not os.getenv("DOWNLOADS_ENABLED")
-            or os.getenv("DOWNLOADS_ENABLED") == "true"
-        ):
-            with atomic_write(
-                "resources/NCBI36_GRCh37.tar.gz", mode="w", overwrite=True
-            ):
-                pass
-            assembly_mapping_data = self.resource.get_assembly_mapping_data(
-                "NCBI36", "GRCh37"
-            )
-            assert len(assembly_mapping_data) == 25
-
     def test_get_assembly_mapping_data(self):
         assembly_mapping_data = self.resource.get_assembly_mapping_data(
             "NCBI36", "GRCh37"
@@ -79,11 +65,6 @@ class TestResources(BaseSNPsTestCase):
             if not v:
                 assert False
         assert True
-
-    def test__all_chroms_in_tar(self):
-        assert not self.resource._all_chroms_in_tar(
-            ["PAR"], "resources/NCBI36_GRCh37.tar.gz"
-        )
 
     def test_download_example_datasets(self):
         paths = self.resource.download_example_datasets()

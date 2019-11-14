@@ -76,14 +76,6 @@ class TestResources(BaseSNPsTestCase):
 
         assert True
 
-    def test__load_assembly_mapping_data_None(self):
-        result = self.resource._load_assembly_mapping_data(None)
-        assert not result
-
-    def test__download_file_compress(self):
-        result = self.resource._download_file("", "", compress=True)
-        assert not result
-
     def test_get_paths_reference_sequences_invalid_assembly(self):
         assembly, chroms, urls, paths = self.resource._get_paths_reference_sequences(
             assembly="36"

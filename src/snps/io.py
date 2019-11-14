@@ -87,86 +87,82 @@ class Reader:
         """
         file = self._file
 
-        try:
-            # peek into files to determine the data format
-            if isinstance(file, str) and os.path.exists(file):
-                if ".zip" in file:
-                    with zipfile.ZipFile(file) as z:
-                        with z.open(z.namelist()[0], "r") as f:
-                            first_line, comments, data = self._extract_comments(f, True)
-                elif ".gz" in file:
-                    with gzip.open(file, "rt") as f:
-                        first_line, comments, data = self._extract_comments(f, False)
-                else:
-                    with open(file, "r") as f:
-                        first_line, comments, data = self._extract_comments(f, False)
+        # peek into files to determine the data format
+        if isinstance(file, str) and os.path.exists(file):
+            if ".zip" in file:
+                with zipfile.ZipFile(file) as z:
+                    with z.open(z.namelist()[0], "r") as f:
+                        first_line, comments, data = self._extract_comments(f, True)
+            elif ".gz" in file:
+                with gzip.open(file, "rt") as f:
+                    first_line, comments, data = self._extract_comments(f, False)
+            else:
+                with open(file, "r") as f:
+                    first_line, comments, data = self._extract_comments(f, False)
 
-            elif isinstance(file, bytes):
-                if self.is_zip(file):
+        elif isinstance(file, bytes):
+            if self.is_zip(file):
 
-                    with zipfile.ZipFile(io.BytesIO(file)) as z:
-                        namelist = z.namelist()
-                        key = "GFG_filtered_unphased_genotypes_23andMe.txt"
-                        key_search = [key in name for name in namelist]
+                with zipfile.ZipFile(io.BytesIO(file)) as z:
+                    namelist = z.namelist()
+                    key = "GFG_filtered_unphased_genotypes_23andMe.txt"
+                    key_search = [key in name for name in namelist]
 
-                        if any(key_search):
-                            filename = namelist[key_search.index(True)]
-                        else:
-                            filename = namelist[0]
+                    if any(key_search):
+                        filename = namelist[key_search.index(True)]
+                    else:
+                        filename = namelist[0]
 
-                        with z.open(filename, "r") as f:
-                            data = f.read()
-                            file = io.BytesIO(data)
-                            first_line, comments, data = self._extract_comments(
-                                io.BytesIO(data), True
-                            )
-
-                elif self.is_gzip(file):
-
-                    with gzip.open(io.BytesIO(file), "rb") as f:
+                    with z.open(filename, "r") as f:
                         data = f.read()
                         file = io.BytesIO(data)
                         first_line, comments, data = self._extract_comments(
                             io.BytesIO(data), True
                         )
 
-                else:
-                    file = io.BytesIO(file)
+            elif self.is_gzip(file):
+
+                with gzip.open(io.BytesIO(file), "rb") as f:
+                    data = f.read()
+                    file = io.BytesIO(data)
                     first_line, comments, data = self._extract_comments(
-                        deepcopy(file), True
+                        io.BytesIO(data), True
                     )
 
             else:
-                return pd.DataFrame(), ""
+                file = io.BytesIO(file)
+                first_line, comments, data = self._extract_comments(
+                    deepcopy(file), True
+                )
 
-            if "23andMe" in first_line:
-                return self.read_23andme(file)
-            elif "Ancestry" in first_line:
-                return self.read_ancestry(file)
-            elif first_line.startswith("RSID"):
-                return self.read_ftdna(file)
-            elif "famfinder" in first_line:
-                return self.read_ftdna_famfinder(file)
-            elif "MyHeritage" in first_line:
-                return self.read_myheritage(file)
-            elif "Living DNA" in first_line:
-                return self.read_livingdna(file)
-            elif "SNP Name	rsID	Sample.ID	Allele1...Top" in first_line:
-                return self.read_mapmygenome(file)
-            elif "lineage" in first_line or "snps" in first_line:
-                return self.read_lineage_csv(file, comments)
-            elif first_line.startswith("rsid"):
-                return self.read_generic_csv(file)
-            elif "vcf" in comments.lower():
-                return self.read_vcf(file, self._rsids)
-            elif ("Genes for Good" in comments) | ("PLINK" in comments):
-                return self.read_genes_for_good(file)
-            elif "CODIGO46" in comments:
-                return self.read_codigo46(data)
-            else:
-                return pd.DataFrame(), ""
-        except Exception as err:
-            logger.warning(err)
+        else:
+            return pd.DataFrame(), ""
+
+        if "23andMe" in first_line:
+            return self.read_23andme(file)
+        elif "Ancestry" in first_line:
+            return self.read_ancestry(file)
+        elif first_line.startswith("RSID"):
+            return self.read_ftdna(file)
+        elif "famfinder" in first_line:
+            return self.read_ftdna_famfinder(file)
+        elif "MyHeritage" in first_line:
+            return self.read_myheritage(file)
+        elif "Living DNA" in first_line:
+            return self.read_livingdna(file)
+        elif "SNP Name	rsID	Sample.ID	Allele1...Top" in first_line:
+            return self.read_mapmygenome(file)
+        elif "lineage" in first_line or "snps" in first_line:
+            return self.read_lineage_csv(file, comments)
+        elif first_line.startswith("rsid"):
+            return self.read_generic_csv(file)
+        elif "vcf" in comments.lower():
+            return self.read_vcf(file, self._rsids)
+        elif ("Genes for Good" in comments) | ("PLINK" in comments):
+            return self.read_genes_for_good(file)
+        elif "CODIGO46" in comments:
+            return self.read_codigo46(data)
+        else:
             return pd.DataFrame(), ""
 
     @classmethod

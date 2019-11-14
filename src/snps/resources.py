@@ -285,24 +285,20 @@ class Resources(metaclass=Singleton):
         -----
         Keys of returned dict are chromosomes and values are the corresponding assembly map.
         """
-        try:
-            assembly_mapping_data = {}
+        assembly_mapping_data = {}
 
-            with tarfile.open(filename, "r") as tar:
-                # http://stackoverflow.com/a/2018576
-                for member in tar.getmembers():
-                    if ".json" in member.name:
-                        with tar.extractfile(member) as tar_file:
-                            tar_bytes = tar_file.read()
-                        # https://stackoverflow.com/a/42683509/4727627
-                        assembly_mapping_data[member.name.split(".")[0]] = json.loads(
-                            tar_bytes.decode("utf-8")
-                        )
+        with tarfile.open(filename, "r") as tar:
+            # http://stackoverflow.com/a/2018576
+            for member in tar.getmembers():
+                if ".json" in member.name:
+                    with tar.extractfile(member) as tar_file:
+                        tar_bytes = tar_file.read()
+                    # https://stackoverflow.com/a/42683509/4727627
+                    assembly_mapping_data[member.name.split(".")[0]] = json.loads(
+                        tar_bytes.decode("utf-8")
+                    )
 
-            return assembly_mapping_data
-        except Exception as err:
-            logger.warning(err)
-            return {}
+        return assembly_mapping_data
 
     def _get_paths_reference_sequences(
         self, sub_dir="fasta", assembly="GRCh37", chroms=()
@@ -476,13 +472,9 @@ class Resources(metaclass=Singleton):
         if not os.path.exists(destination):
             logger.info("Downloading {}".format(os.path.relpath(destination)))
 
-            try:
-                self._download_assembly_mapping_data(
-                    destination, chroms, source_assembly, target_assembly, retries
-                )
-            except Exception as err:
-                logger.warning(err)
-                return ""
+            self._download_assembly_mapping_data(
+                destination, chroms, source_assembly, target_assembly, retries
+            )
 
         return destination
 
@@ -521,29 +513,25 @@ class Resources(metaclass=Singleton):
                         os.remove(f_tmp.name)
 
     def _load_codigo46_resources(self, rsid_map, chrpos_map):
-        try:
-            d = {}
+        d = {}
 
-            with gzip.open(rsid_map, "rb") as f:
-                codigo_rsid_map = f.read().decode("utf-8")
+        with gzip.open(rsid_map, "rb") as f:
+            codigo_rsid_map = f.read().decode("utf-8")
 
-            d["rsid_map"] = dict(
-                (x.split("\t")[0], x.split("\t")[1])
-                for x in codigo_rsid_map.split("\n")[:-1]
-            )
+        d["rsid_map"] = dict(
+            (x.split("\t")[0], x.split("\t")[1])
+            for x in codigo_rsid_map.split("\n")[:-1]
+        )
 
-            with gzip.open(chrpos_map, "rb") as f:
-                codigo_chrpos_map = f.read().decode("utf-8")
+        with gzip.open(chrpos_map, "rb") as f:
+            codigo_chrpos_map = f.read().decode("utf-8")
 
-            d["chrpos_map"] = dict(
-                (x.split("\t")[0], x.split("\t")[1] + ":" + x.split("\t")[2])
-                for x in codigo_chrpos_map.split("\n")[:-1]
-            )
+        d["chrpos_map"] = dict(
+            (x.split("\t")[0], x.split("\t")[1] + ":" + x.split("\t")[2])
+            for x in codigo_chrpos_map.split("\n")[:-1]
+        )
 
-            return d
-        except Exception as err:
-            logger.warning(err)
-            return {}
+        return d
 
     def _get_path_codigo46_rsid_map(self):
         return self._download_file(
@@ -611,9 +599,6 @@ class Resources(metaclass=Singleton):
                         compress=compress,
                         timeout=timeout,
                     )
-            except Exception as err:
-                logger.warning(err)
-                return ""
 
         return destination
 

@@ -279,7 +279,7 @@ class Resources(metaclass=Singleton):
         Returns
         -------
         assembly_mapping_data : dict
-            dict of assembly maps if loading was successful, else {}
+            dict of assembly maps
 
         Notes
         -----

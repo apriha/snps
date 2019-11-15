@@ -604,11 +604,6 @@ class TestSNPsCollection(BaseSNPsTestCase):
         s = SNPs()
         assert not s.save_snps()
 
-    def test_save_snps_invalid_output_dir(self):
-        s = SNPs("tests/input/GRCh37.csv")
-        s._output_dir = None
-        assert not s.save_snps()
-
     def test_save_discrepant_positions(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
@@ -636,13 +631,6 @@ class TestSNPsCollection(BaseSNPsTestCase):
     def test_save_discrepant_positions_no_discrepant_snps(self):
         sc = SNPsCollection()
         assert len(sc.discrepant_positions) == 0
-        assert not sc.save_discrepant_positions()
-
-    def test_save_discrepant_positions_invalid_output_dir(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert len(sc.discrepant_positions) == 4
-        sc._output_dir = None
         assert not sc.save_discrepant_positions()
 
     def test_save_discrepant_positions_exception(self):
@@ -679,13 +667,6 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert len(sc.discrepant_genotypes) == 0
         assert not sc.save_discrepant_genotypes()
 
-    def test_save_discrepant_genotypes_invalid_output_dir(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert len(sc.discrepant_genotypes) == 1
-        sc._output_dir = None
-        assert not sc.save_discrepant_genotypes()
-
     def test_save_discrepant_genotypes_exception(self):
         sc = SNPsCollection()
         sc._discrepant_genotypes = "invalid"
@@ -710,13 +691,6 @@ class TestSNPsCollection(BaseSNPsTestCase):
     def test_save_discrepant_snps_no_discrepant_snps(self):
         sc = SNPsCollection()
         assert len(sc.discrepant_snps) == 0
-        assert not sc.save_discrepant_snps()
-
-    def test_save_discrepant_snps_invalid_output_dir(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert len(sc.discrepant_snps) == 4
-        sc._output_dir = None
         assert not sc.save_discrepant_snps()
 
     def test_save_discrepant_snps_exception(self):

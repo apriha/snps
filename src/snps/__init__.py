@@ -317,31 +317,25 @@ class SNPs:
         )
         for rsid in self._snps.loc[self._snps["chrom"] == "PAR"].index.values:
             if "rs" in rsid:
-                try:
-                    id = rsid.split("rs")[1]
-                    response = rest_client.perform_rest_action(
-                        "/variation/v0/refsnp/" + id
-                    )
+                id = rsid.split("rs")[1]
+                response = rest_client.perform_rest_action("/variation/v0/refsnp/" + id)
 
-                    if response is not None:
-                        for item in response["primary_snapshot_data"][
-                            "placements_with_allele"
-                        ]:
-                            if "NC_000023" in item["seq_id"]:
-                                assigned = self._assign_snp(rsid, item["alleles"], "X")
-                            elif "NC_000024" in item["seq_id"]:
-                                assigned = self._assign_snp(rsid, item["alleles"], "Y")
-                            else:
-                                assigned = False
+                if response is not None:
+                    for item in response["primary_snapshot_data"][
+                        "placements_with_allele"
+                    ]:
+                        if "NC_000023" in item["seq_id"]:
+                            assigned = self._assign_snp(rsid, item["alleles"], "X")
+                        elif "NC_000024" in item["seq_id"]:
+                            assigned = self._assign_snp(rsid, item["alleles"], "Y")
+                        else:
+                            assigned = False
 
-                            if assigned:
-                                if not self._build_detected:
-                                    self._build = self._extract_build(item)
-                                    self._build_detected = True
-                                break
-
-                except Exception as err:
-                    logger.warning(err)
+                        if assigned:
+                            if not self._build_detected:
+                                self._build = self._extract_build(item)
+                                self._build_detected = True
+                            break
 
     def _assign_snp(self, rsid, alleles, chrom):
         # only assign SNP if positions match (i.e., same build)

@@ -187,7 +187,7 @@ class Reader:
             f.seek(0)
         return first_line, comments, data
 
-    def handle_bytes_data(self, file, include_data=True):
+    def handle_bytes_data(self, file, include_data=False):
         compression = "infer"
         if self.is_zip(file):
             compression = "zip"
@@ -759,7 +759,6 @@ class Reader:
                         allele,
                     ]
                     rows.append(record_array)
-
             df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
             df = df.astype(
                 {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}

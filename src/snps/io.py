@@ -86,84 +86,64 @@ class Reader:
             dataframe of parsed SNPs, detected source of SNPs
         """
         file = self._file
+        compression = "infer"
 
+        # try:
         # peek into files to determine the data format
         if isinstance(file, str) and os.path.exists(file):
+
             if ".zip" in file:
                 with zipfile.ZipFile(file) as z:
                     with z.open(z.namelist()[0], "r") as f:
-                        first_line, comments, data = self._extract_comments(f, True)
+                        first_line, comments, data = self._extract_comments(
+                            f, True, False
+                        )
             elif ".gz" in file:
                 with gzip.open(file, "rt") as f:
-                    first_line, comments, data = self._extract_comments(f, False)
+                    first_line, comments, data = self._extract_comments(f, False, False)
             else:
                 with open(file, "r") as f:
-                    first_line, comments, data = self._extract_comments(f, False)
+                    first_line, comments, data = self._extract_comments(f, False, False)
 
         elif isinstance(file, bytes):
-            if self.is_zip(file):
 
-                with zipfile.ZipFile(io.BytesIO(file)) as z:
-                    namelist = z.namelist()
-                    key = "GFG_filtered_unphased_genotypes_23andMe.txt"
-                    key_search = [key in name for name in namelist]
-
-                    if any(key_search):
-                        filename = namelist[key_search.index(True)]
-                    else:
-                        filename = namelist[0]
-
-                    with z.open(filename, "r") as f:
-                        data = f.read()
-                        file = io.BytesIO(data)
-                        first_line, comments, data = self._extract_comments(
-                            io.BytesIO(data), True
-                        )
-
-            elif self.is_gzip(file):
-
-                with gzip.open(io.BytesIO(file), "rb") as f:
-                    data = f.read()
-                    file = io.BytesIO(data)
-                    first_line, comments, data = self._extract_comments(
-                        io.BytesIO(data), True
-                    )
-
-            else:
-                file = io.BytesIO(file)
-                first_line, comments, data = self._extract_comments(
-                    deepcopy(file), True
-                )
+            first_line, comments, data, compression = self.handle_bytes_data(file)
+            file = io.BytesIO(file)
 
         else:
             return pd.DataFrame(), ""
 
         if "23andMe" in first_line:
-            return self.read_23andme(file)
+            return self.read_23andme(file, compression)
         elif "Ancestry" in first_line:
-            return self.read_ancestry(file)
+            return self.read_ancestry(file, compression)
         elif first_line.startswith("RSID"):
-            return self.read_ftdna(file)
+            return self.read_ftdna(file, compression)
         elif "famfinder" in first_line:
-            return self.read_ftdna_famfinder(file)
+            return self.read_ftdna_famfinder(file, compression)
         elif "MyHeritage" in first_line:
-            return self.read_myheritage(file)
+            return self.read_myheritage(file, compression)
         elif "Living DNA" in first_line:
-            return self.read_livingdna(file)
+            return self.read_livingdna(file, compression)
         elif "SNP Name	rsID	Sample.ID	Allele1...Top" in first_line:
-            return self.read_mapmygenome(file)
+            return self.read_mapmygenome(file, compression)
         elif "lineage" in first_line or "snps" in first_line:
-            return self.read_lineage_csv(file, comments)
+            return self.read_lineage_csv(file, comments, compression)
         elif first_line.startswith("rsid"):
-            return self.read_generic_csv(file)
-        elif "vcf" in comments.lower():
-            return self.read_vcf(file, self._rsids)
+            return self.read_generic_csv(file, compression)
+        elif "vcf" in comments.lower() or "##contig" in comments.lower():
+            return self.read_vcf(file, compression, self._rsids)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
-            return self.read_genes_for_good(file)
+            return self.read_genes_for_good(file, compression)
         elif "CODIGO46" in comments:
-            return self.read_codigo46(data)
+            return self.read_codigo46(file, compression)
+        elif "SANO" in comments:
+            return self.read_sano(file, compression)
         else:
             return pd.DataFrame(), ""
+        # except Exception as err:
+        #     print(err)
+        #     return pd.DataFrame(), ""
 
     @classmethod
     def read_file(cls, file, only_detect_source, resources, rsids):
@@ -188,8 +168,11 @@ class Reader:
         r = cls(file, only_detect_source, resources, rsids)
         return r()
 
-    def _extract_comments(self, f, decode):
+    def _extract_comments(self, f, decode, include_data=False):
         line = self._read_line(f, decode)
+        if 'WebKitFormBoundary' in line: # Do not read header sometimes includes in Apple uploads
+            line = self._read_line(f, decode)    
+        
         first_line = line
         comments = ""
         data = ""
@@ -198,9 +181,10 @@ class Reader:
             while line.startswith("#"):
                 comments += line
                 line = self._read_line(f, decode)
-            while line:
-                data += line
-                line = self._read_line(f, decode)
+            if include_data:
+                while line:
+                    data += line
+                    line = self._read_line(f, decode)
 
         elif first_line.startswith("[Header]"):
             while not line.startswith("[Data]"):
@@ -208,11 +192,46 @@ class Reader:
                 line = self._read_line(f, decode)
             # Ignore the [Data] row
             line = self._read_line(f, decode)
-            while line:
-                data += line
-                line = self._read_line(f, decode)
-
+            if include_data:
+                while line:
+                    data += line
+                    line = self._read_line(f, decode)
+        if not isinstance(f, zipfile.ZipExtFile):
+            f.seek(0)
         return first_line, comments, data
+
+    def handle_bytes_data(self, file, include_data=False):
+        compression = "infer"
+        if self.is_zip(file):
+            compression = "zip"
+            with zipfile.ZipFile(io.BytesIO(file)) as z:
+                namelist = z.namelist()
+                key = "GFG_filtered_unphased_genotypes_23andMe.txt"
+                key_search = [key in name for name in namelist]
+
+                if any(key_search):
+                    filename = namelist[key_search.index(True)]
+                else:
+                    filename = namelist[0]
+
+                with z.open(filename, "r") as f:
+                    first_line, comments, data = self._extract_comments(
+                        f, True, include_data
+                    )
+
+        elif self.is_gzip(file):
+            compression = "gzip"
+
+            with gzip.open(io.BytesIO(file), "rb") as f:
+                first_line, comments, data = self._extract_comments(f, True, include_data)
+
+        else:
+            file = io.BytesIO(file)
+            first_line, comments, data = self._extract_comments(
+                deepcopy(file), True, include_data
+            )
+            file.seek(0)
+        return first_line, comments, data, compression
 
     @staticmethod
     def is_zip(bytes_data):
@@ -232,7 +251,7 @@ class Reader:
         else:
             return f.readline()
 
-    def read_23andme(self, file):
+    def read_23andme(self, file, compression):
         """ Read and parse 23andMe file.
 
         https://www.23andme.com
@@ -261,11 +280,12 @@ class Reader:
             names=["rsid", "chrom", "pos", "genotype"],
             index_col=0,
             dtype={"chrom": object},
+            compression=compression,
         )
 
         return df, "23andMe"
 
-    def read_ftdna(self, file):
+    def read_ftdna(self, file, compression):
         """Read and parse Family Tree DNA (FTDNA) file.
 
         https://www.familytreedna.com
@@ -293,6 +313,7 @@ class Reader:
             names=["rsid", "chrom", "pos", "genotype"],
             index_col=0,
             dtype={"chrom": object},
+            compression=compression,
         )
 
         # remove incongruous data
@@ -305,7 +326,7 @@ class Reader:
 
         return df, "FTDNA"
 
-    def read_ftdna_famfinder(self, file):
+    def read_ftdna_famfinder(self, file, compression):
         """ Read and parse Family Tree DNA (FTDNA) "famfinder" file.
 
         https://www.familytreedna.com
@@ -333,6 +354,7 @@ class Reader:
             names=["rsid", "chrom", "pos", "allele1", "allele2"],
             index_col=0,
             dtype={"chrom": object},
+            compression=compression,
         )
 
         # create genotype column from allele columns
@@ -345,7 +367,7 @@ class Reader:
 
         return df, "FTDNA"
 
-    def read_ancestry(self, file):
+    def read_ancestry(self, file, compression):
         """ Read and parse Ancestry.com file.
 
         http://www.ancestry.com
@@ -375,6 +397,7 @@ class Reader:
             names=["rsid", "chrom", "pos", "allele1", "allele2"],
             index_col=0,
             dtype={"chrom": object},
+            compression=compression,
         )
 
         # create genotype column from allele columns
@@ -393,7 +416,7 @@ class Reader:
 
         return df, "AncestryDNA"
 
-    def read_myheritage(self, file):
+    def read_myheritage(self, file, compression):
         """ Read and parse MyHeritage file.
 
         https://www.myheritage.com
@@ -422,11 +445,12 @@ class Reader:
             names=["rsid", "chrom", "pos", "genotype"],
             index_col=0,
             dtype={"chrom": object, "pos": np.int64},
+            compression=compression,
         )
 
         return df, "MyHeritage"
 
-    def read_livingdna(self, file):
+    def read_livingdna(self, file, compression):
         """ Read and parse LivingDNA file.
 
         https://livingdna.com/
@@ -455,11 +479,12 @@ class Reader:
             names=["rsid", "chrom", "pos", "genotype"],
             index_col=0,
             dtype={"chrom": object},
+            compression=compression,
         )
 
         return df, "LivingDNA"
 
-    def read_mapmygenome(self, file):
+    def read_mapmygenome(self, file, compression):
         """ Read and parse Mapmygenome file.
 
         https://mapmygenome.in
@@ -488,6 +513,7 @@ class Reader:
             header=0,
             index_col=1,
             dtype={"Chr": object},
+            compression=compression,
         )
 
         df["genotype"] = df["Allele1...Top"] + df["Allele2...Top"]
@@ -497,7 +523,7 @@ class Reader:
 
         return df, "Mapmygenome"
 
-    def read_genes_for_good(self, file):
+    def read_genes_for_good(self, file, compression):
         """ Read and parse Genes For Good file.
 
         https://genesforgood.sph.umich.edu/readme/readme1.2.txt
@@ -527,11 +553,12 @@ class Reader:
             names=["rsid", "chrom", "pos", "genotype"],
             index_col=0,
             dtype={"chrom": object},
+            compression=compression,
         )
 
         return df, "GenesForGood"
 
-    def read_codigo46(self, data):
+    def read_codigo46(self, file, compression):
         """ Read and parse Codigo46 files.
 
         https://codigo46.com.mx
@@ -555,6 +582,14 @@ class Reader:
 
         codigo46_resources = self._resources.get_codigo46_resources()
 
+        if isinstance(file, str):
+            with open(file, "rb") as f:
+                first_line, comments, data = self._extract_comments(f, True, True)
+        else:
+            first_line, comments, data, compression = self.handle_bytes_data(
+                file.read(), include_data=True
+            )
+
         df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
 
         def map_codigo_rsids(x):
@@ -572,6 +607,7 @@ class Reader:
         df["chrom"] = df["SNP Name"].apply(map_codigo_chr)
         df["pos"] = df["SNP Name"].apply(map_codigo_pos)
         df["genotype"] = df["Allele1 - Plus"] + df["Allele2 - Plus"]
+        df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
 
         df = df.astype({"chrom": object, "pos": np.int64})
         df = df[["rsid", "chrom", "pos", "genotype"]]
@@ -579,7 +615,64 @@ class Reader:
 
         return df, "Codigo46"
 
-    def read_lineage_csv(self, file, comments):
+    def read_sano(self, file, compression):
+        """ Read and parse Sano Genetics files.
+
+        http://sanogenetics.com/
+
+        Parameters
+        ----------
+        data : str
+            data string
+
+        Returns
+        -------
+        pandas.DataFrame
+            genetic data normalized for use with `snps`
+        str
+            name of data source
+
+        """
+
+        if self._only_detect_source:
+            return pd.DataFrame(), "Sano"
+
+        codigo46_resources = self._resources.get_codigo46_resources()
+
+        if isinstance(file, str):
+            with open(file, "rb") as f:
+                first_line, comments, data = self._extract_comments(f, True, True)
+        else:
+            first_line, comments, data, compression = self.handle_bytes_data(
+                file.read(), include_data=True
+            )
+
+        df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
+
+        def map_codigo_rsids(x):
+            return codigo46_resources["rsid_map"].get(x)
+
+        def map_codigo_chr(x):
+            chrpos = codigo46_resources["chrpos_map"].get(x)
+            return chrpos.split(":")[0] if chrpos else None
+
+        def map_codigo_pos(x):
+            chrpos = codigo46_resources["chrpos_map"].get(x)
+            return chrpos.split(":")[1] if chrpos else None
+
+        df["rsid"] = df["SNP Name"].apply(map_codigo_rsids)
+        df["chrom"] = df["SNP Name"].apply(map_codigo_chr)
+        df["pos"] = df["SNP Name"].apply(map_codigo_pos)
+        df["genotype"] = df["Allele1 - Forward"] + df["  - Forward"]
+        df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
+
+        df = df.astype({"chrom": object, "pos": np.int64})
+        df = df[["rsid", "chrom", "pos", "genotype"]]
+        df.set_index(["rsid"], inplace=True)
+
+        return df, "Sano"
+
+    def read_lineage_csv(self, file, comments, compression):
         """ Read and parse CSV file generated by lineage / snps.
 
         Parameters
@@ -614,11 +707,12 @@ class Reader:
             names=["rsid", "chrom", "pos", "genotype"],
             index_col=0,
             dtype={"chrom": object, "pos": np.int64},
+            compression=compression,
         )
 
         return df, source
 
-    def read_generic_csv(self, file):
+    def read_generic_csv(self, file, compression):
         """ Read and parse generic CSV file.
 
         Notes
@@ -655,11 +749,12 @@ class Reader:
             names=["rsid", "chrom", "pos", "genotype"],
             index_col=0,
             dtype={"chrom": object, "pos": np.int64},
+            compression=compression,
         )
 
         return df, "generic"
 
-    def read_vcf(self, file, rsids=()):
+    def read_vcf(self, file, compression, rsids=()):
         """ Read and parse VCF file.
 
         Notes
@@ -703,6 +798,7 @@ class Reader:
         rows = []
         first_four_bytes = buffer.read(4)
         buffer.seek(0)
+
 
         if self.is_gzip(first_four_bytes):
             f = gzip.open(buffer)

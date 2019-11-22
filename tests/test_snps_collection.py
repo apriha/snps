@@ -164,6 +164,38 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert s.source == "MyHeritage"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
+    def test_snps_codigo46_bytes(self):
+        # https://codigo46.com.mx
+
+        # reset resource if already loaded
+        temp = SNPs()
+        temp._resources._codigo46_resources = {}
+
+        with open("tests/resources/codigo46_rsid_map.txt", "rb") as f_in:
+            with atomic_write(
+                "resources/codigo46_rsid_map.txt.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        with open("tests/resources/codigo46_chrpos_map.txt", "rb") as f_in:
+            with atomic_write(
+                "resources/codigo46_chrpos_map.txt.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        with open("tests/input/codigo46.txt", "rb") as f:
+            s = SNPs(f.read())
+        assert s.source == "Codigo46"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
+        # reset resource
+        temp._resources._codigo46_resources = {}
+
+        os.remove("resources/codigo46_rsid_map.txt.gz")
+        os.remove("resources/codigo46_chrpos_map.txt.gz")
+
     def test_snps_codigo46(self):
         # https://codigo46.com.mx
 
@@ -265,7 +297,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert s.source == "vcf"
         assert s.unannotated_vcf
 
-    def test_snps_vcf_buffer(self):
+    def test_snps_vcf_bytes(self):
         with open("tests/input/testvcf.vcf", "r") as f:
             snps_vcf_buffer = SNPs(f.read().encode("utf-8"))
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
@@ -274,7 +306,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert snps_vcf_buffer.source == "vcf"
         pd.testing.assert_frame_equal(snps_vcf_buffer.snps, self.generic_snps_vcf())
 
-    def test_snps_vcf_buffer_rsids(self):
+    def test_snps_vcf_bytes_rsids(self):
         with open("tests/input/testvcf.vcf", "r") as f:
             rsids = ["rs1", "rs2"]
             df = SNPs(f.read().encode("utf-8"), rsids=rsids)
@@ -284,7 +316,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert df.source == "vcf"
         pd.testing.assert_frame_equal(df.snps, self.generic_snps_vcf().loc[rsids])
 
-    def test_snps_vcf_buffer_gz(self):
+    def test_snps_vcf_bytes_gz(self):
         with open("tests/input/testvcf.vcf", "rb") as f_in:
             with atomic_write(
                 "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
@@ -302,7 +334,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert s.source == "vcf"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
 
-    def test_snps_vcf_buffer_gz_rsids(self):
+    def test_snps_vcf_bytes_gz_rsids(self):
         with open("tests/input/testvcf.vcf", "rb") as f_in:
             with atomic_write(
                 "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
@@ -315,6 +347,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
             data = f.read()
             s = SNPs(data, rsids=rsids)
         os.remove("tests/input/testvcf.vcf.gz")
+        
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID

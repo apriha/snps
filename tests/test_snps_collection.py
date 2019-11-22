@@ -297,7 +297,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert s.source == "vcf"
         assert s.unannotated_vcf
 
-    def test_snps_vcf_bytes(self):
+    def test_snps_vcf_buffer(self):
         with open("tests/input/testvcf.vcf", "r") as f:
             snps_vcf_buffer = SNPs(f.read().encode("utf-8"))
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
@@ -306,7 +306,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert snps_vcf_buffer.source == "vcf"
         pd.testing.assert_frame_equal(snps_vcf_buffer.snps, self.generic_snps_vcf())
 
-    def test_snps_vcf_bytes_rsids(self):
+    def test_snps_vcf_buffer_rsids(self):
         with open("tests/input/testvcf.vcf", "r") as f:
             rsids = ["rs1", "rs2"]
             df = SNPs(f.read().encode("utf-8"), rsids=rsids)
@@ -316,7 +316,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert df.source == "vcf"
         pd.testing.assert_frame_equal(df.snps, self.generic_snps_vcf().loc[rsids])
 
-    def test_snps_vcf_bytes_gz(self):
+    def test_snps_vcf_buffer_gz(self):
         with open("tests/input/testvcf.vcf", "rb") as f_in:
             with atomic_write(
                 "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
@@ -334,7 +334,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert s.source == "vcf"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
 
-    def test_snps_vcf_bytes_gz_rsids(self):
+    def test_snps_vcf_buffer_gz_rsids(self):
         with open("tests/input/testvcf.vcf", "rb") as f_in:
             with atomic_write(
                 "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True

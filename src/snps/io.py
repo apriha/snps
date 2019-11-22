@@ -170,8 +170,6 @@ class Reader:
 
     def _extract_comments(self, f, decode, include_data=False):
         line = self._read_line(f, decode)
-        if 'WebKitFormBoundary' in line: # Do not read header sometimes includes in Apple uploads
-            line = self._read_line(f, decode)    
         
         first_line = line
         comments = ""

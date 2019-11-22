@@ -663,7 +663,7 @@ class Reader:
         df["rsid"] = df["SNP Name"].apply(map_codigo_rsids)
         df["chrom"] = df["SNP Name"].apply(map_codigo_chr)
         df["pos"] = df["SNP Name"].apply(map_codigo_pos)
-        df["genotype"] = df["Allele1 - Forward"] + df["  - Forward"]
+        df["genotype"] = df["Allele1 - Forward"] + df["Allele2 - Forward"]
         df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
 
         df = df.astype({"chrom": object, "pos": np.int64})

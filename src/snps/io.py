@@ -578,7 +578,7 @@ class Reader:
         if self._only_detect_source:
             return pd.DataFrame(), "Codigo46"
 
-        codigo46_resources = self._resources.get_codigo46_resources()
+        gsa_resources = self._resources.get_gsa_resources()
 
         if isinstance(file, str):
             with open(file, "rb") as f:
@@ -591,14 +591,14 @@ class Reader:
         df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
 
         def map_codigo_rsids(x):
-            return codigo46_resources["rsid_map"].get(x)
+            return gsa_resources["rsid_map"].get(x)
 
         def map_codigo_chr(x):
-            chrpos = codigo46_resources["chrpos_map"].get(x)
+            chrpos = gsa_resources["chrpos_map"].get(x)
             return chrpos.split(":")[0] if chrpos else None
 
         def map_codigo_pos(x):
-            chrpos = codigo46_resources["chrpos_map"].get(x)
+            chrpos = gsa_resources["chrpos_map"].get(x)
             return chrpos.split(":")[1] if chrpos else None
 
         df["rsid"] = df["SNP Name"].apply(map_codigo_rsids)
@@ -635,7 +635,7 @@ class Reader:
         if self._only_detect_source:
             return pd.DataFrame(), "Sano"
 
-        codigo46_resources = self._resources.get_codigo46_resources()
+        gsa_resources = self._resources.get_gsa_resources()
 
         if isinstance(file, str):
             with open(file, "rb") as f:
@@ -648,14 +648,14 @@ class Reader:
         df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
 
         def map_codigo_rsids(x):
-            return codigo46_resources["rsid_map"].get(x)
+            return gsa_resources["rsid_map"].get(x)
 
         def map_codigo_chr(x):
-            chrpos = codigo46_resources["chrpos_map"].get(x)
+            chrpos = gsa_resources["chrpos_map"].get(x)
             return chrpos.split(":")[0] if chrpos else None
 
         def map_codigo_pos(x):
-            chrpos = codigo46_resources["chrpos_map"].get(x)
+            chrpos = gsa_resources["chrpos_map"].get(x)
             return chrpos.split(":")[1] if chrpos else None
 
         df["rsid"] = df["SNP Name"].apply(map_codigo_rsids)

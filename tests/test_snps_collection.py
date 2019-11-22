@@ -169,18 +169,18 @@ class TestSNPsCollection(BaseSNPsTestCase):
 
         # reset resource if already loaded
         temp = SNPs()
-        temp._resources._codigo46_resources = {}
+        temp._resources._gsa_resources = {}
 
-        with open("tests/resources/codigo46_rsid_map.txt", "rb") as f_in:
+        with open("tests/resources/gsa_rsid_map.txt", "rb") as f_in:
             with atomic_write(
-                "resources/codigo46_rsid_map.txt.gz", mode="wb", overwrite=True
+                "resources/gsa_rsid_map.txt.gz", mode="wb", overwrite=True
             ) as f_out:
                 with gzip.open(f_out, "wb") as f_gzip:
                     shutil.copyfileobj(f_in, f_gzip)
 
-        with open("tests/resources/codigo46_chrpos_map.txt", "rb") as f_in:
+        with open("tests/resources/gsa_chrpos_map.txt", "rb") as f_in:
             with atomic_write(
-                "resources/codigo46_chrpos_map.txt.gz", mode="wb", overwrite=True
+                "resources/gsa_chrpos_map.txt.gz", mode="wb", overwrite=True
             ) as f_out:
                 with gzip.open(f_out, "wb") as f_gzip:
                     shutil.copyfileobj(f_in, f_gzip)
@@ -193,26 +193,26 @@ class TestSNPsCollection(BaseSNPsTestCase):
         # reset resource
         temp._resources._codigo46_resources = {}
 
-        os.remove("resources/codigo46_rsid_map.txt.gz")
-        os.remove("resources/codigo46_chrpos_map.txt.gz")
+        os.remove("resources/gsa_rsid_map.txt.gz")
+        os.remove("resources/gsa_chrpos_map.txt.gz")
 
     def test_snps_codigo46(self):
         # https://codigo46.com.mx
 
         # reset resource if already loaded
         temp = SNPs()
-        temp._resources._codigo46_resources = {}
+        temp._resources._gsa_resources = {}
 
-        with open("tests/resources/codigo46_rsid_map.txt", "rb") as f_in:
+        with open("tests/resources/gsa_rsid_map.txt", "rb") as f_in:
             with atomic_write(
-                "resources/codigo46_rsid_map.txt.gz", mode="wb", overwrite=True
+                "resources/gsa_rsid_map.txt.gz", mode="wb", overwrite=True
             ) as f_out:
                 with gzip.open(f_out, "wb") as f_gzip:
                     shutil.copyfileobj(f_in, f_gzip)
 
-        with open("tests/resources/codigo46_chrpos_map.txt", "rb") as f_in:
+        with open("tests/resources/gsa_chrpos_map.txt", "rb") as f_in:
             with atomic_write(
-                "resources/codigo46_chrpos_map.txt.gz", mode="wb", overwrite=True
+                "resources/gsa_chrpos_map.txt.gz", mode="wb", overwrite=True
             ) as f_out:
                 with gzip.open(f_out, "wb") as f_gzip:
                     shutil.copyfileobj(f_in, f_gzip)
@@ -224,8 +224,8 @@ class TestSNPsCollection(BaseSNPsTestCase):
         # reset resource
         temp._resources._codigo46_resources = {}
 
-        os.remove("resources/codigo46_rsid_map.txt.gz")
-        os.remove("resources/codigo46_chrpos_map.txt.gz")
+        os.remove("resources/gsa_rsid_map.txt.gz")
+        os.remove("resources/gsa_chrpos_map.txt.gz")
 
     def test_snps_livingdna(self):
         # https://livingdna.com

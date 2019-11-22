@@ -107,6 +107,7 @@ setup(
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "Topic :: Scientific/Engineering :: Information Analysis",
@@ -117,7 +118,7 @@ setup(
         "Issue Tracker": "https://github.com/apriha/snps/issues",
     },
     keywords="snps dna chromosomes bioinformatics",
-    install_requires=["numpy", "pandas", "atomicwrites", "PyVCF"],
+    install_requires=["numpy", "pandas", "atomicwrites"],
     python_requires=">=3.5",
     platforms=["any"],
 )

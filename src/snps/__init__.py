@@ -1,4 +1,4 @@
-""" snps
+""" `snps`
 
 tools for reading, writing, merging, and remapping SNPs
 
@@ -71,6 +71,7 @@ class SNPs:
         resources_dir="resources",
         parallelize=False,
         processes=os.cpu_count(),
+        rsids=(),
     ):
         """ Object used to read and parse genotype / raw data files.
 
@@ -90,6 +91,8 @@ class SNPs:
             utilize multiprocessing to speedup calculations
         processes : int
             processes to launch if multiprocessing
+        rsids : tuple, optional
+            rsids to extract if loading a VCF file
         """
         self._file = file
         self._only_detect_source = only_detect_source
@@ -103,7 +106,9 @@ class SNPs:
 
         if file:
 
-            self._snps, self._source = self._read_raw_data(file, only_detect_source)
+            self._snps, self._source = self._read_raw_data(
+                file, only_detect_source, rsids
+            )
 
             if not self._snps.empty:
                 self.sort_snps()
@@ -119,7 +124,7 @@ class SNPs:
                     self._assign_par_snps()
 
     def __repr__(self):
-        return "SNPs({!r})".format(self._file)
+        return "SNPs({!r})".format(self._file[0:50])
 
     @property
     def source(self):
@@ -214,6 +219,19 @@ class SNPs:
         """
         return self.determine_sex()
 
+    @property
+    def unannotated_vcf(self):
+        """ Indicates if VCF file is unannotated.
+
+        Returns
+        -------
+        bool
+        """
+        if self.snp_count == 0 and self.source == "vcf":
+            return True
+
+        return False
+
     def get_summary(self):
         """ Get summary of ``SNPs``.
 
@@ -273,23 +291,23 @@ class SNPs:
             snps=self, filename=filename, vcf=vcf, atomic=atomic, **kwargs
         )
 
-    def _read_raw_data(self, file, only_detect_source):
-        return Reader.read_file(file, only_detect_source, self._resources)
+    def _read_raw_data(self, file, only_detect_source, rsids):
+        return Reader.read_file(file, only_detect_source, self._resources, rsids)
 
     def _assign_par_snps(self):
         """ Assign PAR SNPs to the X or Y chromosome using SNP position.
 
         References
         -----
-        .. [1] National Center for Biotechnology Information, Variation Services, RefSNP,
+        1. National Center for Biotechnology Information, Variation Services, RefSNP,
            https://api.ncbi.nlm.nih.gov/variation/v0/
-        .. [2] Yates et. al. (doi:10.1093/bioinformatics/btu613),
+        2. Yates et. al. (doi:10.1093/bioinformatics/btu613),
            `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
-        .. [3] Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
-        .. [4] Sherry ST, Ward MH, Kholodov M, Baker J, Phan L, Smigielski EM, Sirotkin K.
+        3. Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
+        4. Sherry ST, Ward MH, Kholodov M, Baker J, Phan L, Smigielski EM, Sirotkin K.
            dbSNP: the NCBI database of genetic variation. Nucleic Acids Res. 2001 Jan 1;
            29(1):308-11.
-        .. [5] Database of Single Nucleotide Polymorphisms (dbSNP). Bethesda (MD): National Center
+        5. Database of Single Nucleotide Polymorphisms (dbSNP). Bethesda (MD): National Center
            for Biotechnology Information, National Library of Medicine. dbSNP accession:
            rs28736870, rs113313554, and rs758419898 (dbSNP Build ID: 151). Available from:
            http://www.ncbi.nlm.nih.gov/SNP/
@@ -299,31 +317,25 @@ class SNPs:
         )
         for rsid in self._snps.loc[self._snps["chrom"] == "PAR"].index.values:
             if "rs" in rsid:
-                try:
-                    id = rsid.split("rs")[1]
-                    response = rest_client.perform_rest_action(
-                        "/variation/v0/refsnp/" + id
-                    )
+                id = rsid.split("rs")[1]
+                response = rest_client.perform_rest_action("/variation/v0/refsnp/" + id)
 
-                    if response is not None:
-                        for item in response["primary_snapshot_data"][
-                            "placements_with_allele"
-                        ]:
-                            if "NC_000023" in item["seq_id"]:
-                                assigned = self._assign_snp(rsid, item["alleles"], "X")
-                            elif "NC_000024" in item["seq_id"]:
-                                assigned = self._assign_snp(rsid, item["alleles"], "Y")
-                            else:
-                                assigned = False
+                if response is not None:
+                    for item in response["primary_snapshot_data"][
+                        "placements_with_allele"
+                    ]:
+                        if "NC_000023" in item["seq_id"]:
+                            assigned = self._assign_snp(rsid, item["alleles"], "X")
+                        elif "NC_000024" in item["seq_id"]:
+                            assigned = self._assign_snp(rsid, item["alleles"], "Y")
+                        else:
+                            assigned = False
 
-                            if assigned:
-                                if not self._build_detected:
-                                    self._build = self._extract_build(item)
-                                    self._build_detected = True
-                                break
-
-                except Exception as err:
-                    logger.warning(err)
+                        if assigned:
+                            if not self._build_detected:
+                                self._build = self._extract_build(item)
+                                self._build_detected = True
+                            break
 
     def _assign_snp(self, rsid, alleles, chrom):
         # only assign SNP if positions match (i.e., same build)
@@ -363,13 +375,13 @@ class SNPs:
 
         References
         ----------
-        .. [1] Yates et. al. (doi:10.1093/bioinformatics/btu613),
+        1. Yates et. al. (doi:10.1093/bioinformatics/btu613),
            `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
-        .. [2] Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
-        .. [3] Sherry ST, Ward MH, Kholodov M, Baker J, Phan L, Smigielski EM, Sirotkin K.
+        2. Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
+        3. Sherry ST, Ward MH, Kholodov M, Baker J, Phan L, Smigielski EM, Sirotkin K.
            dbSNP: the NCBI database of genetic variation. Nucleic Acids Res. 2001
            Jan 1;29(1):308-11.
-        .. [4] Database of Single Nucleotide Polymorphisms (dbSNP). Bethesda (MD): National Center
+        4. Database of Single Nucleotide Polymorphisms (dbSNP). Bethesda (MD): National Center
            for Biotechnology Information, National Library of Medicine. dbSNP accession: rs3094315,
            rs11928389, rs2500347, rs964481, and rs2341354 (dbSNP Build ID: 151). Available from:
            http://www.ncbi.nlm.nih.gov/SNP/
@@ -602,7 +614,7 @@ class SNPs:
 
         References
         ----------
-        .. [1] Ensembl, Assembly Map Endpoint,
+        1. Ensembl, Assembly Map Endpoint,
            http://rest.ensembl.org/documentation/info/assembly_map
         """
         chromosomes_remapped = []
@@ -611,7 +623,7 @@ class SNPs:
         snps = self.snps
 
         if snps.empty:
-            logger.debug("No SNPs to remap")
+            logger.warning("No SNPs to remap")
             return chromosomes_remapped, chromosomes_not_remapped
         else:
             chromosomes = snps["chrom"].unique()
@@ -620,7 +632,7 @@ class SNPs:
         valid_assemblies = ["NCBI36", "GRCh37", "GRCh38", 36, 37, 38]
 
         if target_assembly not in valid_assemblies:
-            logger.debug("Invalid target assembly")
+            logger.warning("Invalid target assembly")
             return chromosomes_remapped, chromosomes_not_remapped
 
         if isinstance(target_assembly, int):
@@ -659,7 +671,7 @@ class SNPs:
                     }
                 )
             else:
-                logger.debug(
+                logger.warning(
                     "Chromosome {} not remapped; "
                     "removing chromosome from SNPs for consistency".format(chrom)
                 )
@@ -716,11 +728,11 @@ class SNPs:
             mapped_region = mapping["mapped"]["seq_region_name"]
 
             if orig_region != mapped_region:
-                logger.debug("discrepant chroms")
+                logger.warning("discrepant chroms")
                 continue
 
             if orig_range_len != mapped_range_len:
-                logger.debug(
+                logger.warning(
                     "discrepant coords"
                 )  # observed when mapping NCBI36 -> GRCh38
                 continue
@@ -904,7 +916,7 @@ class SNPsCollection(SNPs):
         discrepant_genotypes_threshold,
         save_output,
     ):
-        logger.debug("Loading " + os.path.relpath(file))
+        logger.info("Loading {}".format(os.path.relpath(file)))
         discrepant_positions, discrepant_genotypes = self._add_snps(
             SNPs(file),
             discrepant_snp_positions_threshold,
@@ -919,7 +931,7 @@ class SNPsCollection(SNPs):
             discrepant_genotypes, sort=True
         )
 
-    def save_snps(self, filename="", vcf=False):
+    def save_snps(self, filename="", vcf=False, atomic=True, **kwargs):
         """ Save SNPs to file.
 
         Parameters
@@ -928,6 +940,10 @@ class SNPsCollection(SNPs):
             filename for file to save
         vcf : bool
             flag to save file as VCF
+        atomic : bool
+            atomically write output to a file on local filesystem
+        **kwargs
+            additional parameters to `pandas.DataFrame.to_csv`
 
         Returns
         -------
@@ -946,7 +962,7 @@ class SNPsCollection(SNPs):
                 ext = ".csv"
 
             filename = "{}{}{}".format(prefix, self.assembly, ext)
-        return super().save_snps(filename=filename, vcf=vcf)
+        return super().save_snps(filename=filename, vcf=vcf, atomic=atomic, **kwargs)
 
     def save_discrepant_positions(self, filename=""):
         """ Save SNPs with discrepant positions to file.
@@ -1050,12 +1066,12 @@ class SNPsCollection(SNPs):
         source = [s.strip() for s in snps._source.split(",")]
 
         if not snps._build_detected:
-            logger.debug("build not detected, assuming build {}".format(snps._build))
+            logger.warning("build not detected, assuming build {}".format(snps._build))
 
         if not self._build:
             self._build = build
         elif self._build != build:
-            logger.debug(
+            logger.warning(
                 "build / assembly mismatch between current build of SNPs and SNPs being loaded"
             )
 
@@ -1079,7 +1095,7 @@ class SNPsCollection(SNPs):
                 prefix = "{}_".format(clean_str(self._name))
 
             if 0 < len(discrepant_positions) < discrepant_snp_positions_threshold:
-                logger.debug(
+                logger.warning(
                     "{} SNP positions were discrepant; keeping original positions".format(
                         str(len(discrepant_positions))
                     )
@@ -1095,7 +1111,7 @@ class SNPsCollection(SNPs):
                         ),
                     )
             elif len(discrepant_positions) >= discrepant_snp_positions_threshold:
-                logger.debug(
+                logger.warning(
                     "too many SNPs differ in position; ensure same genome build is being used"
                 )
                 return discrepant_positions, discrepant_genotypes
@@ -1144,7 +1160,7 @@ class SNPsCollection(SNPs):
             ]
 
             if 0 < len(discrepant_genotypes) < discrepant_genotypes_threshold:
-                logger.debug(
+                logger.warning(
                     "{} SNP genotypes were discrepant; marking those as null".format(
                         str(len(discrepant_genotypes))
                     )
@@ -1160,7 +1176,7 @@ class SNPsCollection(SNPs):
                         ),
                     )
             elif len(discrepant_genotypes) >= discrepant_genotypes_threshold:
-                logger.debug(
+                logger.warning(
                     "too many SNPs differ in their genotype; ensure file is for same "
                     "individual"
                 )

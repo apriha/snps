@@ -48,20 +48,6 @@ class TestResources(BaseSNPsTestCase):
         self.resource = Resources(resources_dir="resources")
         self.del_output_dir_helper()
 
-    def test_get_assembly_mapping_data_bad_tar(self):
-        if (
-            not os.getenv("DOWNLOADS_ENABLED")
-            or os.getenv("DOWNLOADS_ENABLED") == "true"
-        ):
-            with atomic_write(
-                "resources/NCBI36_GRCh37.tar.gz", mode="w", overwrite=True
-            ):
-                pass
-            assembly_mapping_data = self.resource.get_assembly_mapping_data(
-                "NCBI36", "GRCh37"
-            )
-            assert len(assembly_mapping_data) == 25
-
     def test_get_assembly_mapping_data(self):
         assembly_mapping_data = self.resource.get_assembly_mapping_data(
             "NCBI36", "GRCh37"
@@ -80,11 +66,6 @@ class TestResources(BaseSNPsTestCase):
                 assert False
         assert True
 
-    def test__all_chroms_in_tar(self):
-        assert not self.resource._all_chroms_in_tar(
-            ["PAR"], "resources/NCBI36_GRCh37.tar.gz"
-        )
-
     def test_download_example_datasets(self):
         paths = self.resource.download_example_datasets()
 
@@ -94,14 +75,6 @@ class TestResources(BaseSNPsTestCase):
                 return
 
         assert True
-
-    def test__load_assembly_mapping_data_None(self):
-        result = self.resource._load_assembly_mapping_data(None)
-        assert not result
-
-    def test__download_file_compress(self):
-        result = self.resource._download_file("", "", compress=True)
-        assert not result
 
     def test_get_paths_reference_sequences_invalid_assembly(self):
         assembly, chroms, urls, paths = self.resource._get_paths_reference_sequences(
@@ -291,7 +264,7 @@ class TestResources(BaseSNPsTestCase):
             seq.sequence,
             np.array(
                 bytearray(
-                    "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNAGGCCGGACN",
+                    "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNAGGCCGGACNNNNNNNN",
                     encoding="utf-8",
                     errors="strict",
                 ),
@@ -299,7 +272,7 @@ class TestResources(BaseSNPsTestCase):
             ),
         )
         assert list("AGGCCGGAC") == list(map(chr, seq.sequence[100:109]))
-        assert seq.md5 == "dc86fbda2f6febd77622407beae66b9a"
+        assert seq.md5 == "6ac6176535ad0e38aba2d05d786c39b6"
         assert seq.start == 1
-        assert seq.end == 110
-        assert seq.length == 110
+        assert seq.end == 117
+        assert seq.length == 117

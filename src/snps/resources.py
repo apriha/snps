@@ -2,14 +2,14 @@
 
 References
 ----------
-.. [1] International Human Genome Sequencing Consortium. Initial sequencing and
+1. International Human Genome Sequencing Consortium. Initial sequencing and
    analysis of the human genome. Nature. 2001 Feb 15;409(6822):860-921.
    http://dx.doi.org/10.1038/35057062
-.. [2] hg19 (GRCh37): Hiram Clawson, Brooke Rhead, Pauline Fujita, Ann Zweig, Katrina
+2. hg19 (GRCh37): Hiram Clawson, Brooke Rhead, Pauline Fujita, Ann Zweig, Katrina
    Learned, Donna Karolchik and Robert Kuhn, https://genome.ucsc.edu/cgi-bin/hgGateway?db=hg19
-.. [3] Yates et. al. (doi:10.1093/bioinformatics/btu613),
+3. Yates et. al. (doi:10.1093/bioinformatics/btu613),
    `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
-.. [4] Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
+4. Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
 
 """
 
@@ -135,7 +135,7 @@ class Resources(metaclass=Singleton):
         valid_assemblies = ["NCBI36", "GRCh37", "GRCh38"]
 
         if assembly not in valid_assemblies:
-            logger.debug("Invalid assembly")
+            logger.warning("Invalid assembly")
             return {}
 
         if not self._reference_chroms_available(assembly, chroms):
@@ -186,7 +186,7 @@ class Resources(metaclass=Singleton):
 
         References
         ----------
-        .. [1] Greshake B, Bayer PE, Rausch H, Reda J (2014), "openSNP-A Crowdsourced Web Resource
+        1. Greshake B, Bayer PE, Rausch H, Reda J (2014), "openSNP-A Crowdsourced Web Resource
            for Personal Genomics," PLOS ONE, 9(3): e89204,
            https://doi.org/10.1371/journal.pone.0089204
         """
@@ -285,24 +285,20 @@ class Resources(metaclass=Singleton):
         -----
         Keys of returned dict are chromosomes and values are the corresponding assembly map.
         """
-        try:
-            assembly_mapping_data = {}
+        assembly_mapping_data = {}
 
-            with tarfile.open(filename, "r") as tar:
-                # http://stackoverflow.com/a/2018576
-                for member in tar.getmembers():
-                    if ".json" in member.name:
-                        with tar.extractfile(member) as tar_file:
-                            tar_bytes = tar_file.read()
-                        # https://stackoverflow.com/a/42683509/4727627
-                        assembly_mapping_data[member.name.split(".")[0]] = json.loads(
-                            tar_bytes.decode("utf-8")
-                        )
+        with tarfile.open(filename, "r") as tar:
+            # http://stackoverflow.com/a/2018576
+            for member in tar.getmembers():
+                if ".json" in member.name:
+                    with tar.extractfile(member) as tar_file:
+                        tar_bytes = tar_file.read()
+                    # https://stackoverflow.com/a/42683509/4727627
+                    assembly_mapping_data[member.name.split(".")[0]] = json.loads(
+                        tar_bytes.decode("utf-8")
+                    )
 
-            return assembly_mapping_data
-        except Exception as err:
-            logger.warning(err)
-            return {}
+        return assembly_mapping_data
 
     def _get_paths_reference_sequences(
         self, sub_dir="fasta", assembly="GRCh37", chroms=()
@@ -335,7 +331,7 @@ class Resources(metaclass=Singleton):
 
         References
         ----------
-        .. [1] Daniel R. Zerbino, Premanand Achuthan, Wasiu Akanni, M. Ridwan Amode,
+        1. Daniel R. Zerbino, Premanand Achuthan, Wasiu Akanni, M. Ridwan Amode,
            Daniel Barrell, Jyothish Bhai, Konstantinos Billis, Carla Cummins, Astrid Gall,
            Carlos García Giro´n, Laurent Gil, Leo Gordon, Leanne Haggerty, Erin Haskell,
            Thibaut Hourlier, Osagie G. Izuogu, Sophie H. Janacek, Thomas Juettemann,
@@ -350,11 +346,11 @@ class Resources(metaclass=Singleton):
            Ensembl 2018.
            PubMed PMID: 29155950.
            doi:10.1093/nar/gkx1098
-        .. [2] NCBI 36, Oct 2005, Ensembl release 54, Database version: 54.36p
-        .. [3] GRCh37.p13 (Genome Reference Consortium Human Reference 37),
+        2. NCBI 36, Oct 2005, Ensembl release 54, Database version: 54.36p
+        3. GRCh37.p13 (Genome Reference Consortium Human Reference 37),
            INSDC Assembly GCA_000001405.14, Feb 2009, Ensembl GRCh37 release 96, Database
            version: 96.37
-        .. [4] GRCh38.p12 (Genome Reference Consortium Human Build 38),
+        4. GRCh38.p12 (Genome Reference Consortium Human Build 38),
            INSDC Assembly GCA_000001405.27, Dec 2013, Ensembl release 96, Database
            version: 96.38
         """
@@ -430,9 +426,9 @@ class Resources(metaclass=Singleton):
 
         References
         ----------
-        .. [1] Ensembl, Assembly Information Endpoint,
+        1. Ensembl, Assembly Information Endpoint,
            https://rest.ensembl.org/documentation/info/assembly_info
-        .. [2] Ensembl, Assembly Map Endpoint,
+        2. Ensembl, Assembly Map Endpoint,
            http://rest.ensembl.org/documentation/info/assembly_map
 
         """
@@ -473,18 +469,12 @@ class Resources(metaclass=Singleton):
             self._resources_dir, assembly_mapping_data + ".tar.gz"
         )
 
-        if not os.path.exists(destination) or not self._all_chroms_in_tar(
-            chroms, destination
-        ):
-            logger.debug("Downloading {}".format(os.path.relpath(destination)))
+        if not os.path.exists(destination):
+            logger.info("Downloading {}".format(os.path.relpath(destination)))
 
-            try:
-                self._download_assembly_mapping_data(
-                    destination, chroms, source_assembly, target_assembly, retries
-                )
-            except Exception as err:
-                logger.warning(err)
-                return ""
+            self._download_assembly_mapping_data(
+                destination, chroms, source_assembly, target_assembly, retries
+            )
 
         return destination
 
@@ -522,44 +512,26 @@ class Resources(metaclass=Singleton):
                         # remove temp file
                         os.remove(f_tmp.name)
 
-    def _all_chroms_in_tar(self, chroms, filename):
-        try:
-            with tarfile.open(filename, "r") as tar:
-                members = tar.getnames()
-
-            for chrom in chroms:
-                if chrom + ".json" not in members:
-                    return False
-        except Exception as err:
-            logger.warning(err)
-            return False
-
-        return True
-
     def _load_codigo46_resources(self, rsid_map, chrpos_map):
-        try:
-            d = {}
+        d = {}
 
-            with gzip.open(rsid_map, "rb") as f:
-                codigo_rsid_map = f.read().decode("utf-8")
+        with gzip.open(rsid_map, "rb") as f:
+            codigo_rsid_map = f.read().decode("utf-8")
 
-            d["rsid_map"] = dict(
-                (x.split("\t")[0], x.split("\t")[1])
-                for x in codigo_rsid_map.split("\n")[:-1]
-            )
+        d["rsid_map"] = dict(
+            (x.split("\t")[0], x.split("\t")[1])
+            for x in codigo_rsid_map.split("\n")[:-1]
+        )
 
-            with gzip.open(chrpos_map, "rb") as f:
-                codigo_chrpos_map = f.read().decode("utf-8")
+        with gzip.open(chrpos_map, "rb") as f:
+            codigo_chrpos_map = f.read().decode("utf-8")
 
-            d["chrpos_map"] = dict(
-                (x.split("\t")[0], x.split("\t")[1] + ":" + x.split("\t")[2])
-                for x in codigo_chrpos_map.split("\n")[:-1]
-            )
+        d["chrpos_map"] = dict(
+            (x.split("\t")[0], x.split("\t")[1] + ":" + x.split("\t")[2])
+            for x in codigo_chrpos_map.split("\n")[:-1]
+        )
 
-            return d
-        except Exception as err:
-            logger.warning(err)
-            return {}
+        return d
 
     def _get_path_codigo46_rsid_map(self):
         return self._download_file(
@@ -627,9 +599,6 @@ class Resources(metaclass=Singleton):
                         compress=compress,
                         timeout=timeout,
                     )
-            except Exception as err:
-                logger.warning(err)
-                return ""
 
         return destination
 
@@ -642,7 +611,7 @@ class Resources(metaclass=Singleton):
         path : str
             path to file being downloaded
         """
-        logger.debug("Downloading " + os.path.relpath(path))
+        logger.info("Downloading {}".format(os.path.relpath(path)))
 
 
 class ReferenceSequence:
@@ -668,7 +637,7 @@ class ReferenceSequence:
 
         References
         ----------
-        .. [1] The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
+        1. The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
            https://samtools.github.io/hts-specs/VCFv4.2.pdf
         """
         self._ID = ID

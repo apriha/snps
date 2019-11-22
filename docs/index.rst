@@ -15,6 +15,10 @@
    README <readme>
    output_files
    snps_banner
+   changelog
+   contributing
+   contributors
+   snps
 
 Indices and tables
 ==================

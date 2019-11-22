@@ -170,7 +170,7 @@ class Reader:
 
     def _extract_comments(self, f, decode, include_data=False):
         line = self._read_line(f, decode)
-        
+
         first_line = line
         comments = ""
         data = ""
@@ -221,7 +221,9 @@ class Reader:
             compression = "gzip"
 
             with gzip.open(io.BytesIO(file), "rb") as f:
-                first_line, comments, data = self._extract_comments(f, True, include_data)
+                first_line, comments, data = self._extract_comments(
+                    f, True, include_data
+                )
 
         else:
             file = io.BytesIO(file)
@@ -796,7 +798,6 @@ class Reader:
         rows = []
         first_four_bytes = buffer.read(4)
         buffer.seek(0)
-
 
         if self.is_gzip(first_four_bytes):
             f = gzip.open(buffer)

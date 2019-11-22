@@ -61,7 +61,7 @@ class TestResources(BaseSNPsTestCase):
 
     def test_get_all_resources(self):
         resources = self.resource.get_all_resources()
-        
+
         for k, v in resources.items():
             if not v:
                 assert False

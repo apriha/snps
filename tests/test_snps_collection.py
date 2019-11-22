@@ -347,7 +347,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
             data = f.read()
             s = SNPs(data, rsids=rsids)
         os.remove("tests/input/testvcf.vcf.gz")
-        
+
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID

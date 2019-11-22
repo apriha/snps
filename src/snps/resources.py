@@ -519,8 +519,7 @@ class Resources(metaclass=Singleton):
             gsa_rsid_map = f.read().decode("utf-8")
 
         d["rsid_map"] = dict(
-            (x.split("\t")[0], x.split("\t")[1])
-            for x in gsa_rsid_map.split("\n")[:-1]
+            (x.split("\t")[0], x.split("\t")[1]) for x in gsa_rsid_map.split("\n")[:-1]
         )
 
         with gzip.open(chrpos_map, "rb") as f:

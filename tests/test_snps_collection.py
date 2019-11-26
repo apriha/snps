@@ -40,9 +40,9 @@ from atomicwrites import atomic_write
 import numpy as np
 import pandas as pd
 
-
-from snps.resources import Resources, ReferenceSequence
 from snps import SNPs, SNPsCollection
+from snps.resources import Resources, ReferenceSequence
+from snps.utils import create_dir
 from tests import BaseSNPsTestCase
 
 
@@ -171,6 +171,8 @@ class TestSNPsCollection(BaseSNPsTestCase):
         temp = SNPs()
         temp._resources._gsa_resources = {}
 
+        create_dir("resources")
+
         with open("tests/resources/gsa_rsid_map.txt", "rb") as f_in:
             with atomic_write(
                 "resources/gsa_rsid_map.txt.gz", mode="wb", overwrite=True
@@ -203,6 +205,8 @@ class TestSNPsCollection(BaseSNPsTestCase):
         temp = SNPs()
         temp._resources._gsa_resources = {}
 
+        create_dir("resources")
+
         with open("tests/resources/gsa_rsid_map.txt", "rb") as f_in:
             with atomic_write(
                 "resources/gsa_rsid_map.txt.gz", mode="wb", overwrite=True
@@ -233,6 +237,8 @@ class TestSNPsCollection(BaseSNPsTestCase):
         # reset resource if already loaded
         temp = SNPs()
         temp._resources._gsa_resources = {}
+
+        create_dir("resources")
 
         with open("tests/resources/gsa_rsid_map.txt", "rb") as f_in:
             with atomic_write(
@@ -265,6 +271,8 @@ class TestSNPsCollection(BaseSNPsTestCase):
         # reset resource if already loaded
         temp = SNPs()
         temp._resources._gsa_resources = {}
+
+        create_dir("resources")
 
         with open("tests/resources/gsa_rsid_map.txt", "rb") as f_in:
             with atomic_write(

@@ -228,7 +228,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         os.remove("resources/gsa_chrpos_map.txt.gz")
 
     def test_snps_sano_bytes(self):
-        # https://codigo46.com.mx
+        # https://sanogenetics.com
 
         # reset resource if already loaded
         temp = SNPs()
@@ -260,7 +260,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         os.remove("resources/gsa_chrpos_map.txt.gz")
 
     def test_snps_sano(self):
-        # https://codigo46.com.mx
+        # https://sanogenetics.com
 
         # reset resource if already loaded
         temp = SNPs()

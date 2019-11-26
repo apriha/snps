@@ -618,7 +618,7 @@ class Reader:
     def read_sano(self, file, compression):
         """ Read and parse Sano Genetics files.
 
-        http://sanogenetics.com/
+        https://sanogenetics.com
 
         Parameters
         ----------

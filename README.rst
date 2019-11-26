@@ -26,7 +26,7 @@ genotype files from the following DNA testing sources:
 - `LivingDNA <https://livingdna.com>`_
 - `Mapmygenome <https://mapmygenome.in>`_
 - `MyHeritage <https://www.myheritage.com>`_
-- `Sano Genetics <https://sanogenetics.com/>`_
+- `Sano Genetics <https://sanogenetics.com>`_
 
 Dependencies
 ------------

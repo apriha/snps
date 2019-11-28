@@ -95,14 +95,14 @@ class Reader:
                 with zipfile.ZipFile(file) as z:
                     with z.open(z.namelist()[0], "r") as f:
                         first_line, comments, data = self._extract_comments(
-                            f, True, False
+                            f, decode=True
                         )
             elif ".gz" in file:
                 with gzip.open(file, "rt") as f:
-                    first_line, comments, data = self._extract_comments(f, False, False)
+                    first_line, comments, data = self._extract_comments(f)
             else:
                 with open(file, "r") as f:
-                    first_line, comments, data = self._extract_comments(f, False, False)
+                    first_line, comments, data = self._extract_comments(f)
 
         elif isinstance(file, bytes):
 
@@ -164,7 +164,7 @@ class Reader:
         r = cls(file, only_detect_source, resources, rsids)
         return r()
 
-    def _extract_comments(self, f, decode, include_data=False):
+    def _extract_comments(self, f, decode=False, include_data=False):
         line = self._read_line(f, decode)
 
         first_line = line
@@ -210,7 +210,7 @@ class Reader:
 
                 with z.open(filename, "r") as f:
                     first_line, comments, data = self._extract_comments(
-                        f, True, include_data
+                        f, decode=True, include_data=include_data
                     )
 
         elif self.is_gzip(file):
@@ -218,13 +218,13 @@ class Reader:
 
             with gzip.open(io.BytesIO(file), "rb") as f:
                 first_line, comments, data = self._extract_comments(
-                    f, True, include_data
+                    f, decode=True, include_data=include_data
                 )
 
         else:
             file = io.BytesIO(file)
             first_line, comments, data = self._extract_comments(
-                deepcopy(file), True, include_data
+                deepcopy(file), decode=True, include_data=include_data
             )
             file.seek(0)
         return first_line, comments, data, compression
@@ -562,7 +562,9 @@ class Reader:
 
         if isinstance(file, str):
             with open(file, "rb") as f:
-                first_line, comments, data = self._extract_comments(f, True, True)
+                first_line, comments, data = self._extract_comments(
+                    f, decode=True, include_data=True
+                )
         else:
             first_line, comments, data, compression = self._handle_bytes_data(
                 file.read(), include_data=True

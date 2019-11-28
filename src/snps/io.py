@@ -88,7 +88,6 @@ class Reader:
         file = self._file
         compression = "infer"
 
-        # try:
         # peek into files to determine the data format
         if isinstance(file, str) and os.path.exists(file):
 
@@ -141,9 +140,6 @@ class Reader:
             return self.read_sano(file, compression)
         else:
             return pd.DataFrame(), ""
-        # except Exception as err:
-        #     print(err)
-        #     return pd.DataFrame(), ""
 
     @classmethod
     def read_file(cls, file, only_detect_source, resources, rsids):

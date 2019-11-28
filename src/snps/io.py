@@ -107,7 +107,7 @@ class Reader:
 
         elif isinstance(file, bytes):
 
-            first_line, comments, data, compression = self.handle_bytes_data(file)
+            first_line, comments, data, compression = self._handle_bytes_data(file)
             file = io.BytesIO(file)
 
         else:
@@ -198,7 +198,7 @@ class Reader:
             f.seek(0)
         return first_line, comments, data
 
-    def handle_bytes_data(self, file, include_data=False):
+    def _handle_bytes_data(self, file, include_data=False):
         compression = "infer"
         if self.is_zip(file):
             compression = "zip"
@@ -586,7 +586,7 @@ class Reader:
             with open(file, "rb") as f:
                 first_line, comments, data = self._extract_comments(f, True, True)
         else:
-            first_line, comments, data, compression = self.handle_bytes_data(
+            first_line, comments, data, compression = self._handle_bytes_data(
                 file.read(), include_data=True
             )
 
@@ -643,7 +643,7 @@ class Reader:
             with open(file, "rb") as f:
                 first_line, comments, data = self._extract_comments(f, True, True)
         else:
-            first_line, comments, data, compression = self.handle_bytes_data(
+            first_line, comments, data, compression = self._handle_bytes_data(
                 file.read(), include_data=True
             )
 

@@ -554,6 +554,47 @@ class Reader:
 
         return df, "GenesForGood"
 
+    def _read_gsa_helper(self, file, compression, source, strand):
+        if self._only_detect_source:
+            return pd.DataFrame(), source
+
+        gsa_resources = self._resources.get_gsa_resources()
+
+        if isinstance(file, str):
+            with open(file, "rb") as f:
+                first_line, comments, data = self._extract_comments(f, True, True)
+        else:
+            first_line, comments, data, compression = self._handle_bytes_data(
+                file.read(), include_data=True
+            )
+
+        df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
+
+        def map_rsids(x):
+            return gsa_resources["rsid_map"].get(x)
+
+        def map_chr(x):
+            chrpos = gsa_resources["chrpos_map"].get(x)
+            return chrpos.split(":")[0] if chrpos else None
+
+        def map_pos(x):
+            chrpos = gsa_resources["chrpos_map"].get(x)
+            return chrpos.split(":")[1] if chrpos else None
+
+        df["rsid"] = df["SNP Name"].apply(map_rsids)
+        df["chrom"] = df["SNP Name"].apply(map_chr)
+        df["pos"] = df["SNP Name"].apply(map_pos)
+        df["genotype"] = (
+            df["Allele1 - {}".format(strand)] + df["Allele2 - {}".format(strand)]
+        )
+        df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
+
+        df = df.astype({"chrom": object, "pos": np.int64})
+        df = df[["rsid", "chrom", "pos", "genotype"]]
+        df.set_index(["rsid"], inplace=True)
+
+        return df, source
+
     def read_codigo46(self, file, compression):
         """ Read and parse Codigo46 files.
 
@@ -572,44 +613,7 @@ class Reader:
             name of data source
 
         """
-
-        if self._only_detect_source:
-            return pd.DataFrame(), "Codigo46"
-
-        gsa_resources = self._resources.get_gsa_resources()
-
-        if isinstance(file, str):
-            with open(file, "rb") as f:
-                first_line, comments, data = self._extract_comments(f, True, True)
-        else:
-            first_line, comments, data, compression = self._handle_bytes_data(
-                file.read(), include_data=True
-            )
-
-        df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
-
-        def map_codigo_rsids(x):
-            return gsa_resources["rsid_map"].get(x)
-
-        def map_codigo_chr(x):
-            chrpos = gsa_resources["chrpos_map"].get(x)
-            return chrpos.split(":")[0] if chrpos else None
-
-        def map_codigo_pos(x):
-            chrpos = gsa_resources["chrpos_map"].get(x)
-            return chrpos.split(":")[1] if chrpos else None
-
-        df["rsid"] = df["SNP Name"].apply(map_codigo_rsids)
-        df["chrom"] = df["SNP Name"].apply(map_codigo_chr)
-        df["pos"] = df["SNP Name"].apply(map_codigo_pos)
-        df["genotype"] = df["Allele1 - Plus"] + df["Allele2 - Plus"]
-        df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
-
-        df = df.astype({"chrom": object, "pos": np.int64})
-        df = df[["rsid", "chrom", "pos", "genotype"]]
-        df.set_index(["rsid"], inplace=True)
-
-        return df, "Codigo46"
+        return self._read_gsa_helper(file, compression, "Codigo46", "Plus")
 
     def read_sano(self, file, compression):
         """ Read and parse Sano Genetics files.
@@ -629,44 +633,7 @@ class Reader:
             name of data source
 
         """
-
-        if self._only_detect_source:
-            return pd.DataFrame(), "Sano"
-
-        gsa_resources = self._resources.get_gsa_resources()
-
-        if isinstance(file, str):
-            with open(file, "rb") as f:
-                first_line, comments, data = self._extract_comments(f, True, True)
-        else:
-            first_line, comments, data, compression = self._handle_bytes_data(
-                file.read(), include_data=True
-            )
-
-        df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
-
-        def map_codigo_rsids(x):
-            return gsa_resources["rsid_map"].get(x)
-
-        def map_codigo_chr(x):
-            chrpos = gsa_resources["chrpos_map"].get(x)
-            return chrpos.split(":")[0] if chrpos else None
-
-        def map_codigo_pos(x):
-            chrpos = gsa_resources["chrpos_map"].get(x)
-            return chrpos.split(":")[1] if chrpos else None
-
-        df["rsid"] = df["SNP Name"].apply(map_codigo_rsids)
-        df["chrom"] = df["SNP Name"].apply(map_codigo_chr)
-        df["pos"] = df["SNP Name"].apply(map_codigo_pos)
-        df["genotype"] = df["Allele1 - Forward"] + df["Allele2 - Forward"]
-        df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
-
-        df = df.astype({"chrom": object, "pos": np.int64})
-        df = df[["rsid", "chrom", "pos", "genotype"]]
-        df.set_index(["rsid"], inplace=True)
-
-        return df, "Sano"
+        return self._read_gsa_helper(file, compression, "Sano", "Forward")
 
     def read_lineage_csv(self, file, comments, compression):
         """ Read and parse CSV file generated by lineage / snps.

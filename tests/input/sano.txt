@@ -1,7 +1,7 @@
 [Header]
-Content		CODIGO46.bpm
+Content		SANO
 [Data]
-SNP Name	Sample ID	Allele1 - Plus	Allele2 - Plus
+SNP Name	Sample ID	Allele1 - Forward	Allele2 - Forward
 1:101	123	A	A
 1:102	123	C	C
 1:103	123	G	G

@@ -82,11 +82,17 @@ class Reader:
 
         Returns
         -------
-        tuple : (pandas.DataFrame, str)
-            dataframe of parsed SNPs, detected source of SNPs
+        dict
+            dict with the following items:
+
+            snps (pandas.DataFrame)
+                dataframe of parsed SNPs
+            source (str)
+                detected source of SNPs
         """
         file = self._file
         compression = "infer"
+        d = {"snps": pd.DataFrame(), "source": ""}
 
         # peek into files to determine the data format
         if isinstance(file, str) and os.path.exists(file):
@@ -110,7 +116,7 @@ class Reader:
             file = io.BytesIO(file)
 
         else:
-            return pd.DataFrame(), ""
+            return d
 
         if "23andMe" in first_line:
             return self.read_23andme(file, compression)
@@ -139,7 +145,7 @@ class Reader:
         elif "SANO" in comments:
             return self.read_sano(file)
         else:
-            return pd.DataFrame(), ""
+            return d
 
     @classmethod
     def read_file(cls, file, only_detect_source, resources, rsids):
@@ -158,8 +164,13 @@ class Reader:
 
         Returns
         -------
-        tuple : (pandas.DataFrame, str)
-            dataframe of parsed SNPs, detected source of SNPs
+        dict
+            dict with the following items:
+
+            snps (pandas.DataFrame)
+                dataframe of parsed SNPs
+            source (str)
+                detected source of SNPs
         """
         r = cls(file, only_detect_source, resources, rsids)
         return r()
@@ -264,22 +275,21 @@ class Reader:
         str
             name of data source
         """
-
         if self._only_detect_source:
-            return pd.DataFrame(), "23andMe"
+            df = pd.DataFrame()
+        else:
+            df = pd.read_csv(
+                file,
+                comment="#",
+                sep="\t",
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype={"chrom": object},
+                compression=compression,
+            )
 
-        df = pd.read_csv(
-            file,
-            comment="#",
-            sep="\t",
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype={"chrom": object},
-            compression=compression,
-        )
-
-        return df, "23andMe"
+        return {"snps": df, "source": "23andMe"}
 
     def read_ftdna(self, file, compression):
         """Read and parse Family Tree DNA (FTDNA) file.
@@ -298,29 +308,28 @@ class Reader:
         str
             name of data source
         """
-
         if self._only_detect_source:
-            return pd.DataFrame(), "FTDNA"
+            df = pd.DataFrame()
+        else:
+            df = pd.read_csv(
+                file,
+                skiprows=1,
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype={"chrom": object},
+                compression=compression,
+            )
 
-        df = pd.read_csv(
-            file,
-            skiprows=1,
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype={"chrom": object},
-            compression=compression,
-        )
+            # remove incongruous data
+            df = df.drop(
+                df.loc[df.index == "RSID"].index
+            )  # second header for concatenated data
 
-        # remove incongruous data
-        df = df.drop(
-            df.loc[df.index == "RSID"].index
-        )  # second header for concatenated data
+            # if second header existed, pos dtype will be object (should be np.int64)
+            df["pos"] = df["pos"].astype(np.int64)
 
-        # if second header existed, pos dtype will be object (should be np.int64)
-        df["pos"] = df["pos"].astype(np.int64)
-
-        return df, "FTDNA"
+        return {"snps": df, "source": "FTDNA"}
 
     def read_ftdna_famfinder(self, file, compression):
         """ Read and parse Family Tree DNA (FTDNA) "famfinder" file.
@@ -339,29 +348,28 @@ class Reader:
         str
             name of data source
         """
-
         if self._only_detect_source:
-            return pd.DataFrame(), "FTDNA"
+            df = pd.DataFrame()
+        else:
+            df = pd.read_csv(
+                file,
+                comment="#",
+                na_values="-",
+                names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                index_col=0,
+                dtype={"chrom": object},
+                compression=compression,
+            )
 
-        df = pd.read_csv(
-            file,
-            comment="#",
-            na_values="-",
-            names=["rsid", "chrom", "pos", "allele1", "allele2"],
-            index_col=0,
-            dtype={"chrom": object},
-            compression=compression,
-        )
+            # create genotype column from allele columns
+            df["genotype"] = df["allele1"] + df["allele2"]
 
-        # create genotype column from allele columns
-        df["genotype"] = df["allele1"] + df["allele2"]
+            # delete allele columns
+            # http://stackoverflow.com/a/13485766
+            del df["allele1"]
+            del df["allele2"]
 
-        # delete allele columns
-        # http://stackoverflow.com/a/13485766
-        del df["allele1"]
-        del df["allele2"]
-
-        return df, "FTDNA"
+        return {"snps": df, "source": "FTDNA"}
 
     def read_ancestry(self, file, compression):
         """ Read and parse Ancestry.com file.
@@ -380,37 +388,36 @@ class Reader:
         str
             name of data source
         """
-
         if self._only_detect_source:
-            return pd.DataFrame(), "AncestryDNA"
+            df = pd.DataFrame()
+        else:
+            df = pd.read_csv(
+                file,
+                comment="#",
+                header=0,
+                sep="\t",
+                na_values=0,
+                names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                index_col=0,
+                dtype={"chrom": object},
+                compression=compression,
+            )
 
-        df = pd.read_csv(
-            file,
-            comment="#",
-            header=0,
-            sep="\t",
-            na_values=0,
-            names=["rsid", "chrom", "pos", "allele1", "allele2"],
-            index_col=0,
-            dtype={"chrom": object},
-            compression=compression,
-        )
+            # create genotype column from allele columns
+            df["genotype"] = df["allele1"] + df["allele2"]
 
-        # create genotype column from allele columns
-        df["genotype"] = df["allele1"] + df["allele2"]
+            # delete allele columns
+            # http://stackoverflow.com/a/13485766
+            del df["allele1"]
+            del df["allele2"]
 
-        # delete allele columns
-        # http://stackoverflow.com/a/13485766
-        del df["allele1"]
-        del df["allele2"]
+            # https://redd.it/5y90un
+            df.iloc[np.where(df["chrom"] == "23")[0], 0] = "X"
+            df.iloc[np.where(df["chrom"] == "24")[0], 0] = "Y"
+            df.iloc[np.where(df["chrom"] == "25")[0], 0] = "PAR"
+            df.iloc[np.where(df["chrom"] == "26")[0], 0] = "MT"
 
-        # https://redd.it/5y90un
-        df.iloc[np.where(df["chrom"] == "23")[0], 0] = "X"
-        df.iloc[np.where(df["chrom"] == "24")[0], 0] = "Y"
-        df.iloc[np.where(df["chrom"] == "25")[0], 0] = "PAR"
-        df.iloc[np.where(df["chrom"] == "26")[0], 0] = "MT"
-
-        return df, "AncestryDNA"
+        return {"snps": df, "source": "AncestryDNA"}
 
     def read_myheritage(self, file, compression):
         """ Read and parse MyHeritage file.
@@ -429,22 +436,21 @@ class Reader:
         str
             name of data source
         """
-
         if self._only_detect_source:
-            return pd.DataFrame(), "MyHeritage"
+            df = pd.DataFrame()
+        else:
+            df = pd.read_csv(
+                file,
+                comment="#",
+                header=0,
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype={"chrom": object, "pos": np.int64},
+                compression=compression,
+            )
 
-        df = pd.read_csv(
-            file,
-            comment="#",
-            header=0,
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype={"chrom": object, "pos": np.int64},
-            compression=compression,
-        )
-
-        return df, "MyHeritage"
+        return {"snps": df, "source": "MyHeritage"}
 
     def read_livingdna(self, file, compression):
         """ Read and parse LivingDNA file.
@@ -463,22 +469,21 @@ class Reader:
         str
             name of data source
         """
-
         if self._only_detect_source:
-            return pd.DataFrame(), "LivingDNA"
+            df = pd.DataFrame()
+        else:
+            df = pd.read_csv(
+                file,
+                comment="#",
+                sep="\t",
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype={"chrom": object},
+                compression=compression,
+            )
 
-        df = pd.read_csv(
-            file,
-            comment="#",
-            sep="\t",
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype={"chrom": object},
-            compression=compression,
-        )
-
-        return df, "LivingDNA"
+        return {"snps": df, "source": "LivingDNA"}
 
     def read_mapmygenome(self, file, compression):
         """ Read and parse Mapmygenome file.
@@ -497,27 +502,26 @@ class Reader:
         str
             name of data source
         """
-
         if self._only_detect_source:
-            return pd.DataFrame(), "Mapmygenome"
+            df = pd.DataFrame()
+        else:
+            df = pd.read_csv(
+                file,
+                comment="#",
+                sep="\t",
+                na_values="--",
+                header=0,
+                index_col=1,
+                dtype={"Chr": object},
+                compression=compression,
+            )
 
-        df = pd.read_csv(
-            file,
-            comment="#",
-            sep="\t",
-            na_values="--",
-            header=0,
-            index_col=1,
-            dtype={"Chr": object},
-            compression=compression,
-        )
+            df["genotype"] = df["Allele1...Top"] + df["Allele2...Top"]
+            df.rename(columns={"Chr": "chrom", "Position": "pos"}, inplace=True)
+            df.index.name = "rsid"
+            df = df[["chrom", "pos", "genotype"]]
 
-        df["genotype"] = df["Allele1...Top"] + df["Allele2...Top"]
-        df.rename(columns={"Chr": "chrom", "Position": "pos"}, inplace=True)
-        df.index.name = "rsid"
-        df = df[["chrom", "pos", "genotype"]]
-
-        return df, "Mapmygenome"
+        return {"snps": df, "source": "Mapmygenome"}
 
     def read_genes_for_good(self, file, compression):
         """ Read and parse Genes For Good file.
@@ -537,65 +541,64 @@ class Reader:
             name of data source
 
         """
-
         if self._only_detect_source:
-            return pd.DataFrame(), "GenesForGood"
+            df = pd.DataFrame()
+        else:
+            df = pd.read_csv(
+                file,
+                comment="#",
+                sep="\t",
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype={"chrom": object},
+                compression=compression,
+            )
 
-        df = pd.read_csv(
-            file,
-            comment="#",
-            sep="\t",
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype={"chrom": object},
-            compression=compression,
-        )
-
-        return df, "GenesForGood"
+        return {"snps": df, "source": "GenesForGood"}
 
     def _read_gsa_helper(self, file, source, strand):
         if self._only_detect_source:
-            return pd.DataFrame(), source
-
-        gsa_resources = self._resources.get_gsa_resources()
-
-        if isinstance(file, str):
-            with open(file, "rb") as f:
-                first_line, comments, data = self._extract_comments(
-                    f, decode=True, include_data=True
-                )
+            df = pd.DataFrame()
         else:
-            first_line, comments, data, compression = self._handle_bytes_data(
-                file.read(), include_data=True
+            gsa_resources = self._resources.get_gsa_resources()
+
+            if isinstance(file, str):
+                with open(file, "rb") as f:
+                    first_line, comments, data = self._extract_comments(
+                        f, decode=True, include_data=True
+                    )
+            else:
+                first_line, comments, data, compression = self._handle_bytes_data(
+                    file.read(), include_data=True
+                )
+
+            df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
+
+            def map_rsids(x):
+                return gsa_resources["rsid_map"].get(x)
+
+            def map_chr(x):
+                chrpos = gsa_resources["chrpos_map"].get(x)
+                return chrpos.split(":")[0] if chrpos else None
+
+            def map_pos(x):
+                chrpos = gsa_resources["chrpos_map"].get(x)
+                return chrpos.split(":")[1] if chrpos else None
+
+            df["rsid"] = df["SNP Name"].apply(map_rsids)
+            df["chrom"] = df["SNP Name"].apply(map_chr)
+            df["pos"] = df["SNP Name"].apply(map_pos)
+            df["genotype"] = (
+                df["Allele1 - {}".format(strand)] + df["Allele2 - {}".format(strand)]
             )
+            df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
 
-        df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
+            df = df.astype({"chrom": object, "pos": np.int64})
+            df = df[["rsid", "chrom", "pos", "genotype"]]
+            df.set_index(["rsid"], inplace=True)
 
-        def map_rsids(x):
-            return gsa_resources["rsid_map"].get(x)
-
-        def map_chr(x):
-            chrpos = gsa_resources["chrpos_map"].get(x)
-            return chrpos.split(":")[0] if chrpos else None
-
-        def map_pos(x):
-            chrpos = gsa_resources["chrpos_map"].get(x)
-            return chrpos.split(":")[1] if chrpos else None
-
-        df["rsid"] = df["SNP Name"].apply(map_rsids)
-        df["chrom"] = df["SNP Name"].apply(map_chr)
-        df["pos"] = df["SNP Name"].apply(map_pos)
-        df["genotype"] = (
-            df["Allele1 - {}".format(strand)] + df["Allele2 - {}".format(strand)]
-        )
-        df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
-
-        df = df.astype({"chrom": object, "pos": np.int64})
-        df = df[["rsid", "chrom", "pos", "genotype"]]
-        df.set_index(["rsid"], inplace=True)
-
-        return df, source
+        return {"snps": df, "source": source}
 
     def read_codigo46(self, file):
         """ Read and parse Codigo46 files.
@@ -654,7 +657,6 @@ class Reader:
         str
             name of data source(s)
         """
-
         source = ""
         for comment in comments.split("\n"):
             if "Source(s):" in comment:
@@ -662,20 +664,20 @@ class Reader:
                 break
 
         if self._only_detect_source:
-            return pd.DataFrame(), source
+            df = pd.DataFrame()
+        else:
+            df = pd.read_csv(
+                file,
+                comment="#",
+                header=0,
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype={"chrom": object, "pos": np.int64},
+                compression=compression,
+            )
 
-        df = pd.read_csv(
-            file,
-            comment="#",
-            header=0,
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype={"chrom": object, "pos": np.int64},
-            compression=compression,
-        )
-
-        return df, source
+        return {"snps": df, "source": source}
 
     def read_generic_csv(self, file, compression):
         """ Read and parse generic CSV file.
@@ -703,21 +705,20 @@ class Reader:
         str
             name of data source
         """
-
         if self._only_detect_source:
-            return pd.DataFrame(), "generic"
+            df = pd.DataFrame()
+        else:
+            df = pd.read_csv(
+                file,
+                skiprows=1,
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype={"chrom": object, "pos": np.int64},
+                compression=compression,
+            )
 
-        df = pd.read_csv(
-            file,
-            skiprows=1,
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype={"chrom": object, "pos": np.int64},
-            compression=compression,
-        )
-
-        return df, "generic"
+        return {"snps": df, "source": "generic"}
 
     def read_vcf(self, file, compression, rsids=()):
         """ Read and parse VCF file.
@@ -749,15 +750,16 @@ class Reader:
         str
             name of data source
         """
-
         if self._only_detect_source:
-            return pd.DataFrame(), "vcf"
-
-        if not isinstance(file, io.BytesIO):
-            with open(file, "rb") as f:
-                return self._parse_vcf(f, rsids)
+            df = pd.DataFrame()
         else:
-            return self._parse_vcf(file, rsids)
+            if not isinstance(file, io.BytesIO):
+                with open(file, "rb") as f:
+                    df = self._parse_vcf(f, rsids)
+            else:
+                df = self._parse_vcf(file, rsids)
+
+        return {"snps": df, "source": "vcf"}
 
     def _parse_vcf(self, buffer, rsids):
         rows = []
@@ -831,7 +833,7 @@ class Reader:
 
             df.set_index("rsid", inplace=True, drop=True)
 
-        return df, "vcf"
+        return df
 
 
 class Writer:

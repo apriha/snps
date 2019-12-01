@@ -106,9 +106,10 @@ class SNPs:
 
         if file:
 
-            self._snps, self._source = self._read_raw_data(
-                file, only_detect_source, rsids
-            )
+            d = self._read_raw_data(file, only_detect_source, rsids)
+
+            self._snps = d["snps"]
+            self._source = d["source"]
 
             if not self._snps.empty:
                 self.sort_snps()

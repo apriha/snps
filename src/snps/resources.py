@@ -81,7 +81,7 @@ class Resources(metaclass=Singleton):
         self._resources_dir = os.path.abspath(resources_dir)
         self._ensembl_rest_client = EnsemblRestClient()
         self._reference_sequences = {}
-        self._codigo46_resources = {}
+        self._gsa_resources = {}
 
     def get_reference_sequences(
         self,
@@ -221,7 +221,7 @@ class Resources(metaclass=Singleton):
             resources[source + "_" + target] = self.get_assembly_mapping_data(
                 source, target
             )
-        resources["codigo46_resources"] = self.get_codigo46_resources()
+        resources["gsa_resources"] = self.get_gsa_resources()
         return resources
 
     def get_all_reference_sequences(self, **kwargs):
@@ -240,20 +240,20 @@ class Resources(metaclass=Singleton):
             self.get_reference_sequences(assembly=assembly, **kwargs)
         return self._reference_sequences
 
-    def get_codigo46_resources(self):
-        """ Get resources for reading Codigo46 files.
+    def get_gsa_resources(self):
+        """ Get resources for reading Global Screening Array files.
 
-        https://codigo46.com.mx
+        https://support.illumina.com/downloads/infinium-global-screening-array-v2-0-product-files.html
 
         Returns
         -------
         dict
         """
-        if not self._codigo46_resources:
-            self._codigo46_resources = self._load_codigo46_resources(
-                self._get_path_codigo46_rsid_map(), self._get_path_codigo46_chrpos_map()
+        if not self._gsa_resources:
+            self._gsa_resources = self._load_gsa_resources(
+                self._get_path_gsa_rsid_map(), self._get_path_gsa_chrpos_map()
             )
-        return self._codigo46_resources
+        return self._gsa_resources
 
     @staticmethod
     def _write_data_to_gzip(f, data):
@@ -279,7 +279,7 @@ class Resources(metaclass=Singleton):
         Returns
         -------
         assembly_mapping_data : dict
-            dict of assembly maps if loading was successful, else {}
+            dict of assembly maps
 
         Notes
         -----
@@ -512,37 +512,36 @@ class Resources(metaclass=Singleton):
                         # remove temp file
                         os.remove(f_tmp.name)
 
-    def _load_codigo46_resources(self, rsid_map, chrpos_map):
+    def _load_gsa_resources(self, rsid_map, chrpos_map):
         d = {}
 
         with gzip.open(rsid_map, "rb") as f:
-            codigo_rsid_map = f.read().decode("utf-8")
+            gsa_rsid_map = f.read().decode("utf-8")
 
         d["rsid_map"] = dict(
-            (x.split("\t")[0], x.split("\t")[1])
-            for x in codigo_rsid_map.split("\n")[:-1]
+            (x.split("\t")[0], x.split("\t")[1]) for x in gsa_rsid_map.split("\n")[:-1]
         )
 
         with gzip.open(chrpos_map, "rb") as f:
-            codigo_chrpos_map = f.read().decode("utf-8")
+            gsa_chrpos_map = f.read().decode("utf-8")
 
         d["chrpos_map"] = dict(
             (x.split("\t")[0], x.split("\t")[1] + ":" + x.split("\t")[2])
-            for x in codigo_chrpos_map.split("\n")[:-1]
+            for x in gsa_chrpos_map.split("\n")[:-1]
         )
 
         return d
 
-    def _get_path_codigo46_rsid_map(self):
+    def _get_path_gsa_rsid_map(self):
         return self._download_file(
-            "https://sano-public.s3.eu-west-2.amazonaws.com/codigo_rsid_map.txt.gz",
-            "codigo46_rsid_map.txt.gz",
+            "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_rsid_map.txt.gz",
+            "gsa_rsid_map.txt.gz",
         )
 
-    def _get_path_codigo46_chrpos_map(self):
+    def _get_path_gsa_chrpos_map(self):
         return self._download_file(
-            "https://sano-public.s3.eu-west-2.amazonaws.com/codigo_chrpos_map.txt.gz",
-            "codigo46_chrpos_map.txt.gz",
+            "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_chrpos_map.txt.gz",
+            "gsa_chrpos_map.txt.gz",
         )
 
     def _download_file(self, url, filename, compress=False, timeout=30):

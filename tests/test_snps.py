@@ -93,6 +93,7 @@ class TestSnps(BaseSNPsTestCase):
         assert self.snps_buffer_zip.snp_count == 6
 
     def test_snp_buffer_gz(self):
+
         assert self.snps_buffer_gz.snp_count == 6
 
     def test_snp_buffer(self):

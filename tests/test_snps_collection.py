@@ -40,9 +40,9 @@ from atomicwrites import atomic_write
 import numpy as np
 import pandas as pd
 
-
-from snps.resources import Resources, ReferenceSequence
 from snps import SNPs, SNPsCollection
+from snps.resources import Resources, ReferenceSequence
+from snps.utils import create_dir
 from tests import BaseSNPsTestCase
 
 
@@ -164,36 +164,78 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert s.source == "MyHeritage"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
+    @staticmethod
+    def _setup_gsa_test():
+        # reset resource if already loaded
+        temp = SNPs()
+        temp._resources._gsa_resources = {}
+
+        create_dir("resources")
+
+        with open("tests/resources/gsa_rsid_map.txt", "rb") as f_in:
+            with atomic_write(
+                "resources/gsa_rsid_map.txt.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        with open("tests/resources/gsa_chrpos_map.txt", "rb") as f_in:
+            with atomic_write(
+                "resources/gsa_chrpos_map.txt.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+    @staticmethod
+    def _teardown_gsa_test():
+        os.remove("resources/gsa_rsid_map.txt.gz")
+        os.remove("resources/gsa_chrpos_map.txt.gz")
+
+    def test_snps_codigo46_bytes(self):
+        # https://codigo46.com.mx
+
+        self._setup_gsa_test()
+
+        with open("tests/input/codigo46.txt", "rb") as f:
+            s = SNPs(f.read())
+        assert s.source == "Codigo46"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
+        self._teardown_gsa_test()
+
     def test_snps_codigo46(self):
         # https://codigo46.com.mx
 
-        # reset resource if already loaded
-        temp = SNPs()
-        temp._resources._codigo46_resources = {}
-
-        with open("tests/resources/codigo46_rsid_map.txt", "rb") as f_in:
-            with atomic_write(
-                "resources/codigo46_rsid_map.txt.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
-
-        with open("tests/resources/codigo46_chrpos_map.txt", "rb") as f_in:
-            with atomic_write(
-                "resources/codigo46_chrpos_map.txt.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
+        self._setup_gsa_test()
 
         s = SNPs("tests/input/codigo46.txt")
         assert s.source == "Codigo46"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
-        # reset resource
-        temp._resources._codigo46_resources = {}
+        self._teardown_gsa_test()
 
-        os.remove("resources/codigo46_rsid_map.txt.gz")
-        os.remove("resources/codigo46_chrpos_map.txt.gz")
+    def test_snps_sano_bytes(self):
+        # https://sanogenetics.com
+
+        self._setup_gsa_test()
+
+        with open("tests/input/sano.txt", "rb") as f:
+            s = SNPs(f.read())
+        assert s.source == "Sano"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
+        self._teardown_gsa_test()
+
+    def test_snps_sano(self):
+        # https://sanogenetics.com
+
+        self._setup_gsa_test()
+
+        s = SNPs("tests/input/sano.txt")
+        assert s.source == "Sano"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
+        self._teardown_gsa_test()
 
     def test_snps_livingdna(self):
         # https://livingdna.com
@@ -315,6 +357,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
             data = f.read()
             s = SNPs(data, rsids=rsids)
         os.remove("tests/input/testvcf.vcf.gz")
+
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID

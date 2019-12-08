@@ -89,10 +89,12 @@ class Reader:
                 dataframe of parsed SNPs
             source (str)
                 detected source of SNPs
+            phased (bool)
+                flag indicating if SNPs are phased
         """
         file = self._file
         compression = "infer"
-        d = {"snps": pd.DataFrame(), "source": ""}
+        d = {"snps": pd.DataFrame(), "source": "", "phased": False}
 
         # peek into files to determine the data format
         if isinstance(file, str) and os.path.exists(file):
@@ -171,6 +173,8 @@ class Reader:
                 dataframe of parsed SNPs
             source (str)
                 detected source of SNPs
+            phased (bool)
+                flag indicating if SNPs are phased
         """
         r = cls(file, only_detect_source, resources, rsids)
         return r()
@@ -270,6 +274,8 @@ class Reader:
 
             0 (pandas.DataFrame)
                 dataframe of parsed SNPs (empty if only detecting source)
+            1 (bool), optional
+                flag indicating if SNPs are phased
 
         Returns
         -------
@@ -280,13 +286,25 @@ class Reader:
                 dataframe of parsed SNPs
             source (str)
                 detected source of SNPs
+            phased (bool)
+                flag indicating if SNPs are phased
+
+        References
+        ----------
+        1. Fluent Python by Luciano Ramalho (O'Reilly). Copyright 2015 Luciano Ramalho,
+           978-1-491-94600-8.
         """
+        phased = False
+
         if self._only_detect_source:
             df = pd.DataFrame()
         else:
-            df = parser()
+            df, *extra = parser()
 
-        return {"snps": df, "source": source}
+            if len(extra) == 1:
+                phased = extra[0]
+
+        return {"snps": df, "source": source, "phased": phased}
 
     def read_23andme(self, file, compression):
         """ Read and parse 23andMe file.
@@ -673,9 +691,18 @@ class Reader:
             name of data source(s)
         """
         source = ""
+        phased = False
+
         for comment in comments.split("\n"):
             if "Source(s):" in comment:
                 source = comment.split("Source(s):")[1].strip()
+                break
+
+        for comment in comments.split("\n"):
+            if "Phased:" in comment:
+                phased_str = comment.split("Phased:")[1].strip()
+                if phased_str == "True":
+                    phased = True
                 break
 
         def parser():
@@ -690,6 +717,7 @@ class Reader:
                     dtype={"chrom": object, "pos": np.int64},
                     compression=compression,
                 ),
+                phased,
             )
 
         return self.read_helper(source, parser)
@@ -766,16 +794,17 @@ class Reader:
         def parser():
             if not isinstance(file, io.BytesIO):
                 with open(file, "rb") as f:
-                    df = self._parse_vcf(f, rsids)
+                    df, phased = self._parse_vcf(f, rsids)
             else:
-                df = self._parse_vcf(file, rsids)
+                df, phased = self._parse_vcf(file, rsids)
 
-            return (df,)
+            return (df, phased)
 
         return self.read_helper("vcf", parser)
 
     def _parse_vcf(self, buffer, rsids):
         rows = []
+        phased = True
         first_four_bytes = buffer.read(4)
         buffer.seek(0)
 
@@ -831,6 +860,9 @@ class Reader:
                     # if ALT is None, but genotype is 0/0
                     genotype = ref_alt[int(zygote1)] + ref_alt[int(zygote2)]
 
+                if "/" in zygote and pd.notna(genotype):
+                    phased = False
+
                 record_array = [
                     rsid,
                     "{}".format(line_split[0]).strip("chr"),
@@ -846,7 +878,7 @@ class Reader:
 
             df.set_index("rsid", inplace=True, drop=True)
 
-        return (df,)
+        return (df, phased)
 
 
 class Writer:
@@ -922,10 +954,12 @@ class Writer:
         comment = (
             "# Source(s): {}\n"
             "# Assembly: {}\n"
+            "# Phased: {}\n"
             "# SNPs: {}\n"
             "# Chromosomes: {}\n".format(
                 self._snps.source,
                 self._snps.assembly,
+                self._snps.phased,
                 self._snps.snp_count,
                 self._snps.chromosomes_summary,
             )
@@ -1160,12 +1194,17 @@ class Writer:
     def _compute_genotype(self, ref, alt, genotype):
         alleles = [ref]
 
+        if self._snps.phased:
+            separator = "|"
+        else:
+            separator = "/"
+
         if pd.notna(alt):
             alleles.extend(alt.split(","))
 
         if len(genotype) == 2:
-            return "{}/{}".format(
-                alleles.index(genotype[0]), alleles.index(genotype[1])
+            return "{}{}{}".format(
+                alleles.index(genotype[0]), separator, alleles.index(genotype[1])
             )
         else:
             return "{}".format(alleles.index(genotype[0]))

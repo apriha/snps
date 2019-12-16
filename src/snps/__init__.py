@@ -553,16 +553,17 @@ class SNPs:
 
     def deduplicate_rsids(self):
         # Keep first duplicate rsid. TODO record duplicates as discrepant SNPs
-        self._snps = self._snps.loc[~self._snps.index.duplicated(keep='first')]
+        self._snps = self._snps.loc[~self._snps.index.duplicated(keep="first")]
 
     def _deduplicate_chrom(self, chrom):
         """ Deduplicate a chromosome"""
         chrom_genotype_rsids = self._snps[
-            (self._snps["chrom"] == chrom) &
-            (self._snps["genotype"].notnull())
+            (self._snps["chrom"] == chrom) & (self._snps["genotype"].notnull())
         ].index
-        if all([len(x) == 2 for x in self._snps.loc[chrom_genotype_rsids, 'genotype']]):
-            self._snps.loc[chrom_genotype_rsids, 'genotype'] = self._snps.loc[chrom_genotype_rsids, 'genotype'].apply(lambda x: x[0])
+        if all([len(x) == 2 for x in self._snps.loc[chrom_genotype_rsids, "genotype"]]):
+            self._snps.loc[chrom_genotype_rsids, "genotype"] = self._snps.loc[
+                chrom_genotype_rsids, "genotype"
+            ].apply(lambda x: x[0])
 
     def _deduplicate_XY_chrom(self):
         """ Fix chromosome issue where some data providers duplicate male X and Y chromosomes"""

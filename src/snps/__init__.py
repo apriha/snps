@@ -533,7 +533,8 @@ class SNPs:
 
             x_snps = len(self._snps.loc[self._snps["chrom"] == "X"])
 
-            assert x_snps > 0
+            if x_snps == 0:
+                return ""
 
             heterozygous_x_snps = len(
                 self._snps.loc[

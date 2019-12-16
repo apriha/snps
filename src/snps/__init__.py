@@ -112,8 +112,11 @@ class SNPs:
 
             if not self._snps.empty:
                 self.sort_snps()
+                self.deduplicate_rsids()
 
                 self._build = self.detect_build()
+                if self.determine_sex() == "Male":
+                    self._deduplicate_XY_chrom()
 
                 if not self._build:
                     self._build = 37  # assume Build 37 / GRCh37 if not detected
@@ -530,8 +533,7 @@ class SNPs:
 
             x_snps = len(self._snps.loc[self._snps["chrom"] == "X"])
 
-            if x_snps == 0:
-                return ""
+            assert x_snps > 0
 
             heterozygous_x_snps = len(
                 self._snps.loc[
@@ -547,6 +549,24 @@ class SNPs:
                 return "Male"
         else:
             return ""
+
+    def deduplicate_rsids(self):
+        # Keep first duplicate rsid. TODO record duplicates as discrepant SNPs
+        self._snps = self._snps.loc[~self._snps.index.duplicated(keep='first')]
+
+    def _deduplicate_chrom(self, chrom):
+        """ Deduplicate a chromosome"""
+        chrom_genotype_rsids = self._snps[
+            (self._snps["chrom"] == chrom) &
+            (self._snps["genotype"].notnull())
+        ].index
+        if all([len(x) == 2 for x in self._snps.loc[chrom_genotype_rsids, 'genotype']]):
+            self._snps.loc[chrom_genotype_rsids, 'genotype'] = self._snps.loc[chrom_genotype_rsids, 'genotype'].apply(lambda x: x[0])
+
+    def _deduplicate_XY_chrom(self):
+        """ Fix chromosome issue where some data providers duplicate male X and Y chromosomes"""
+        self._deduplicate_chrom("X")
+        self._deduplicate_chrom("Y")
 
     def sort_snps(self):
         """ Sort SNPs based on ordered chromosome list and position. """
@@ -1075,7 +1095,7 @@ class SNPsCollection(SNPs):
                 "build / assembly mismatch between current build of SNPs and SNPs being loaded"
             )
 
-        # ensure there area always two X alleles
+        # ensure there are always two X alleles
         snps = self._double_single_alleles(snps._snps, "X")
 
         if self._snps.empty:

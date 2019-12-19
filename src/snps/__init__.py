@@ -97,6 +97,7 @@ class SNPs:
         self._file = file
         self._only_detect_source = only_detect_source
         self._snps = pd.DataFrame()
+        self._duplicate_snps = pd.DataFrame()
         self._source = ""
         self._build = 0
         self._build_detected = False
@@ -148,6 +149,19 @@ class SNPs:
         pandas.DataFrame
         """
         return self._snps.copy()
+
+    @property
+    def duplicate_snps(self):
+        """ Get any duplicate SNPs.
+
+        A duplicate SNP has the same RSID as another SNP. The first occurrence
+        of the RSID is not considered a duplicate SNP.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        return self._duplicate_snps
 
     @property
     def build(self):
@@ -552,8 +566,14 @@ class SNPs:
             return ""
 
     def deduplicate_rsids(self):
-        # Keep first duplicate rsid. TODO record duplicates as discrepant SNPs
-        self._snps = self._snps.loc[~self._snps.index.duplicated(keep="first")]
+        # Keep first duplicate rsid.
+        duplicate_rsids = self._snps.index.duplicated(keep="first")
+        # save duplicate SNPs
+        self._duplicate_snps = self._duplicate_snps.append(
+            self._snps.loc[duplicate_rsids]
+        )
+        # deduplicate
+        self._snps = self._snps.loc[~duplicate_rsids]
 
     def _deduplicate_chrom(self, chrom):
         """ Deduplicate a chromosome"""

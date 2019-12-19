@@ -595,6 +595,60 @@ class SNPs:
         self._deduplicate_chrom("X")
         self._deduplicate_chrom("Y")
 
+    @staticmethod
+    def get_par_regions(build):
+        """ Get PAR regions for the X and Y chromosomes.
+
+        Parameters
+        ----------
+        build : int
+            build of SNPs
+
+        Returns
+        -------
+        pandas.DataFrame
+            PAR regions for the given build
+
+        References
+        ----------
+        1. Genome Reference Consortium, https://www.ncbi.nlm.nih.gov/grc/human
+        2. Yates et. al. (doi:10.1093/bioinformatics/btu613),
+           `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
+        3. Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
+        """
+        if build == 37:
+            return pd.DataFrame(
+                {
+                    "region": ["PAR1", "PAR2", "PAR1", "PAR2"],
+                    "chrom": ["X", "X", "Y", "Y"],
+                    "start": [60001, 154931044, 10001, 59034050],
+                    "stop": [2699520, 155260560, 2649520, 59363566],
+                },
+                columns=["region", "chrom", "start", "stop"],
+            )
+        elif build == 38:
+            return pd.DataFrame(
+                {
+                    "region": ["PAR1", "PAR2", "PAR1", "PAR2"],
+                    "chrom": ["X", "X", "Y", "Y"],
+                    "start": [10001, 155701383, 10001, 56887903],
+                    "stop": [2781479, 156030895, 2781479, 57217415],
+                },
+                columns=["region", "chrom", "start", "stop"],
+            )
+        elif build == 36:
+            return pd.DataFrame(
+                {
+                    "region": ["PAR1", "PAR2", "PAR1", "PAR2"],
+                    "chrom": ["X", "X", "Y", "Y"],
+                    "start": [1, 154584238, 1, 57443438],
+                    "stop": [2709520, 154913754, 2709520, 57772954],
+                },
+                columns=["region", "chrom", "start", "stop"],
+            )
+        else:
+            return pd.DataFrame()
+
     def sort_snps(self):
         """ Sort SNPs based on ordered chromosome list and position. """
 

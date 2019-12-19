@@ -118,7 +118,7 @@ class SNPs:
                 self.sort_snps()
 
                 if deduplicate:
-                    self.deduplicate_rsids()
+                    self._deduplicate_rsids()
 
                 self._build = self.detect_build()
                 if self.determine_sex() == "Male":
@@ -570,7 +570,7 @@ class SNPs:
         else:
             return ""
 
-    def deduplicate_rsids(self):
+    def _deduplicate_rsids(self):
         # Keep first duplicate rsid.
         duplicate_rsids = self._snps.index.duplicated(keep="first")
         # save duplicate SNPs

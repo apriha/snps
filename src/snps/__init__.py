@@ -69,6 +69,7 @@ class SNPs:
         assign_par_snps=True,
         output_dir="output",
         resources_dir="resources",
+        deduplicate=True,
         parallelize=False,
         processes=os.cpu_count(),
         rsids=(),
@@ -87,6 +88,8 @@ class SNPs:
             path to output directory
         resources_dir : str
             name / path of resources directory
+        deduplicate : bool
+            deduplicate RSIDs and make SNPs available as `duplicate_snps`
         parallelize : bool
             utilize multiprocessing to speedup calculations
         processes : int
@@ -113,7 +116,9 @@ class SNPs:
 
             if not self._snps.empty:
                 self.sort_snps()
-                self.deduplicate_rsids()
+
+                if deduplicate:
+                    self.deduplicate_rsids()
 
                 self._build = self.detect_build()
                 if self.determine_sex() == "Male":

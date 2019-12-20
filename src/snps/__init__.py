@@ -101,6 +101,7 @@ class SNPs:
         self._only_detect_source = only_detect_source
         self._snps = pd.DataFrame()
         self._duplicate_snps = pd.DataFrame()
+        self._discrepant_XY_snps = pd.DataFrame()
         self._source = ""
         self._build = 0
         self._build_detected = False
@@ -121,13 +122,14 @@ class SNPs:
                     self._deduplicate_rsids()
 
                 self._build = self.detect_build()
-                if self.determine_sex() == "Male":
-                    self._deduplicate_XY_chrom()
 
                 if not self._build:
                     self._build = 37  # assume Build 37 / GRCh37 if not detected
                 else:
                     self._build_detected = True
+
+                if self.determine_sex() == "Male":
+                    self._deduplicate_XY_chrom()
 
                 if assign_par_snps:
                     self._assign_par_snps()
@@ -167,6 +169,19 @@ class SNPs:
         pandas.DataFrame
         """
         return self._duplicate_snps
+
+    @property
+    def discrepant_XY_snps(self):
+        """ Get any discrepant XY SNPs.
+
+        A discrepant XY SNP is a heterozygous SNP in the non-PAR region of the X
+        or Y chromosome found during deduplication for a detected male genotype.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        return self._discrepant_XY_snps
 
     @property
     def build(self):
@@ -603,14 +618,25 @@ class SNPs:
         self._snps = self._snps.loc[~duplicate_rsids]
 
     def _deduplicate_chrom(self, chrom):
-        """ Deduplicate a chromosome"""
-        chrom_genotype_rsids = self._snps[
-            (self._snps["chrom"] == chrom) & (self._snps["genotype"].notnull())
-        ].index
-        if all([len(x) == 2 for x in self._snps.loc[chrom_genotype_rsids, "genotype"]]):
-            self._snps.loc[chrom_genotype_rsids, "genotype"] = self._snps.loc[
-                chrom_genotype_rsids, "genotype"
-            ].apply(lambda x: x[0])
+        """ Deduplicate a chromosome in the non-PAR region. """
+
+        discrepant_XY_snps = self._get_non_par_snps(chrom)
+
+        # save discrepant XY SNPs
+        self._discrepant_XY_snps = self._discrepant_XY_snps.append(
+            self._snps.loc[discrepant_XY_snps]
+        )
+
+        # drop discrepant XY SNPs since it's ambiguous for which allele to deduplicate
+        self._snps.drop(discrepant_XY_snps, inplace=True)
+
+        # get remaining non-PAR SNPs with two alleles
+        non_par_snps = self._get_non_par_snps(chrom, heterozygous=False)
+
+        # remove duplicate allele
+        self._snps.loc[non_par_snps, "genotype"] = self._snps.loc[
+            non_par_snps, "genotype"
+        ].apply(lambda x: x[0])
 
     def _deduplicate_XY_chrom(self):
         """ Fix chromosome issue where some data providers duplicate male X and Y chromosomes"""

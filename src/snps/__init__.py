@@ -555,13 +555,8 @@ class SNPs:
             if x_snps == 0:
                 return ""
 
-            heterozygous_x_snps = len(
-                self._snps.loc[
-                    (self._snps["chrom"] == "X")
-                    & (self._snps["genotype"].notnull())
-                    & (self._snps["genotype"].str[0] != self._snps["genotype"].str[1])
-                ]
-            )
+            # only count heterozygous SNPs in the non-PAR region
+            heterozygous_x_snps = len(self._get_non_par_snps("X"))
 
             if heterozygous_x_snps / x_snps > heterozygous_x_snps_threshold:
                 return "Female"
@@ -569,6 +564,33 @@ class SNPs:
                 return "Male"
         else:
             return ""
+
+    def _get_non_par_snps(self, chrom, heterozygous=True):
+        # get non-PAR start / stop positions for chrom
+        pr = self.get_par_regions(self.build)
+        np_start = pr.loc[(pr.chrom == chrom) & (pr.region == "PAR1")].stop.values[0]
+        np_stop = pr.loc[(pr.chrom == chrom) & (pr.region == "PAR2")].start.values[0]
+
+        if heterozygous:
+            # get heterozygous SNPs in the non-PAR region (i.e., discrepant XY SNPs)
+            return self._snps.loc[
+                (self._snps.chrom == chrom)
+                & (self._snps.genotype.notnull())
+                & (self._snps.genotype.str.len() == 2)
+                & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
+                & (self._snps.pos > np_start)
+                & (self._snps.pos < np_stop)
+            ].index
+        else:
+            # get homozygous SNPs in the non-PAR region
+            return self._snps.loc[
+                (self._snps.chrom == chrom)
+                & (self._snps.genotype.notnull())
+                & (self._snps.genotype.str.len() == 2)
+                & (self._snps.genotype.str[0] == self._snps.genotype.str[1])
+                & (self._snps.pos > np_start)
+                & (self._snps.pos < np_stop)
+            ].index
 
     def _deduplicate_rsids(self):
         # Keep first duplicate rsid.

@@ -570,8 +570,13 @@ class SNPs:
             if x_snps == 0:
                 return ""
 
-            # only count heterozygous SNPs in the non-PAR region
-            heterozygous_x_snps = len(self._get_non_par_snps("X"))
+            heterozygous_x_snps = len(
+                self._snps.loc[
+                    (self._snps["chrom"] == "X")
+                    & (self._snps["genotype"].notnull())
+                    & (self._snps["genotype"].str[0] != self._snps["genotype"].str[1])
+                ]
+            )
 
             if heterozygous_x_snps / x_snps > heterozygous_x_snps_threshold:
                 return "Female"

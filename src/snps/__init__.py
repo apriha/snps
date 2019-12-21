@@ -574,6 +574,7 @@ class SNPs:
                 self._snps.loc[
                     (self._snps["chrom"] == "X")
                     & (self._snps["genotype"].notnull())
+                    & (self._snps["genotype"].str.len() == 2)
                     & (self._snps["genotype"].str[0] != self._snps["genotype"].str[1])
                 ]
             )

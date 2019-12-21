@@ -74,7 +74,8 @@ class SNPs:
         parallelize=False,
         processes=os.cpu_count(),
         rsids=(),
-        **kwargs,
+        y_snps_not_null_threshold=0.25,
+        heterozygous_x_snps_threshold=0.01,
     ):
         """ Object used to read and parse genotype / raw data files.
 
@@ -100,6 +101,10 @@ class SNPs:
             processes to launch if multiprocessing
         rsids : tuple, optional
             rsids to extract if loading a VCF file
+        y_snps_not_null_threshold : float
+            percentage Y SNPs that are not null; used when deduplicating X and Y chromosome alleles
+        heterozygous_x_snps_threshold : float
+            percentage heterozygous X SNPs; used when deduplicating X and Y chromosome alleles
         """
         self._file = file
         self._only_detect_source = only_detect_source
@@ -133,7 +138,12 @@ class SNPs:
                     self._build_detected = True
 
                 if deduplicate_XY_chrom:
-                    if self.determine_sex(**kwargs) == "Male":
+                    if (
+                        self.determine_sex(
+                            y_snps_not_null_threshold, heterozygous_x_snps_threshold
+                        )
+                        == "Male"
+                    ):
                         self._deduplicate_XY_chrom()
 
                 if assign_par_snps:
@@ -160,7 +170,7 @@ class SNPs:
         -------
         pandas.DataFrame
         """
-        return self._snps.copy()
+        return self._snps
 
     @property
     def duplicate_snps(self):
@@ -537,10 +547,7 @@ class SNPs:
             return ""
 
     def determine_sex(
-        self,
-        y_snps_not_null_threshold=0.1,
-        heterozygous_x_snps_threshold=0.01,
-        **kwargs,
+        self, y_snps_not_null_threshold=0.1, heterozygous_x_snps_threshold=0.01
     ):
         """ Determine sex from SNPs using thresholds.
 

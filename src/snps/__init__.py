@@ -70,6 +70,7 @@ class SNPs:
         output_dir="output",
         resources_dir="resources",
         deduplicate=True,
+        deduplicate_XY_chrom=True,
         parallelize=False,
         processes=os.cpu_count(),
         rsids=(),
@@ -90,6 +91,8 @@ class SNPs:
             name / path of resources directory
         deduplicate : bool
             deduplicate RSIDs and make SNPs available as `duplicate_snps`
+        deduplicate_XY_chrom : bool
+            deduplicate alleles in the non-PAR regions of X and Y for males; see `discrepant_XY_snps`
         parallelize : bool
             utilize multiprocessing to speedup calculations
         processes : int
@@ -128,8 +131,9 @@ class SNPs:
                 else:
                     self._build_detected = True
 
-                if self.determine_sex() == "Male":
-                    self._deduplicate_XY_chrom()
+                if deduplicate_XY_chrom:
+                    if self.determine_sex() == "Male":
+                        self._deduplicate_XY_chrom()
 
                 if assign_par_snps:
                     self._assign_par_snps()

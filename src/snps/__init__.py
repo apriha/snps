@@ -133,7 +133,7 @@ class SNPs:
                     self._build_detected = True
 
                 if deduplicate_XY_chrom:
-                    if self.determine_sex() == "Male":
+                    if self.determine_sex(**kwargs) == "Male":
                         self._deduplicate_XY_chrom()
 
                 if assign_par_snps:
@@ -537,7 +537,10 @@ class SNPs:
             return ""
 
     def determine_sex(
-        self, y_snps_not_null_threshold=0.1, heterozygous_x_snps_threshold=0.01
+        self,
+        y_snps_not_null_threshold=0.1,
+        heterozygous_x_snps_threshold=0.01,
+        **kwargs,
     ):
         """ Determine sex from SNPs using thresholds.
 

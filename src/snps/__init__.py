@@ -586,11 +586,15 @@ class SNPs:
         else:
             return ""
 
-    def _get_non_par_snps(self, chrom, heterozygous=True):
+    def _get_non_par_start_stop(self, chrom):
         # get non-PAR start / stop positions for chrom
         pr = self.get_par_regions(self.build)
         np_start = pr.loc[(pr.chrom == chrom) & (pr.region == "PAR1")].stop.values[0]
         np_stop = pr.loc[(pr.chrom == chrom) & (pr.region == "PAR2")].start.values[0]
+        return np_start, np_stop
+
+    def _get_non_par_snps(self, chrom, heterozygous=True):
+        np_start, np_stop = self._get_non_par_start_stop(chrom)
 
         if heterozygous:
             # get heterozygous SNPs in the non-PAR region (i.e., discrepant XY SNPs)

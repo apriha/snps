@@ -74,6 +74,7 @@ class SNPs:
         parallelize=False,
         processes=os.cpu_count(),
         rsids=(),
+        **kwargs,
     ):
         """ Object used to read and parse genotype / raw data files.
 

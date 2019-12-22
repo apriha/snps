@@ -570,7 +570,7 @@ class Reader:
                 file.read(), include_data=True
             )
 
-        df = pd.read_csv(io.StringIO(data), sep="\t", na_values="--")
+        df = pd.read_csv(io.StringIO(data), sep="\t", na_values="-")
 
         def map_rsids(x):
             return gsa_resources["rsid_map"].get(x)

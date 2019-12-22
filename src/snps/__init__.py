@@ -547,7 +547,7 @@ class SNPs:
             return ""
 
     def determine_sex(
-        self, y_snps_not_null_threshold=0.1, heterozygous_x_snps_threshold=0.01
+        self, y_snps_not_null_threshold=0.25, heterozygous_x_snps_threshold=0.01
     ):
         """ Determine sex from SNPs using thresholds.
 
@@ -574,7 +574,6 @@ class SNPs:
                         & (self._snps["genotype"].notnull())
                     ]
                 )
-
                 if y_snps_not_null / y_snps > y_snps_not_null_threshold:
                     return "Male"
                 else:

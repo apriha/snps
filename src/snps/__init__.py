@@ -170,7 +170,7 @@ class SNPs:
         -------
         pandas.DataFrame
         """
-        return self._snps
+        return self._snps.copy()
 
     @property
     def duplicate_snps(self):

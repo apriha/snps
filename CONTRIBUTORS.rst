@@ -9,13 +9,15 @@ Contributors
 Core Developers
 ---------------
 
-=========== ==========
+=========== ===============
 Name        GitHub
-=========== ==========
+=========== ===============
 Andrew Riha `@apriha`_
-=========== ==========
+Will Jones  `@willgdjones`_
+=========== ===============
 
 .. _@apriha: https://github.com/apriha
+.. _@willgdjones: https://github.com/willgdjones
 
 Other Contributors
 ------------------
@@ -27,10 +29,8 @@ Name            GitHub
 =============== ===============
 Anatoli Babenia `@abitrolly`_
 Kevin Arvai     `@arvkevi`_
-Will Jones      `@willgdjones`_
 Yoan Bouzin
 =============== ===============
 
 .. _@abitrolly: https://github.com/abitrolly
 .. _@arvkevi: https://github.com/arvkevi
-.. _@willgdjones: https://github.com/willgdjones

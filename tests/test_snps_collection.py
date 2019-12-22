@@ -256,6 +256,17 @@ class TestSNPsCollection(BaseSNPsTestCase):
         s = SNPs("tests/input/testvcf.vcf")
         assert s.source == "vcf"
         assert not s.unannotated_vcf
+        assert not s.phased
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+
+    def test_snps_vcf_phased(self):
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        s = SNPs("tests/input/testvcf_phased.vcf")
+        assert s.source == "vcf"
+        assert not s.unannotated_vcf
+        assert s.phased
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
 
     def test_snps_vcf_rsids(self):
@@ -306,6 +317,11 @@ class TestSNPsCollection(BaseSNPsTestCase):
         s = SNPs("tests/input/unannotated_testvcf.vcf")
         assert s.source == "vcf"
         assert s.unannotated_vcf
+
+    def test_snps_not_phased(self):
+        s = SNPs("tests/input/generic.csv")
+        assert s.source == "generic"
+        assert not s.phased
 
     def test_snps_vcf_buffer(self):
         with open("tests/input/testvcf.vcf", "r") as f:
@@ -653,6 +669,42 @@ class TestSNPsCollection(BaseSNPsTestCase):
 
         assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
         s = SNPs("output/vcf_GRCh37.vcf")
+        assert not s.phased
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+
+    def test_save_snps_vcf_phased(self):
+        # read phased data
+        s = SNPs("tests/input/testvcf_phased.vcf")
+
+        # setup resource to use test FASTA reference sequence
+        r = Resources()
+        r._reference_sequences["GRCh37"] = {}
+        with open("tests/input/generic.fa", "rb") as f_in:
+            with atomic_write(
+                "tests/input/generic.fa.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        seq = ReferenceSequence(ID="1", path="tests/input/generic.fa.gz")
+
+        r._reference_sequences["GRCh37"]["1"] = seq
+
+        # save phased data to VCF
+        assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
+        # read saved VCF
+        s = SNPs("output/vcf_GRCh37.vcf")
+        assert s.phased
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+
+    def test_save_snps_csv_phased(self):
+        # read phased data
+        s = SNPs("tests/input/testvcf_phased.vcf")
+        # save phased data to CSV
+        assert os.path.relpath(s.save_snps()) == "output/vcf_GRCh37.csv"
+        # read saved CSV
+        s = SNPs("output/vcf_GRCh37.csv")
+        assert s.phased
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
 
     def test_save_snps_specify_file(self):

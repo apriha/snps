@@ -112,6 +112,7 @@ class SNPs:
         self._duplicate_snps = pd.DataFrame()
         self._discrepant_XY_snps = pd.DataFrame()
         self._source = ""
+        self._phased = False
         self._build = 0
         self._build_detected = False
         self._output_dir = output_dir
@@ -120,9 +121,11 @@ class SNPs:
 
         if file:
 
-            self._snps, self._source = self._read_raw_data(
-                file, only_detect_source, rsids
-            )
+            d = self._read_raw_data(file, only_detect_source, rsids)
+
+            self._snps = d["snps"]
+            self._source = d["source"]
+            self._phased = d["phased"]
 
             if not self._snps.empty:
                 self.sort_snps()
@@ -283,6 +286,16 @@ class SNPs:
             return True
 
         return False
+
+    @property
+    def phased(self):
+        """ Indicates if genotype is phased.
+
+        Returns
+        -------
+        bool
+        """
+        return self._phased
 
     def get_summary(self):
         """ Get summary of ``SNPs``.

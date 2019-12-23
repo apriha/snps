@@ -10,6 +10,7 @@ pytest-watch = "*"
 sphinx = "*"
 sphinx-rtd-theme = "*"
 black = "==19.10b0"
+matplotlib = "*"
 
 [packages]
 snps = {editable = true,path = "."}

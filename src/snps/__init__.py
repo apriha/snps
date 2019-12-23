@@ -147,7 +147,7 @@ class SNPs:
         -------
         pandas.DataFrame
         """
-        return self._snps.copy()
+        return self._snps
 
     @property
     def build(self):

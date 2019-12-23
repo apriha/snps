@@ -35,6 +35,7 @@ import gzip
 import os
 import shutil
 import warnings
+import zipfile
 
 from atomicwrites import atomic_write
 import numpy as np
@@ -277,3 +278,21 @@ class TestResources(BaseSNPsTestCase):
         assert seq.start == 1
         assert seq.end == 117
         assert seq.length == 117
+
+    def test_get_opensnp_datadump_filenames(self):
+        # temporarily set resources dir to tests
+        self.resource._resources_dir = "tests/resources"
+
+        # write test openSNP datadump zip
+        with atomic_write(
+            "tests/resources/opensnp_datadump.current.zip", mode="wb", overwrite=True
+        ) as f:
+            with zipfile.ZipFile(f, "w") as f_zip:
+                f_zip.write("tests/input/generic.csv", arcname="generic1.csv")
+                f_zip.write("tests/input/generic.csv", arcname="generic2.csv")
+
+        filenames = self.resource.get_opensnp_datadump_filenames()
+
+        assert filenames == ["generic1.csv", "generic2.csv"]
+
+        self.resource._resources_dir = "resources"

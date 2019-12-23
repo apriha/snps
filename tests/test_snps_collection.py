@@ -875,3 +875,24 @@ class TestSNPsCollection(BaseSNPsTestCase):
     def test___repr__snps_collection(self):
         sc = SNPsCollection()
         assert "SNPsCollection(name='')" == sc.__repr__()
+
+    def test_load_opensnp_datadump_file(self):
+        # temporarily set resources dir to tests
+        r = Resources()
+        r._resources_dir = "tests/resources"
+
+        # write test openSNP datadump zip
+        with atomic_write(
+            "tests/resources/opensnp_datadump.current.zip", mode="wb", overwrite=True
+        ) as f:
+            with zipfile.ZipFile(f, "w") as f_zip:
+                f_zip.write("tests/input/generic.csv", arcname="generic1.csv")
+                f_zip.write("tests/input/generic.csv", arcname="generic2.csv")
+
+        snps1 = SNPs(r.load_opensnp_datadump_file("generic1.csv"))
+        snps2 = SNPs(r.load_opensnp_datadump_file("generic2.csv"))
+
+        pd.testing.assert_frame_equal(snps1.snps, self.generic_snps())
+        pd.testing.assert_frame_equal(snps2.snps, self.generic_snps())
+
+        r._resources_dir = "resources"

@@ -446,15 +446,22 @@ class SNPs:
         else:
             return ""
 
-    def get_snp_count(self):
+    def get_snp_count(self, chrom=""):
         """ Count of SNPs.
+
+        Parameters
+        ----------
+        chrom : str, optional
+            chromosome (e.g., "1", "X", "MT")
 
         Returns
         -------
         int
         """
-
-        return len(self._snps)
+        if chrom:
+            return len(self._snps.loc[(self._snps.chrom == chrom)])
+        else:
+            return len(self._snps)
 
     def get_chromosomes(self):
         """ Get the chromosomes of SNPs.

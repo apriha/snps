@@ -74,8 +74,6 @@ class SNPs:
         parallelize=False,
         processes=os.cpu_count(),
         rsids=(),
-        y_snps_not_null_threshold=0.25,
-        heterozygous_x_snps_threshold=0.01,
     ):
         """ Object used to read and parse genotype / raw data files.
 
@@ -101,10 +99,6 @@ class SNPs:
             processes to launch if multiprocessing
         rsids : tuple, optional
             rsids to extract if loading a VCF file
-        y_snps_not_null_threshold : float
-            percentage Y SNPs that are not null; used when deduplicating X and Y chromosome alleles
-        heterozygous_x_snps_threshold : float
-            percentage heterozygous X SNPs; used when deduplicating X and Y chromosome alleles
         """
         self._file = file
         self._only_detect_source = only_detect_source
@@ -141,12 +135,7 @@ class SNPs:
                     self._build_detected = True
 
                 if deduplicate_XY_chrom:
-                    if (
-                        self.determine_sex(
-                            y_snps_not_null_threshold, heterozygous_x_snps_threshold
-                        )
-                        == "Male"
-                    ):
+                    if self.determine_sex() == "Male":
                         self._deduplicate_XY_chrom()
 
                 if assign_par_snps:

@@ -18,7 +18,7 @@ computed to determine if an optimum ratio could be used to separate Male and Fem
 Results
 -------
 Over nearly 4000 samples, heterozygous X chromosome SNPs appear to separate Male and Female
-genotypes at a ratio of 0.05 (i.e., there are two separate distributions). Similarly, not-null Y
-SNPs can be used to separate Male and Female genotypes, with a ratio of about 0.3.
+genotypes at a ratio of 0.03 (i.e., there are two separate distributions). Similarly, not-null Y
+SNPs can be used to separate Male and Female genotypes, with a ratio of 0.3.
 
 .. image:: https://raw.githubusercontent.com/apriha/snps/master/analysis/xy-chrom-snp-ratios/xy-chrom-snp-ratios.png

@@ -220,7 +220,10 @@ class SNPs:
         str
             'Male' or 'Female' if detected, else empty str
         """
-        return self.determine_sex()
+        sex = self.determine_sex(chrom="X")
+        if not sex:
+            sex = self.determine_sex(chrom="Y")
+        return sex
 
     @property
     def unannotated_vcf(self):
@@ -561,7 +564,10 @@ class SNPs:
             return ""
 
     def determine_sex(
-        self, heterozygous_x_snps_threshold=0.05, y_snps_not_null_threshold=0.3
+        self,
+        heterozygous_x_snps_threshold=0.03,
+        y_snps_not_null_threshold=0.3,
+        chrom="X",
     ):
         """ Determine sex from SNPs using thresholds.
 
@@ -571,50 +577,40 @@ class SNPs:
             percentage heterozygous X SNPs; above this threshold, Female is determined
         y_snps_not_null_threshold : float
             percentage Y SNPs that are not null; above this threshold, Male is determined
+        chrom : {"X", "Y"}
+            use X or Y chromosome SNPs to determine sex
 
         Returns
         -------
         str
             'Male' or 'Female' if detected, else empty str
         """
-
         if not self._snps.empty:
-            x_snps = len(self._snps.loc[self._snps["chrom"] == "X"])
+            if chrom == "X":
+                return self._determine_sex_X(heterozygous_x_snps_threshold)
+            elif chrom == "Y":
+                return self._determine_sex_Y(y_snps_not_null_threshold)
+        return ""
 
-            if x_snps > 0:
-                heterozygous_x_snps = len(
-                    self._snps.loc[
-                        (self._snps["chrom"] == "X")
-                        & (self._snps["genotype"].notnull())
-                        & (self._snps["genotype"].str.len() == 2)
-                        & (
-                            self._snps["genotype"].str[0]
-                            != self._snps["genotype"].str[1]
-                        )
-                    ]
-                )
+    def _determine_sex_X(self, threshold):
+        x_snps = self.get_snp_count("X")
 
-                if heterozygous_x_snps / x_snps > heterozygous_x_snps_threshold:
-                    return "Female"
-                else:
-                    return "Male"
+        if x_snps > 0:
+            if len(self.heterozygous_snps("X")) / x_snps > threshold:
+                return "Female"
             else:
-                y_snps = len(self._snps.loc[(self._snps["chrom"] == "Y")])
+                return "Male"
+        else:
+            return ""
 
-                if y_snps > 0:
-                    y_snps_not_null = len(
-                        self._snps.loc[
-                            (self._snps["chrom"] == "Y")
-                            & (self._snps["genotype"].notnull())
-                        ]
-                    )
+    def _determine_sex_Y(self, threshold):
+        y_snps = self.get_snp_count("Y")
 
-                    if y_snps_not_null / y_snps > y_snps_not_null_threshold:
-                        return "Male"
-                    else:
-                        return "Female"
-                else:
-                    return ""
+        if y_snps > 0:
+            if len(self.not_null_snps("Y")) / y_snps > threshold:
+                return "Male"
+            else:
+                return "Female"
         else:
             return ""
 

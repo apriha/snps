@@ -245,6 +245,52 @@ class SNPs:
         """
         return self._phased
 
+    def heterozygous_snps(self, chrom=""):
+        """ Get heterozygous SNPs.
+
+        Parameters
+        ----------
+        chrom : str, optional
+            chromosome (e.g., "1", "X", "MT")
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        if chrom:
+            return self._snps.loc[
+                (self._snps.chrom == chrom)
+                & (self._snps.genotype.notnull())
+                & (self._snps.genotype.str.len() == 2)
+                & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
+            ]
+        else:
+            return self._snps.loc[
+                (self._snps.genotype.notnull())
+                & (self._snps.genotype.str.len() == 2)
+                & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
+            ]
+
+    def not_null_snps(self, chrom=""):
+        """ Get not null SNPs.
+
+        Parameters
+        ----------
+        chrom : str, optional
+            chromosome (e.g., "1", "X", "MT")
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+
+        if chrom:
+            return self._snps.loc[
+                (self._snps.chrom == chrom) & (self._snps.genotype.notnull())
+            ]
+        else:
+            return self._snps.loc[self._snps.genotype.notnull()]
+
     def get_summary(self):
         """ Get summary of ``SNPs``.
 

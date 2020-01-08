@@ -69,6 +69,8 @@ class SNPs:
         assign_par_snps=True,
         output_dir="output",
         resources_dir="resources",
+        deduplicate=True,
+        deduplicate_XY_chrom=True,
         parallelize=False,
         processes=os.cpu_count(),
         rsids=(),
@@ -87,6 +89,10 @@ class SNPs:
             path to output directory
         resources_dir : str
             name / path of resources directory
+        deduplicate : bool
+            deduplicate RSIDs and make SNPs available as `duplicate_snps`
+        deduplicate_XY_chrom : bool
+            deduplicate alleles in the non-PAR regions of X and Y for males; see `discrepant_XY_snps`
         parallelize : bool
             utilize multiprocessing to speedup calculations
         processes : int
@@ -97,6 +103,8 @@ class SNPs:
         self._file = file
         self._only_detect_source = only_detect_source
         self._snps = pd.DataFrame()
+        self._duplicate_snps = pd.DataFrame()
+        self._discrepant_XY_snps = pd.DataFrame()
         self._source = ""
         self._phased = False
         self._build = 0
@@ -116,12 +124,19 @@ class SNPs:
             if not self._snps.empty:
                 self.sort_snps()
 
+                if deduplicate:
+                    self._deduplicate_rsids()
+
                 self._build = self.detect_build()
 
                 if not self._build:
                     self._build = 37  # assume Build 37 / GRCh37 if not detected
                 else:
                     self._build_detected = True
+
+                if deduplicate_XY_chrom:
+                    if self.determine_sex() == "Male":
+                        self._deduplicate_XY_chrom()
 
                 if assign_par_snps:
                     self._assign_par_snps()
@@ -148,6 +163,32 @@ class SNPs:
         pandas.DataFrame
         """
         return self._snps
+
+    @property
+    def duplicate_snps(self):
+        """ Get any duplicate SNPs.
+
+        A duplicate SNP has the same RSID as another SNP. The first occurrence
+        of the RSID is not considered a duplicate SNP.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        return self._duplicate_snps
+
+    @property
+    def discrepant_XY_snps(self):
+        """ Get any discrepant XY SNPs.
+
+        A discrepant XY SNP is a heterozygous SNP in the non-PAR region of the X
+        or Y chromosome found during deduplication for a detected male genotype.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        return self._discrepant_XY_snps
 
     @property
     def build(self):
@@ -613,6 +654,127 @@ class SNPs:
                 return "Female"
         else:
             return ""
+
+    def _get_non_par_start_stop(self, chrom):
+        # get non-PAR start / stop positions for chrom
+        pr = self.get_par_regions(self.build)
+        np_start = pr.loc[(pr.chrom == chrom) & (pr.region == "PAR1")].stop.values[0]
+        np_stop = pr.loc[(pr.chrom == chrom) & (pr.region == "PAR2")].start.values[0]
+        return np_start, np_stop
+
+    def _get_non_par_snps(self, chrom, heterozygous=True):
+        np_start, np_stop = self._get_non_par_start_stop(chrom)
+
+        if heterozygous:
+            # get heterozygous SNPs in the non-PAR region (i.e., discrepant XY SNPs)
+            return self._snps.loc[
+                (self._snps.chrom == chrom)
+                & (self._snps.genotype.notnull())
+                & (self._snps.genotype.str.len() == 2)
+                & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
+                & (self._snps.pos > np_start)
+                & (self._snps.pos < np_stop)
+            ].index
+        else:
+            # get homozygous SNPs in the non-PAR region
+            return self._snps.loc[
+                (self._snps.chrom == chrom)
+                & (self._snps.genotype.notnull())
+                & (self._snps.genotype.str.len() == 2)
+                & (self._snps.genotype.str[0] == self._snps.genotype.str[1])
+                & (self._snps.pos > np_start)
+                & (self._snps.pos < np_stop)
+            ].index
+
+    def _deduplicate_rsids(self):
+        # Keep first duplicate rsid.
+        duplicate_rsids = self._snps.index.duplicated(keep="first")
+        # save duplicate SNPs
+        self._duplicate_snps = self._duplicate_snps.append(
+            self._snps.loc[duplicate_rsids]
+        )
+        # deduplicate
+        self._snps = self._snps.loc[~duplicate_rsids]
+
+    def _deduplicate_chrom(self, chrom):
+        """ Deduplicate a chromosome in the non-PAR region. """
+
+        discrepant_XY_snps = self._get_non_par_snps(chrom)
+
+        # save discrepant XY SNPs
+        self._discrepant_XY_snps = self._discrepant_XY_snps.append(
+            self._snps.loc[discrepant_XY_snps]
+        )
+
+        # drop discrepant XY SNPs since it's ambiguous for which allele to deduplicate
+        self._snps.drop(discrepant_XY_snps, inplace=True)
+
+        # get remaining non-PAR SNPs with two alleles
+        non_par_snps = self._get_non_par_snps(chrom, heterozygous=False)
+
+        # remove duplicate allele
+        self._snps.loc[non_par_snps, "genotype"] = self._snps.loc[
+            non_par_snps, "genotype"
+        ].apply(lambda x: x[0])
+
+    def _deduplicate_XY_chrom(self):
+        """ Fix chromosome issue where some data providers duplicate male X and Y chromosomes"""
+        self._deduplicate_chrom("X")
+        self._deduplicate_chrom("Y")
+
+    @staticmethod
+    def get_par_regions(build):
+        """ Get PAR regions for the X and Y chromosomes.
+
+        Parameters
+        ----------
+        build : int
+            build of SNPs
+
+        Returns
+        -------
+        pandas.DataFrame
+            PAR regions for the given build
+
+        References
+        ----------
+        1. Genome Reference Consortium, https://www.ncbi.nlm.nih.gov/grc/human
+        2. Yates et. al. (doi:10.1093/bioinformatics/btu613),
+           `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
+        3. Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
+        """
+        if build == 37:
+            return pd.DataFrame(
+                {
+                    "region": ["PAR1", "PAR2", "PAR1", "PAR2"],
+                    "chrom": ["X", "X", "Y", "Y"],
+                    "start": [60001, 154931044, 10001, 59034050],
+                    "stop": [2699520, 155260560, 2649520, 59363566],
+                },
+                columns=["region", "chrom", "start", "stop"],
+            )
+        elif build == 38:
+            return pd.DataFrame(
+                {
+                    "region": ["PAR1", "PAR2", "PAR1", "PAR2"],
+                    "chrom": ["X", "X", "Y", "Y"],
+                    "start": [10001, 155701383, 10001, 56887903],
+                    "stop": [2781479, 156030895, 2781479, 57217415],
+                },
+                columns=["region", "chrom", "start", "stop"],
+            )
+        elif build == 36:
+            return pd.DataFrame(
+                {
+                    "region": ["PAR1", "PAR2", "PAR1", "PAR2"],
+                    "chrom": ["X", "X", "Y", "Y"],
+                    "start": [1, 154584238, 1, 57443438],
+                    "stop": [2709520, 154913754, 2709520, 57772954],
+                },
+                columns=["region", "chrom", "start", "stop"],
+            )
+        else:
+            return pd.DataFrame()
 
     def sort_snps(self):
         """ Sort SNPs based on ordered chromosome list and position. """
@@ -1141,7 +1303,7 @@ class SNPsCollection(SNPs):
                 "build / assembly mismatch between current build of SNPs and SNPs being loaded"
             )
 
-        # ensure there area always two X alleles
+        # ensure there are always two X alleles
         snps = self._double_single_alleles(snps._snps, "X")
 
         if self._snps.empty:

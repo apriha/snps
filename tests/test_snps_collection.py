@@ -472,6 +472,24 @@ class TestSNPsCollection(BaseSNPsTestCase):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
         )
+        assert s.snp_count == 15528
+        s._deduplicate_XY_chrom()
+        assert s.snp_count == 15528
+        assert len(s.discrepant_XY_snps) == 0
+        assert s.sex == "Male"
+
+    def test_sex_Male_X_chrom_discrepant_XY_snps(self):
+        s = self.simulate_snps(
+            chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
+        )
+        assert s.snp_count == 15528
+        s._snps.loc["rs8001", "genotype"] = "AC"
+        s._deduplicate_XY_chrom()
+        assert s.snp_count == 15527
+        result = self.create_snp_df(
+            rsid=["rs8001"], chrom=["X"], pos=[80000001], genotype=["AC"]
+        )
+        pd.testing.assert_frame_equal(s.discrepant_XY_snps, result)
         assert s.sex == "Male"
 
     def test_sex_not_determined(self):

@@ -105,7 +105,7 @@ ENV/
 .idea/
 
 # snps
-output/
+output*/
 resources/*
 
 # snps tests

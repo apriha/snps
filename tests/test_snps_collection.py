@@ -896,3 +896,21 @@ class TestSNPsCollection(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(snps2.snps, self.generic_snps())
 
         r._resources_dir = "resources"
+
+    def test_heterozygous_snps(self):
+        s = SNPs("tests/input/generic.csv")
+        pd.testing.assert_frame_equal(
+            s.heterozygous_snps(),
+            self.create_snp_df(
+                rsid=["rs6", "rs7", "rs8"],
+                chrom=["1", "1", "1"],
+                pos=[106, 107, 108],
+                genotype=["GC", "TC", "AT"],
+            ),
+        )
+
+    def test_not_null_snps(self):
+        s = SNPs("tests/input/generic.csv")
+        snps = self.generic_snps()
+        snps.drop("rs5", inplace=True)
+        pd.testing.assert_frame_equal(s.not_null_snps(), snps)

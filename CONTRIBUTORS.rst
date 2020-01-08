@@ -24,13 +24,15 @@ Other Contributors
 
 Listed in alphabetical order.
 
-=============== ===============
-Name            GitHub
-=============== ===============
-Anatoli Babenia `@abitrolly`_
-Kevin Arvai     `@arvkevi`_
+================ ===============
+Name             GitHub
+================ ===============
+Anatoli Babenia  `@abitrolly`_
+Castedo Ellerman `@castedo`_
+Kevin Arvai      `@arvkevi`_
 Yoan Bouzin
-=============== ===============
+================ ===============
 
 .. _@abitrolly: https://github.com/abitrolly
+.. _@castedo: https://github.com/castedo
 .. _@arvkevi: https://github.com/arvkevi

@@ -188,3 +188,25 @@ class TestSnps(BaseSNPsTestCase):
 
     def test_snps_only_detect_source(self):
         assert self.snps_only_detect_source.source == "generic"
+
+    def test_duplicate_rsids(self):
+        snps = SNPs("tests/input/duplicate_rsids.csv")
+        result = self.create_snp_df(
+            rsid=["rs1"], chrom=["1"], pos=[101], genotype=["AA"]
+        )
+        duplicate_snps = self.create_snp_df(
+            rsid=["rs1", "rs1"], chrom=["1", "1"], pos=[102, 103], genotype=["CC", "GG"]
+        )
+        pd.testing.assert_frame_equal(snps.snps, result)
+        pd.testing.assert_frame_equal(snps.duplicate_snps, duplicate_snps)
+
+    def test_deduplicate_false(self):
+        snps = SNPs("tests/input/duplicate_rsids.csv", deduplicate=False)
+
+        result = self.create_snp_df(
+            rsid=["rs1", "rs1", "rs1"],
+            chrom=["1", "1", "1"],
+            pos=[101, 102, 103],
+            genotype=["AA", "CC", "GG"],
+        )
+        pd.testing.assert_frame_equal(snps.snps, result)

@@ -256,6 +256,17 @@ class TestSNPsCollection(BaseSNPsTestCase):
         s = SNPs("tests/input/testvcf.vcf")
         assert s.source == "vcf"
         assert not s.unannotated_vcf
+        assert not s.phased
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+
+    def test_snps_vcf_phased(self):
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        s = SNPs("tests/input/testvcf_phased.vcf")
+        assert s.source == "vcf"
+        assert not s.unannotated_vcf
+        assert s.phased
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
 
     def test_snps_vcf_rsids(self):
@@ -306,6 +317,11 @@ class TestSNPsCollection(BaseSNPsTestCase):
         s = SNPs("tests/input/unannotated_testvcf.vcf")
         assert s.source == "vcf"
         assert s.unannotated_vcf
+
+    def test_snps_not_phased(self):
+        s = SNPs("tests/input/generic.csv")
+        assert s.source == "generic"
+        assert not s.phased
 
     def test_snps_vcf_buffer(self):
         with open("tests/input/testvcf.vcf", "r") as f:
@@ -456,6 +472,24 @@ class TestSNPsCollection(BaseSNPsTestCase):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
         )
+        assert s.snp_count == 15528
+        s._deduplicate_XY_chrom()
+        assert s.snp_count == 15528
+        assert len(s.discrepant_XY_snps) == 0
+        assert s.sex == "Male"
+
+    def test_sex_Male_X_chrom_discrepant_XY_snps(self):
+        s = self.simulate_snps(
+            chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
+        )
+        assert s.snp_count == 15528
+        s._snps.loc["rs8001", "genotype"] = "AC"
+        s._deduplicate_XY_chrom()
+        assert s.snp_count == 15527
+        result = self.create_snp_df(
+            rsid=["rs8001"], chrom=["X"], pos=[80000001], genotype=["AC"]
+        )
+        pd.testing.assert_frame_equal(s.discrepant_XY_snps, result)
         assert s.sex == "Male"
 
     def test_sex_not_determined(self):
@@ -635,6 +669,42 @@ class TestSNPsCollection(BaseSNPsTestCase):
 
         assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
         s = SNPs("output/vcf_GRCh37.vcf")
+        assert not s.phased
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+
+    def test_save_snps_vcf_phased(self):
+        # read phased data
+        s = SNPs("tests/input/testvcf_phased.vcf")
+
+        # setup resource to use test FASTA reference sequence
+        r = Resources()
+        r._reference_sequences["GRCh37"] = {}
+        with open("tests/input/generic.fa", "rb") as f_in:
+            with atomic_write(
+                "tests/input/generic.fa.gz", mode="wb", overwrite=True
+            ) as f_out:
+                with gzip.open(f_out, "wb") as f_gzip:
+                    shutil.copyfileobj(f_in, f_gzip)
+
+        seq = ReferenceSequence(ID="1", path="tests/input/generic.fa.gz")
+
+        r._reference_sequences["GRCh37"]["1"] = seq
+
+        # save phased data to VCF
+        assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
+        # read saved VCF
+        s = SNPs("output/vcf_GRCh37.vcf")
+        assert s.phased
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+
+    def test_save_snps_csv_phased(self):
+        # read phased data
+        s = SNPs("tests/input/testvcf_phased.vcf")
+        # save phased data to CSV
+        assert os.path.relpath(s.save_snps()) == "output/vcf_GRCh37.csv"
+        # read saved CSV
+        s = SNPs("output/vcf_GRCh37.csv")
+        assert s.phased
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
 
     def test_save_snps_specify_file(self):
@@ -823,3 +893,42 @@ class TestSNPsCollection(BaseSNPsTestCase):
     def test___repr__snps_collection(self):
         sc = SNPsCollection()
         assert "SNPsCollection(name='')" == sc.__repr__()
+
+    def test_load_opensnp_datadump_file(self):
+        # temporarily set resources dir to tests
+        r = Resources()
+        r._resources_dir = "tests/resources"
+
+        # write test openSNP datadump zip
+        with atomic_write(
+            "tests/resources/opensnp_datadump.current.zip", mode="wb", overwrite=True
+        ) as f:
+            with zipfile.ZipFile(f, "w") as f_zip:
+                f_zip.write("tests/input/generic.csv", arcname="generic1.csv")
+                f_zip.write("tests/input/generic.csv", arcname="generic2.csv")
+
+        snps1 = SNPs(r.load_opensnp_datadump_file("generic1.csv"))
+        snps2 = SNPs(r.load_opensnp_datadump_file("generic2.csv"))
+
+        pd.testing.assert_frame_equal(snps1.snps, self.generic_snps())
+        pd.testing.assert_frame_equal(snps2.snps, self.generic_snps())
+
+        r._resources_dir = "resources"
+
+    def test_heterozygous_snps(self):
+        s = SNPs("tests/input/generic.csv")
+        pd.testing.assert_frame_equal(
+            s.heterozygous_snps(),
+            self.create_snp_df(
+                rsid=["rs6", "rs7", "rs8"],
+                chrom=["1", "1", "1"],
+                pos=[106, 107, 108],
+                genotype=["GC", "TC", "AT"],
+            ),
+        )
+
+    def test_not_null_snps(self):
+        s = SNPs("tests/input/generic.csv")
+        snps = self.generic_snps()
+        snps.drop("rs5", inplace=True)
+        pd.testing.assert_frame_equal(s.not_null_snps(), snps)

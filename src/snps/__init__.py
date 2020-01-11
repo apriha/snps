@@ -420,8 +420,7 @@ class SNPs:
         )
         for rsid in self._snps.loc[self._snps["chrom"] == "PAR"].index.values:
             if "rs" in rsid:
-                id = rsid.split("rs")[1]
-                response = rest_client.perform_rest_action("/variation/v0/refsnp/" + id)
+                response = self._lookup_refsnp_snapshot(rsid, rest_client)
 
                 if response is not None:
                     for item in response["primary_snapshot_data"][
@@ -439,6 +438,21 @@ class SNPs:
                                 self._build = self._extract_build(item)
                                 self._build_detected = True
                             break
+
+    def _lookup_refsnp_snapshot(self, rsid, rest_client):
+        id = rsid.split("rs")[1]
+        response = rest_client.perform_rest_action("/variation/v0/refsnp/" + id)
+        if "merged_snapshot_data" in response:
+            # this RefSnp id was merged into another
+            # we'll pick the first one to decide which chromosome this PAR will be assigned to
+            merged_id = "rs" + response["merged_snapshot_data"]["merged_into"][0]
+            logger.info("SNP id {} has been merged into id {}".format(rsid, merged_id))
+            return self._lookup_refsnp_snapshot(merged_id, rest_client)
+        elif "nosnppos_snapshot_data" in response:
+            logger.warning("Unable to look up SNP id {}".format(rsid))
+            return None
+        else:
+            return response
 
     def _assign_snp(self, rsid, alleles, chrom):
         # only assign SNP if positions match (i.e., same build)

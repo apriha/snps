@@ -27,12 +27,14 @@ Listed in alphabetical order.
 ================ ===============
 Name             GitHub
 ================ ===============
+Alan Moffet      `@amoffet`_
 Anatoli Babenia  `@abitrolly`_
 Castedo Ellerman `@castedo`_
 Kevin Arvai      `@arvkevi`_
 Yoan Bouzin
 ================ ===============
 
+.. _@amoffet: https://github.com/amoffet
 .. _@abitrolly: https://github.com/abitrolly
 .. _@castedo: https://github.com/castedo
 .. _@arvkevi: https://github.com/arvkevi

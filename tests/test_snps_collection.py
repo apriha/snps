@@ -100,10 +100,10 @@ class TestSNPsCollection(BaseSNPsTestCase):
 
     def snps_GRCh38_PAR(self):
         return self.create_snp_df(
-            rsid=["rs28736870", "rs113313554"],
-            chrom=["X", "Y"],
-            pos=[304103, 624523],
-            genotype=["AA", "AA"],
+            rsid=["rs28736870", "rs113378274", "rs113313554"],
+            chrom=["X", "X", "Y"],
+            pos=[304103, 93431058, 624523],
+            genotype=["AA", "AA", "AA"],
         )
 
     def test_snps_23andme(self):
@@ -853,13 +853,13 @@ class TestSNPsCollection(BaseSNPsTestCase):
             or os.getenv("DOWNLOADS_ENABLED") == "true"
         ):
             s = SNPs("tests/input/GRCh37_PAR.csv")
-            assert s.snp_count == 3
+            assert s.snp_count == 4
             chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
             assert s.build == 38
             assert s.assembly == "GRCh38"
             assert len(chromosomes_remapped) == 2
             assert len(chromosomes_not_remapped) == 1
-            assert s.snp_count == 2
+            assert s.snp_count == 3
             pd.testing.assert_frame_equal(s.snps, self.snps_GRCh38_PAR())
 
     def test_remap_snps_37_to_37(self):

@@ -706,19 +706,35 @@ class Reader:
                 break
 
         def parser():
-            return (
-                pd.read_csv(
-                    file,
-                    comment="#",
-                    header=0,
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype={"chrom": object, "pos": np.int64},
-                    compression=compression,
-                ),
-                phased,
-            )
+            try:
+                return (
+                    pd.read_csv(
+                        file,
+                        comment="#",
+                        header=0,
+                        na_values="--",
+                        names=["rsid", "chrom", "pos", "genotype"],
+                        index_col=0,
+                        dtype={"chrom": object, "pos": np.int64},
+                        compression=compression,
+                    ),
+                    phased,
+                )
+            except pd.errors.ParserError:
+                return (
+                    pd.read_csv(
+                        file,
+                        sep = '\t',
+                        comment="#",
+                        header=0,
+                        na_values="--",
+                        names=["rsid", "chrom", "pos", "genotype"],
+                        index_col=0,
+                        dtype={"chrom": object, "pos": np.int64},
+                        compression=compression,
+                    ),
+                    phased,
+                )
 
         return self.read_helper(source, parser)
 

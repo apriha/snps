@@ -707,8 +707,7 @@ class Reader:
 
         def parser():
             def parse_csv(sep):
-                return (
-                    pd.read_csv(
+                return pd.read_csv(
                     file,
                     sep=sep,
                     comment="#",
@@ -719,11 +718,17 @@ class Reader:
                     dtype={"chrom": object, "pos": np.int64},
                     compression=compression,
                 )
-            )
+
             try:
-                return parse_csv(','), phased,
-            except:
-                return parse_csv('\t'), phased,
+                return (
+                    parse_csv(","),
+                    phased,
+                )
+            except pd.errors.ParserError:
+                return (
+                    parse_csv("\t"),
+                    phased,
+                )
 
         return self.read_helper(source, parser)
 

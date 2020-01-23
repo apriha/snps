@@ -112,6 +112,12 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert s.source == "23andMe"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
+    def test_snps_generated_23andme(self):
+        # https://www.23andme.com
+        s = SNPs("tests/input/23andme_snps.txt")
+        assert s.source == "23andMe"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
     def test_snps_23andme_zip(self):
         with atomic_write(
             "tests/input/23andme.txt.zip", mode="wb", overwrite=True

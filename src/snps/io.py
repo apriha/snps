@@ -134,11 +134,7 @@ class Reader:
             return self.read_livingdna(file, compression)
         elif "SNP Name	rsID	Sample.ID	Allele1...Top" in first_line:
             return self.read_mapmygenome(file, compression)
-        elif "lineage" in first_line:
-            return self.read_snps_csv(file, comments, compression)
-        elif "snps" in first_line and "23andMe" in comments:
-            return self.read_23andme(file, compression)
-        elif "snps" in first_line:
+        elif "lineage" in first_line or "snps" in first_line:
             return self.read_snps_csv(file, comments, compression)
         elif first_line.startswith("rsid"):
             return self.read_generic_csv(file, compression)

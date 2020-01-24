@@ -112,12 +112,6 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert s.source == "23andMe"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
-    def test_snps_generated_23andme(self):
-        # https://www.23andme.com
-        s = SNPs("tests/input/23andme_snps.txt")
-        assert s.source == "23andMe"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
-
     def test_snps_23andme_zip(self):
         with atomic_write(
             "tests/input/23andme.txt.zip", mode="wb", overwrite=True
@@ -656,6 +650,16 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert os.path.relpath(snps.save_snps()) == "output/generic_GRCh37.csv"
         s_saved = SNPs("output/generic_GRCh37.csv")
         pd.testing.assert_frame_equal(s_saved.snps, self.snps_GRCh37())
+
+    def test_save_snps_tsv(self):
+        snps = SNPs("tests/input/generic.csv")
+        assert (
+            os.path.relpath(snps.save_snps("generic.tsv", sep="\t"))
+            == "output/generic.tsv"
+        )
+        s_saved = SNPs("output/generic.tsv")
+        assert snps.source == "generic"
+        pd.testing.assert_frame_equal(s_saved.snps, self.generic_snps())
 
     def test_save_snps_vcf(self):
         s = SNPs("tests/input/testvcf.vcf")

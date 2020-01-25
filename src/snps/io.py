@@ -678,8 +678,8 @@ class Reader:
 
         Parameters
         ----------
-        file : str
-            path to file
+        file : str or buffer
+            path to file or buffer to read
         comments : str
             comments at beginning of file
 
@@ -725,6 +725,9 @@ class Reader:
                     phased,
                 )
             except pd.errors.ParserError:
+                if isinstance(file, io.BufferedIOBase):
+                    file.seek(0)
+
                 return (
                     parse_csv("\t"),
                     phased,

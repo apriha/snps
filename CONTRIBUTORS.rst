@@ -31,6 +31,7 @@ Alan Moffet      `@amoffet`_
 Anatoli Babenia  `@abitrolly`_
 Castedo Ellerman `@castedo`_
 Kevin Arvai      `@arvkevi`_
+Phil Palmer      `@PhilPalmer`_
 Yoan Bouzin
 ================ ===============
 
@@ -38,3 +39,4 @@ Yoan Bouzin
 .. _@abitrolly: https://github.com/abitrolly
 .. _@castedo: https://github.com/castedo
 .. _@arvkevi: https://github.com/arvkevi
+.. _@PhilPalmer: https://github.com/PhilPalmer

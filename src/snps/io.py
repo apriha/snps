@@ -678,8 +678,8 @@ class Reader:
 
         Parameters
         ----------
-        file : str
-            path to file
+        file : str or buffer
+            path to file or buffer to read
         comments : str
             comments at beginning of file
 
@@ -706,9 +706,10 @@ class Reader:
                 break
 
         def parser():
-            return (
-                pd.read_csv(
+            def parse_csv(sep):
+                return pd.read_csv(
                     file,
+                    sep=sep,
                     comment="#",
                     header=0,
                     na_values="--",
@@ -716,9 +717,21 @@ class Reader:
                     index_col=0,
                     dtype={"chrom": object, "pos": np.int64},
                     compression=compression,
-                ),
-                phased,
-            )
+                )
+
+            try:
+                return (
+                    parse_csv(","),
+                    phased,
+                )
+            except pd.errors.ParserError:
+                if isinstance(file, io.BufferedIOBase):
+                    file.seek(0)
+
+                return (
+                    parse_csv("\t"),
+                    phased,
+                )
 
         return self.read_helper(source, parser)
 

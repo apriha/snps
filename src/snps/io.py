@@ -720,18 +720,12 @@ class Reader:
                 )
 
             try:
-                return (
-                    parse_csv(","),
-                    phased,
-                )
+                return (parse_csv(","), phased)
             except pd.errors.ParserError:
                 if isinstance(file, io.BufferedIOBase):
                     file.seek(0)
 
-                return (
-                    parse_csv("\t"),
-                    phased,
-                )
+                return (parse_csv("\t"), phased)
 
         return self.read_helper(source, parser)
 

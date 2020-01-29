@@ -1090,7 +1090,7 @@ class Writer:
         results = map(self._create_vcf_representation, tasks)
 
         contigs = []
-        vcf = []
+        vcf = [pd.DataFrame()]
         for result in list(results):
             contigs.append(result["contig"])
             vcf.append(result["vcf"])

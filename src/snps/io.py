@@ -47,7 +47,7 @@ import numpy as np
 import pandas as pd
 
 import snps
-from snps.utils import save_df_as_csv, clean_str
+from snps.utils import save_df_as_csv, clean_str, get_empty_snps_dataframe
 
 import logging
 
@@ -94,7 +94,7 @@ class Reader:
         """
         file = self._file
         compression = "infer"
-        d = {"snps": pd.DataFrame(), "source": "", "phased": False}
+        d = {"snps": get_empty_snps_dataframe(), "source": "", "phased": False}
 
         # peek into files to determine the data format
         if isinstance(file, str) and os.path.exists(file):
@@ -297,7 +297,7 @@ class Reader:
         phased = False
 
         if self._only_detect_source:
-            df = pd.DataFrame()
+            df = get_empty_snps_dataframe()
         else:
             df, *extra = parser()
 

@@ -210,3 +210,17 @@ class TestSnps(BaseSNPsTestCase):
             genotype=["AA", "CC", "GG"],
         )
         pd.testing.assert_frame_equal(snps.snps, result)
+
+    def test_empty_dataframe(self):
+        s = SNPs()
+        assert s.snp_count == 0
+        assert list(s.snps.columns.values) == ["chrom", "pos", "genotype"]
+        assert s.snps.index.name == "rsid"
+
+    def test_empty_dataframe_file(self):
+        with atomic_write("tests/input/empty.txt", mode="w", overwrite=True):
+            pass
+        s = SNPs("tests/input/empty.txt")
+        assert s.snp_count == 0
+        assert list(s.snps.columns.values) == ["chrom", "pos", "genotype"]
+        assert s.snps.index.name == "rsid"

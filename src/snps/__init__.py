@@ -48,7 +48,7 @@ from pandas.api.types import CategoricalDtype
 from snps.ensembl import EnsemblRestClient
 from snps.resources import Resources
 from snps.io import Reader, Writer
-from snps.utils import save_df_as_csv, Parallelizer, clean_str
+from snps.utils import save_df_as_csv, Parallelizer, clean_str, get_empty_snps_dataframe
 
 # set version string with Versioneer
 from snps._version import get_versions
@@ -102,7 +102,7 @@ class SNPs:
         """
         self._file = file
         self._only_detect_source = only_detect_source
-        self._snps = pd.DataFrame()
+        self._snps = get_empty_snps_dataframe()
         self._duplicate_snps = pd.DataFrame()
         self._discrepant_XY_snps = pd.DataFrame()
         self._source = ""

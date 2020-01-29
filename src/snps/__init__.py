@@ -140,6 +140,8 @@ class SNPs:
 
                 if assign_par_snps:
                     self._assign_par_snps()
+            else:
+                logger.warning("no SNPs loaded...")
 
     def __repr__(self):
         return "SNPs({!r})".format(self._file[0:50])

@@ -745,6 +745,10 @@ class TestSNPsCollection(BaseSNPsTestCase):
         s = SNPs()
         assert not s.save_snps()
 
+    def test_save_snps_no_snps_vcf(self):
+        s = SNPs()
+        assert not s.save_snps(vcf=True)
+
     def test_save_discrepant_positions(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])

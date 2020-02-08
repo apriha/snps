@@ -690,6 +690,7 @@ class Reader:
         dict
             result of `read_helper`
         """
+
         def parser():
             return (
                 pd.read_csv(

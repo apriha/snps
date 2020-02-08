@@ -106,6 +106,12 @@ class TestSNPsCollection(BaseSNPsTestCase):
             genotype=["AA", "AA", "AA"],
         )
 
+    def test_snps_DNALand(self):
+        # https://dna.land/
+        s = SNPs("tests/input/DNALand.txt")
+        assert s.source == "DNA.Land"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
     def test_snps_23andme(self):
         # https://www.23andme.com
         s = SNPs("tests/input/23andme.txt")

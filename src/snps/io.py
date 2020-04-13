@@ -877,6 +877,9 @@ class Reader:
 
                 ref = line_split[3]
                 alt = line_split[4]
+                if len(alt.split(",")) > 1 and alt.split(",")[1] == "<NON_REF>":
+                    alt = alt.split(",")[0]
+
                 zygote = line_split[9]
                 zygote = zygote.split(":")[0]
 

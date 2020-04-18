@@ -103,24 +103,6 @@ class TestSnps(BaseSNPsTestCase):
     def test_snp_buffer(self):
         assert self.snps_buffer.snp_count == 6
 
-    def test_snp_count(self):
-        assert self.snps.snp_count == 6
-
-    def test_snp_count_no_snps(self):
-        assert self.snps_none.snp_count == 0
-
-    def test_chromosomes(self):
-        assert self.snps.chromosomes == ["1", "2", "3", "5", "PAR", "MT"]
-
-    def test_chromosomes_no_snps(self):
-        assert self.snps_none.chromosomes == []
-
-    def test_chromosomes_summary(self):
-        assert self.snps.chromosomes_summary == "1-3, 5, PAR, MT"
-
-    def test_chromosomes_summary_no_snps(self):
-        assert self.snps_none.chromosomes_summary == ""
-
     def test_build_no_snps(self):
         assert not self.snps_none.build
 
@@ -138,12 +120,6 @@ class TestSnps(BaseSNPsTestCase):
 
     def test_sex_no_snps(self):
         assert self.snps_none.sex == ""
-
-    def test_sex_Male_Y_chrom(self):
-        s = self.simulate_snps(chrom="Y", pos_start=1, pos_max=59373566, pos_step=10000)
-        file = s.save_snps()
-        snps = SNPs(file)
-        assert snps.sex == "Male"
 
     def test_get_summary(self):
         assert self.snps_GRCh38.get_summary() == {
@@ -552,38 +528,38 @@ class TestSnps(BaseSNPsTestCase):
         s = SNPs()
         assert s.snps.empty
 
-    # def test_snp_count(self):
-    #     s = SNPs("tests/input/NCBI36.csv")
-    #     assert s.snp_count == 4
-    #
-    # def test_snp_count_no_snps(self):
-    #     s = SNPs()
-    #     assert s.snp_count == 0
-    #
-    # def test_chromosomes(self):
-    #     s = SNPs("tests/input/chromosomes.csv")
-    #     assert s.chromosomes == ["1", "2", "3", "5", "PAR", "MT"]
-    #
-    # def test_chromosomes_no_snps(self):
-    #     s = SNPs()
-    #     assert s.chromosomes == []
-    #
-    # def test_chromosomes_summary(self):
-    #     s = SNPs("tests/input/chromosomes.csv")
-    #     assert s.chromosomes_summary == "1-3, 5, PAR, MT"
-    #
-    # def test_chromosomes_summary_no_snps(self):
-    #     s = SNPs()
-    #     assert s.chromosomes_summary == ""
+    def test_snp_count(self):
+        s = SNPs("tests/input/NCBI36.csv")
+        assert s.snp_count == 4
+
+    def test_snp_count_no_snps(self):
+        s = SNPs()
+        assert s.snp_count == 0
+
+    def test_chromosomes(self):
+        s = SNPs("tests/input/chromosomes.csv")
+        assert s.chromosomes == ["1", "2", "3", "5", "PAR", "MT"]
+
+    def test_chromosomes_no_snps(self):
+        s = SNPs()
+        assert s.chromosomes == []
+
+    def test_chromosomes_summary(self):
+        s = SNPs("tests/input/chromosomes.csv")
+        assert s.chromosomes_summary == "1-3, 5, PAR, MT"
+
+    def test_chromosomes_summary_no_snps(self):
+        s = SNPs()
+        assert s.chromosomes_summary == ""
 
     def test_build(self):
         s = SNPs("tests/input/NCBI36.csv")
         assert s.build == 36
         assert s.assembly == "NCBI36"
 
-    # def test_sex_Male_Y_chrom(self):
-    #     s = self.simulate_snps(chrom="Y", pos_start=1, pos_max=59373566, pos_step=10000)
-    #     assert s.sex == "Male"
+    def test_sex_Male_Y_chrom(self):
+        s = self.simulate_snps(chrom="Y", pos_start=1, pos_max=59373566, pos_step=10000)
+        assert s.sex == "Male"
 
     def test_sex_Female_Y_chrom(self):
         s = self.simulate_snps(

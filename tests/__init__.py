@@ -156,3 +156,37 @@ class BaseSNPsTestCase(TestCase):
             pos=[752566, 144938320, 144938321, 50927009],
             genotype=["AA", np.nan, "ID", "TC"],
         )
+
+    def generic_snps(self):
+        return self.create_snp_df(
+            rsid=["rs" + str(i) for i in range(1, 9)],
+            chrom=["1"] * 8,
+            pos=list(range(101, 109)),
+            genotype=["AA", "CC", "GG", "TT", np.nan, "GC", "TC", "AT"],
+        )
+
+    def generic_snps_vcf(self):
+        df = self.generic_snps()
+        return df.append(
+            self.create_snp_df(
+                rsid=["rs" + str(i) for i in range(12, 18)],
+                chrom=["1"] * 6,
+                pos=list(range(112, 118)),
+                genotype=[np.nan] * 6,
+            )
+        )
+
+    def run_parsing_tests(self, file, source):
+        self.make_parsing_assertions(self.parse_file(file), source)
+        self.make_parsing_assertions(self.parse_bytes(file), source)
+
+    def parse_file(self, file):
+        return SNPs(file)
+
+    def parse_bytes(self, file):
+        with open(file, "rb") as f:
+            return SNPs(f.read())
+
+    def make_parsing_assertions(self, snps, source):
+        self.assertEqual(snps.source, source)
+        pd.testing.assert_frame_equal(snps.snps, self.generic_snps())

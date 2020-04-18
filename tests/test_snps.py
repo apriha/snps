@@ -240,17 +240,28 @@ class TestSnps(BaseSNPsTestCase):
             genotype=["AA", "AA", "AA"],
         )
 
+    def run_parsing_tests(self, file, source):
+        self.make_parsing_assertions(self.parse_file(file), source)
+        self.make_parsing_assertions(self.parse_bytes(file), source)
+
+    def parse_file(self, file):
+        return SNPs(file)
+
+    def parse_bytes(self, file):
+        with open(file, "rb") as f:
+            return SNPs(f.read())
+
+    def make_parsing_assertions(self, snps, source):
+        self.assertEqual(snps.source, source)
+        pd.testing.assert_frame_equal(snps.snps, self.generic_snps())
+
     def test_snps_DNALand(self):
         # https://dna.land/
-        s = SNPs("tests/input/DNALand.txt")
-        assert s.source == "DNA.Land"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        self.run_parsing_tests("tests/input/DNALand.txt", "DNA.Land")
 
     def test_snps_23andme(self):
         # https://www.23andme.com
-        s = SNPs("tests/input/23andme.txt")
-        assert s.source == "23andMe"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        self.run_parsing_tests("tests/input/23andme.txt", "23andMe")
 
     def test_snps_23andme_zip(self):
         with atomic_write(
@@ -259,15 +270,11 @@ class TestSnps(BaseSNPsTestCase):
             with zipfile.ZipFile(f, "w") as f_zip:
                 # https://stackoverflow.com/a/16104667
                 f_zip.write("tests/input/23andme.txt", arcname="23andme.txt")
-        s = SNPs("tests/input/23andme.txt.zip")
-        assert s.source == "23andMe"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        self.run_parsing_tests("tests/input/23andme.txt.zip", "23andMe")
 
     def test_snps_ftdna(self):
         # https://www.familytreedna.com
-        s = SNPs("tests/input/ftdna.csv")
-        assert s.source == "FTDNA"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        self.run_parsing_tests("tests/input/ftdna.csv", "FTDNA")
 
     def test_snps_ftdna_gzip(self):
         with open("tests/input/ftdna.csv", "rb") as f_in:
@@ -276,33 +283,23 @@ class TestSnps(BaseSNPsTestCase):
             ) as f_out:
                 with gzip.open(f_out, "wb") as f_gzip:
                     shutil.copyfileobj(f_in, f_gzip)
-        s = SNPs("tests/input/ftdna.csv.gz")
-        assert s.source == "FTDNA"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        self.run_parsing_tests("tests/input/ftdna.csv.gz", "FTDNA")
 
     def test_snps_ftdna_famfinder(self):
         # https://www.familytreedna.com
-        s = SNPs("tests/input/ftdna_famfinder.csv")
-        assert s.source == "FTDNA"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        self.run_parsing_tests("tests/input/ftdna_famfinder.csv", "FTDNA")
 
     def test_snps_ancestry(self):
         # https://www.ancestry.com
-        s = SNPs("tests/input/ancestry.txt")
-        assert s.source == "AncestryDNA"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        self.run_parsing_tests("tests/input/ancestry.txt", "AncestryDNA")
 
     def test_snps_genes_for_good(self):
         # https://genesforgood.sph.umich.edu/
-        s = SNPs("tests/input/genesforgood.txt")
-        assert s.source == "GenesForGood"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        self.run_parsing_tests("tests/input/genesforgood.txt", "GenesForGood")
 
     def test_snps_myheritage(self):
         # https://www.myheritage.com
-        s = SNPs("tests/input/myheritage.csv")
-        assert s.source == "MyHeritage"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        self.run_parsing_tests("tests/input/myheritage.csv", "MyHeritage")
 
     @staticmethod
     def _setup_gsa_test():
@@ -331,63 +328,25 @@ class TestSnps(BaseSNPsTestCase):
         os.remove("resources/gsa_rsid_map.txt.gz")
         os.remove("resources/gsa_chrpos_map.txt.gz")
 
-    def test_snps_codigo46_bytes(self):
-        # https://codigo46.com.mx
-
-        self._setup_gsa_test()
-
-        with open("tests/input/codigo46.txt", "rb") as f:
-            s = SNPs(f.read())
-        assert s.source == "Codigo46"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
-
-        self._teardown_gsa_test()
-
     def test_snps_codigo46(self):
         # https://codigo46.com.mx
-
         self._setup_gsa_test()
-
-        s = SNPs("tests/input/codigo46.txt")
-        assert s.source == "Codigo46"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
-
-        self._teardown_gsa_test()
-
-    def test_snps_sano_bytes(self):
-        # https://sanogenetics.com
-
-        self._setup_gsa_test()
-
-        with open("tests/input/sano.txt", "rb") as f:
-            s = SNPs(f.read())
-        assert s.source == "Sano"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
-
+        self.run_parsing_tests("tests/input/codigo46.txt", "Codigo46")
         self._teardown_gsa_test()
 
     def test_snps_sano(self):
         # https://sanogenetics.com
-
         self._setup_gsa_test()
-
-        s = SNPs("tests/input/sano.txt")
-        assert s.source == "Sano"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
-
+        self.run_parsing_tests("tests/input/sano.txt", "Sano")
         self._teardown_gsa_test()
 
     def test_snps_livingdna(self):
         # https://livingdna.com
-        s = SNPs("tests/input/livingdna.csv")
-        assert s.source == "LivingDNA"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        self.run_parsing_tests("tests/input/livingdna.csv", "LivingDNA")
 
     def test_snps_mapmygenome(self):
         # https://mapmygenome.in
-        s = SNPs("tests/input/mapmygenome.txt")
-        assert s.source == "Mapmygenome"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+        self.run_parsing_tests("tests/input/mapmygenome.txt", "Mapmygenome")
 
     def test_snps_vcf(self):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
@@ -622,20 +581,7 @@ class TestSnps(BaseSNPsTestCase):
             os.path.relpath(snps.save_snps("generic.tsv", sep="\t"))
             == "output/generic.tsv"
         )
-        s_saved = SNPs("output/generic.tsv")
-        assert snps.source == "generic"
-        pd.testing.assert_frame_equal(s_saved.snps, self.generic_snps())
-
-    def test_save_snps_tsv_bytes(self):
-        snps = SNPs("tests/input/generic.csv")
-        assert (
-            os.path.relpath(snps.save_snps("generic.tsv", sep="\t"))
-            == "output/generic.tsv"
-        )
-        with open("output/generic.tsv", "rb") as f:
-            s_saved = SNPs(f.read())
-        assert snps.source == "generic"
-        pd.testing.assert_frame_equal(s_saved.snps, self.generic_snps())
+        self.run_parsing_tests("output/generic.tsv", "generic")
 
     def test_save_snps_vcf(self):
         s = SNPs("tests/input/testvcf.vcf")

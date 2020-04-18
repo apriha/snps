@@ -44,15 +44,15 @@ from tests import BaseSNPsTestCase
 
 
 class TestReader(BaseSNPsTestCase):
-    def test_snps_DNALand(self):
+    def test_read_DNALand(self):
         # https://dna.land/
         self.run_parsing_tests("tests/input/DNALand.txt", "DNA.Land")
 
-    def test_snps_23andme(self):
+    def test_read_23andme(self):
         # https://www.23andme.com
         self.run_parsing_tests("tests/input/23andme.txt", "23andMe")
 
-    def test_snps_23andme_zip(self):
+    def test_read_23andme_zip(self):
         with atomic_write(
             "tests/input/23andme.txt.zip", mode="wb", overwrite=True
         ) as f:
@@ -61,11 +61,11 @@ class TestReader(BaseSNPsTestCase):
                 f_zip.write("tests/input/23andme.txt", arcname="23andme.txt")
         self.run_parsing_tests("tests/input/23andme.txt.zip", "23andMe")
 
-    def test_snps_ftdna(self):
+    def test_read_ftdna(self):
         # https://www.familytreedna.com
         self.run_parsing_tests("tests/input/ftdna.csv", "FTDNA")
 
-    def test_snps_ftdna_gzip(self):
+    def test_read_ftdna_gzip(self):
         with open("tests/input/ftdna.csv", "rb") as f_in:
             with atomic_write(
                 "tests/input/ftdna.csv.gz", mode="wb", overwrite=True
@@ -74,19 +74,19 @@ class TestReader(BaseSNPsTestCase):
                     shutil.copyfileobj(f_in, f_gzip)
         self.run_parsing_tests("tests/input/ftdna.csv.gz", "FTDNA")
 
-    def test_snps_ftdna_famfinder(self):
+    def test_read_ftdna_famfinder(self):
         # https://www.familytreedna.com
         self.run_parsing_tests("tests/input/ftdna_famfinder.csv", "FTDNA")
 
-    def test_snps_ancestry(self):
+    def test_read_ancestry(self):
         # https://www.ancestry.com
         self.run_parsing_tests("tests/input/ancestry.txt", "AncestryDNA")
 
-    def test_snps_genes_for_good(self):
+    def test_read_genes_for_good(self):
         # https://genesforgood.sph.umich.edu/
         self.run_parsing_tests("tests/input/genesforgood.txt", "GenesForGood")
 
-    def test_snps_myheritage(self):
+    def test_read_myheritage(self):
         # https://www.myheritage.com
         self.run_parsing_tests("tests/input/myheritage.csv", "MyHeritage")
 
@@ -117,27 +117,27 @@ class TestReader(BaseSNPsTestCase):
         os.remove("resources/gsa_rsid_map.txt.gz")
         os.remove("resources/gsa_chrpos_map.txt.gz")
 
-    def test_snps_codigo46(self):
+    def test_read_codigo46(self):
         # https://codigo46.com.mx
         self._setup_gsa_test()
         self.run_parsing_tests("tests/input/codigo46.txt", "Codigo46")
         self._teardown_gsa_test()
 
-    def test_snps_sano(self):
+    def test_read_sano(self):
         # https://sanogenetics.com
         self._setup_gsa_test()
         self.run_parsing_tests("tests/input/sano.txt", "Sano")
         self._teardown_gsa_test()
 
-    def test_snps_livingdna(self):
+    def test_read_livingdna(self):
         # https://livingdna.com
         self.run_parsing_tests("tests/input/livingdna.csv", "LivingDNA")
 
-    def test_snps_mapmygenome(self):
+    def test_read_mapmygenome(self):
         # https://mapmygenome.in
         self.run_parsing_tests("tests/input/mapmygenome.txt", "Mapmygenome")
 
-    def test_snps_vcf(self):
+    def test_read_vcf(self):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID
@@ -147,7 +147,7 @@ class TestReader(BaseSNPsTestCase):
         assert not s.phased
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
 
-    def test_snps_vcf_phased(self):
+    def test_read_vcf_phased(self):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID
@@ -157,7 +157,7 @@ class TestReader(BaseSNPsTestCase):
         assert s.phased
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
 
-    def test_snps_vcf_rsids(self):
+    def test_read_vcf_rsids(self):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID
@@ -167,7 +167,7 @@ class TestReader(BaseSNPsTestCase):
         assert not s.unannotated_vcf
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf().loc[rsids])
 
-    def test_snps_vcf_gz(self):
+    def test_read_vcf_gz(self):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID
@@ -182,7 +182,7 @@ class TestReader(BaseSNPsTestCase):
         assert s.source == "vcf"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
 
-    def test_snps_vcf_gz_rsids(self):
+    def test_read_vcf_gz_rsids(self):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID
@@ -198,7 +198,7 @@ class TestReader(BaseSNPsTestCase):
         assert s.source == "vcf"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf().loc[rsids])
 
-    def test_snps_unannotated_vcf(self):
+    def test_read_unannotated_vcf(self):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID
@@ -206,12 +206,12 @@ class TestReader(BaseSNPsTestCase):
         assert s.source == "vcf"
         assert s.unannotated_vcf
 
-    def test_snps_not_phased(self):
+    def test_read_not_phased(self):
         s = SNPs("tests/input/generic.csv")
         assert s.source == "generic"
         assert not s.phased
 
-    def test_snps_vcf_buffer(self):
+    def test_read_vcf_buffer(self):
         with open("tests/input/testvcf.vcf", "r") as f:
             snps_vcf_buffer = SNPs(f.read().encode("utf-8"))
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
@@ -220,7 +220,7 @@ class TestReader(BaseSNPsTestCase):
         assert snps_vcf_buffer.source == "vcf"
         pd.testing.assert_frame_equal(snps_vcf_buffer.snps, self.generic_snps_vcf())
 
-    def test_snps_vcf_buffer_rsids(self):
+    def test_read_vcf_buffer_rsids(self):
         with open("tests/input/testvcf.vcf", "r") as f:
             rsids = ["rs1", "rs2"]
             df = SNPs(f.read().encode("utf-8"), rsids=rsids)
@@ -230,7 +230,7 @@ class TestReader(BaseSNPsTestCase):
         assert df.source == "vcf"
         pd.testing.assert_frame_equal(df.snps, self.generic_snps_vcf().loc[rsids])
 
-    def test_snps_vcf_buffer_gz(self):
+    def test_read_vcf_buffer_gz(self):
         with open("tests/input/testvcf.vcf", "rb") as f_in:
             with atomic_write(
                 "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
@@ -248,7 +248,7 @@ class TestReader(BaseSNPsTestCase):
         assert s.source == "vcf"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
 
-    def test_snps_vcf_buffer_gz_rsids(self):
+    def test_read_vcf_buffer_gz_rsids(self):
         with open("tests/input/testvcf.vcf", "rb") as f_in:
             with atomic_write(
                 "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True

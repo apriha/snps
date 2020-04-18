@@ -140,3 +140,19 @@ class BaseSNPsTestCase(TestCase):
         )
         df = df.set_index("rsid")
         return df
+
+    def snps_NCBI36(self):
+        return self.create_snp_df(
+            rsid=["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
+            chrom=["1", "1", "1", "3"],
+            pos=[742429, 143649677, 143649678, 50908372],
+            genotype=["AA", np.nan, "ID", "AG"],
+        )
+
+    def snps_GRCh37(self):
+        return self.create_snp_df(
+            rsid=["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
+            chrom=["1", "1", "1", "3"],
+            pos=[752566, 144938320, 144938321, 50927009],
+            genotype=["AA", np.nan, "ID", "TC"],
+        )

@@ -32,14 +32,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import os
-from atomicwrites import atomic_write
-import zipfile
-import gzip
 import pandas as pd
-import shutil
 
 from snps import SNPs
-from snps.utils import create_dir
+from snps.utils import create_dir, zip_file, gzip_file
 from tests import BaseSNPsTestCase
 
 
@@ -53,12 +49,9 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests("tests/input/23andme.txt", "23andMe")
 
     def test_read_23andme_zip(self):
-        with atomic_write(
-            "tests/input/23andme.txt.zip", mode="wb", overwrite=True
-        ) as f:
-            with zipfile.ZipFile(f, "w") as f_zip:
-                # https://stackoverflow.com/a/16104667
-                f_zip.write("tests/input/23andme.txt", arcname="23andme.txt")
+        zip_file(
+            "tests/input/23andme.txt", "tests/input/23andme.txt.zip", "23andme.txt"
+        )
         self.run_parsing_tests("tests/input/23andme.txt.zip", "23andMe")
 
     def test_read_ftdna(self):
@@ -66,12 +59,7 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests("tests/input/ftdna.csv", "FTDNA")
 
     def test_read_ftdna_gzip(self):
-        with open("tests/input/ftdna.csv", "rb") as f_in:
-            with atomic_write(
-                "tests/input/ftdna.csv.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
+        gzip_file("tests/input/ftdna.csv", "tests/input/ftdna.csv.gz")
         self.run_parsing_tests("tests/input/ftdna.csv.gz", "FTDNA")
 
     def test_read_ftdna_famfinder(self):
@@ -98,19 +86,10 @@ class TestReader(BaseSNPsTestCase):
 
         create_dir("../resources")
 
-        with open("tests/resources/gsa_rsid_map.txt", "rb") as f_in:
-            with atomic_write(
-                "resources/gsa_rsid_map.txt.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
-
-        with open("tests/resources/gsa_chrpos_map.txt", "rb") as f_in:
-            with atomic_write(
-                "resources/gsa_chrpos_map.txt.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
+        gzip_file("tests/resources/gsa_rsid_map.txt", "resources/gsa_rsid_map.txt.gz")
+        gzip_file(
+            "tests/resources/gsa_chrpos_map.txt", "resources/gsa_chrpos_map.txt.gz"
+        )
 
     @staticmethod
     def _teardown_gsa_test():
@@ -171,13 +150,7 @@ class TestReader(BaseSNPsTestCase):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID
-        with open("tests/input/testvcf.vcf", "rb") as f_in:
-            with atomic_write(
-                "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
-
+        gzip_file("tests/input/testvcf.vcf", "tests/input/testvcf.vcf.gz")
         s = SNPs("tests/input/testvcf.vcf.gz")
         assert s.source == "vcf"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
@@ -186,13 +159,7 @@ class TestReader(BaseSNPsTestCase):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID
-        with open("tests/input/testvcf.vcf", "rb") as f_in:
-            with atomic_write(
-                "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
-
+        gzip_file("tests/input/testvcf.vcf", "tests/input/testvcf.vcf.gz")
         rsids = ["rs1", "rs2"]
         s = SNPs("tests/input/testvcf.vcf.gz", rsids=rsids)
         assert s.source == "vcf"
@@ -231,13 +198,7 @@ class TestReader(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(df.snps, self.generic_snps_vcf().loc[rsids])
 
     def test_read_vcf_buffer_gz(self):
-        with open("tests/input/testvcf.vcf", "rb") as f_in:
-            with atomic_write(
-                "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
-
+        gzip_file("tests/input/testvcf.vcf", "tests/input/testvcf.vcf.gz")
         with open("tests/input/testvcf.vcf.gz", "rb") as f:
             data = f.read()
             s = SNPs(data)
@@ -249,19 +210,12 @@ class TestReader(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
 
     def test_read_vcf_buffer_gz_rsids(self):
-        with open("tests/input/testvcf.vcf", "rb") as f_in:
-            with atomic_write(
-                "tests/input/testvcf.vcf.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
-
+        gzip_file("tests/input/testvcf.vcf", "tests/input/testvcf.vcf.gz")
         with open("tests/input/testvcf.vcf.gz", "rb") as f:
             rsids = ["rs1", "rs2"]
             data = f.read()
             s = SNPs(data, rsids=rsids)
         os.remove("tests/input/testvcf.vcf.gz")
-
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID

@@ -117,10 +117,11 @@ class SNPs:
 
             d = self._read_raw_data(file, only_detect_source, rsids)
 
-            d["snps"].index = [rsid.split(",")[0] for rsid in d["snps"].index]
-            d["snps"].index.name = "rsid"
+            # Replace multiple rsids separated by commas in index with the first rsid
+            multi_rsids = list(filter(lambda x: len(x.split(",")) > 1, d["snps"].index))            
+            multi_rsids_dict = dict( (multi_rsid, multi_rsid.split(",")[0]) for multi_rsid in multi_rsids)
+            d["snps"].rename(index=multi_rsids_dict, inplace=True)
 
-            import pdb; pdb.set_trace()
             self._snps = d["snps"]
             self._source = d["source"]
             self._phased = d["phased"]

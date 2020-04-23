@@ -117,9 +117,15 @@ class SNPs:
 
             d = self._read_raw_data(file, only_detect_source, rsids)
 
+            d["snps"].index = [rsid.split(",")[0] for rsid in d["snps"].index]
+            d["snps"].index.name = "rsid"
+
+            import pdb; pdb.set_trace()
             self._snps = d["snps"]
             self._source = d["source"]
             self._phased = d["phased"]
+
+            
 
             if not self._snps.empty:
                 self.sort_snps()

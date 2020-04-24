@@ -338,6 +338,11 @@ class TestSNPsCollection(BaseSNPsTestCase):
         assert s.source == "generic"
         pd.testing.assert_frame_equal(s.snps, self.generic_snps())
 
+    def test_snps_generic_non_standard_columns(self):
+        s = SNPs("tests/input/generic_non_standard_columns.tsv")
+        assert s.source == "generic"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
     def test_snps_generic_multi_rsid_tsv(self):
         s = SNPs("tests/input/generic_multi_rsid.tsv")
         assert s.source == "generic"

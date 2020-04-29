@@ -799,7 +799,7 @@ class Reader:
                     names=["rsid", "chrom", "pos", "genotype"],
                     usecols=[0, 1, 2, 3],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype={"chrom": object, "pos": np.int64},
                     compression=compression,
                 ),   
             )

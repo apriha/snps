@@ -787,18 +787,21 @@ class Reader:
         dict
             result of `read_helper`
         """
-
+        
         def parser():
             return (
                 pd.read_csv(
                     file,
-                    skiprows=1,
+                    sep=None,
                     na_values="--",
+                    skiprows=1,
+                    engine="python",
                     names=["rsid", "chrom", "pos", "genotype"],
+                    usecols=[0, 1, 2, 3],
                     index_col=0,
                     dtype={"chrom": object, "pos": np.int64},
                     compression=compression,
-                ),
+                ),   
             )
 
         return self.read_helper("generic", parser)

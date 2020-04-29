@@ -117,9 +117,16 @@ class SNPs:
 
             d = self._read_raw_data(file, only_detect_source, rsids)
 
+            # Replace multiple rsids separated by commas in index with the first rsid. E.g. rs1,rs2 -> rs1
+            multi_rsids = list(filter(lambda x: len(x.split(",")) > 1, d["snps"].index))            
+            multi_rsids_dict = dict( (multi_rsid, multi_rsid.split(",")[0]) for multi_rsid in multi_rsids)
+            d["snps"].rename(index=multi_rsids_dict, inplace=True)
+
             self._snps = d["snps"]
             self._source = d["source"]
             self._phased = d["phased"]
+
+            
 
             if not self._snps.empty:
                 self.sort_snps()

@@ -137,7 +137,7 @@ class Reader:
         elif "lineage" in first_line or "snps" in first_line:
             return self.read_snps_csv(file, comments, compression)
         elif first_line.startswith("rsid"):
-            return self.read_generic_csv(file, compression)
+            return self.read_generic(file, compression)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
             return self.read_vcf(file, compression, self._rsids)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
@@ -763,8 +763,8 @@ class Reader:
 
         return self.read_helper(source, parser)
 
-    def read_generic_csv(self, file, compression):
-        """ Read and parse generic CSV file.
+    def read_generic(self, file, compression):
+        """ Read and parse generic CSV or TSV file.
 
         Notes
         -----
@@ -789,17 +789,43 @@ class Reader:
         """
 
         def parser():
-            return (
-                pd.read_csv(
+            def parse(sep):
+                return pd.read_csv(
                     file,
+                    sep=sep,
                     skiprows=1,
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype={"chrom": object, "pos": np.int64},
                     compression=compression,
-                ),
-            )
+                )
+
+            try:
+                df = parse(",")
+            except ValueError:
+                try:
+                    if isinstance(file, io.BufferedIOBase):
+                        file.seek(0)
+
+                    df = parse("\t")
+                except ValueError:
+                    if isinstance(file, io.BufferedIOBase):
+                        file.seek(0)
+
+                    df = pd.read_csv(
+                        file,
+                        sep=None,
+                        na_values="--",
+                        skiprows=1,
+                        engine="python",
+                        names=["rsid", "chrom", "pos", "genotype"],
+                        usecols=[0, 1, 2, 3],
+                        index_col=0,
+                        dtype={"chrom": object, "pos": np.int64},
+                        compression=compression,
+                    )
+            return (df,)
 
         return self.read_helper("generic", parser)
 
@@ -877,6 +903,9 @@ class Reader:
 
                 ref = line_split[3]
                 alt = line_split[4]
+                if len(alt.split(",")) > 1 and alt.split(",")[1] == "<NON_REF>":
+                    alt = alt.split(",")[0]
+
                 zygote = line_split[9]
                 zygote = zygote.split(":")[0]
 

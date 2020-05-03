@@ -175,8 +175,24 @@ class TestReader(BaseSNPsTestCase):
 
     def test_read_not_phased(self):
         s = SNPs("tests/input/generic.csv")
-        assert s.source == "generic"
         assert not s.phased
+
+    def test_read_generic_csv(self):
+        self.run_parsing_tests("tests/input/generic.csv", "generic")
+
+    def test_read_generic_tsv(self):
+        self.run_parsing_tests("tests/input/generic.tsv", "generic")
+
+    def test_read_generic_non_standard_columns(self):
+        self.run_parsing_tests(
+            "tests/input/generic_non_standard_columns.tsv", "generic"
+        )
+
+    def test_read_generic_multi_rsid_tsv(self):
+        self.run_parsing_tests("tests/input/generic_multi_rsid.tsv", "generic")
+
+    def test_read_generic_extra_column_tsv(self):
+        self.run_parsing_tests("tests/input/generic_extra_column.tsv", "generic")
 
     def test_read_vcf_buffer(self):
         with open("tests/input/testvcf.vcf", "r") as f:

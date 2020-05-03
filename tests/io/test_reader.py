@@ -32,40 +32,45 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import os
+import tempfile
 
-from snps import SNPs
-from snps.utils import create_dir, zip_file, gzip_file
+from snps.resources import Resources
+from snps.utils import zip_file, gzip_file
 from tests import BaseSNPsTestCase
 
 
 class TestReader(BaseSNPsTestCase):
     @staticmethod
-    def _setup_gsa_test():
+    def _setup_gsa_test(resources_dir):
         # reset resource if already loaded
-        temp = SNPs()
-        temp._resources._gsa_resources = {}
+        r = Resources()
+        r._resources_dir = resources_dir
+        r._gsa_resources = {}
 
-        create_dir("../resources")
-
-        gzip_file("tests/resources/gsa_rsid_map.txt", "resources/gsa_rsid_map.txt.gz")
         gzip_file(
-            "tests/resources/gsa_chrpos_map.txt", "resources/gsa_chrpos_map.txt.gz"
+            "tests/resources/gsa_rsid_map.txt",
+            os.path.join(resources_dir, "gsa_rsid_map.txt.gz"),
+        )
+        gzip_file(
+            "tests/resources/gsa_chrpos_map.txt",
+            os.path.join(resources_dir, "gsa_chrpos_map.txt.gz"),
         )
 
     @staticmethod
     def _teardown_gsa_test():
-        os.remove("resources/gsa_rsid_map.txt.gz")
-        os.remove("resources/gsa_chrpos_map.txt.gz")
+        r = Resources()
+        r._resources_dir = "resources"
+        r._gsa_resources = {}
 
     def test_read_23andme(self):
         # https://www.23andme.com
         self.run_parsing_tests("tests/input/23andme.txt", "23andMe")
 
     def test_read_23andme_zip(self):
-        zip_file(
-            "tests/input/23andme.txt", "tests/input/23andme.txt.zip", "23andme.txt"
-        )
-        self.run_parsing_tests("tests/input/23andme.txt.zip", "23andMe")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest = os.path.join(tmpdir, "23andme.txt.zip")
+            zip_file("tests/input/23andme.txt", dest, "23andme.txt")
+            self.run_parsing_tests(dest, "23andMe")
 
     def test_read_ancestry(self):
         # https://www.ancestry.com
@@ -73,9 +78,10 @@ class TestReader(BaseSNPsTestCase):
 
     def test_read_codigo46(self):
         # https://codigo46.com.mx
-        self._setup_gsa_test()
-        self.run_parsing_tests("tests/input/codigo46.txt", "Codigo46")
-        self._teardown_gsa_test()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._setup_gsa_test(tmpdir)
+            self.run_parsing_tests("tests/input/codigo46.txt", "Codigo46")
+            self._teardown_gsa_test()
 
     def test_read_DNALand(self):
         # https://dna.land/
@@ -86,8 +92,10 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests("tests/input/ftdna.csv", "FTDNA")
 
     def test_read_ftdna_gzip(self):
-        gzip_file("tests/input/ftdna.csv", "tests/input/ftdna.csv.gz")
-        self.run_parsing_tests("tests/input/ftdna.csv.gz", "FTDNA")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest = os.path.join(tmpdir, "ftdna.csv.gz")
+            gzip_file("tests/input/ftdna.csv", dest)
+            self.run_parsing_tests(dest, "FTDNA")
 
     def test_read_ftdna_famfinder(self):
         # https://www.familytreedna.com
@@ -128,16 +136,19 @@ class TestReader(BaseSNPsTestCase):
 
     def test_read_sano(self):
         # https://sanogenetics.com
-        self._setup_gsa_test()
-        self.run_parsing_tests("tests/input/sano.txt", "Sano")
-        self._teardown_gsa_test()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._setup_gsa_test(tmpdir)
+            self.run_parsing_tests("tests/input/sano.txt", "Sano")
+            self._teardown_gsa_test()
 
     def test_read_vcf(self):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")
 
     def test_read_vcf_gz(self):
-        gzip_file("tests/input/testvcf.vcf", "tests/input/testvcf.vcf.gz")
-        self.run_parsing_tests_vcf("tests/input/testvcf.vcf.gz")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest = os.path.join(tmpdir, "testvcf.vcf.gz")
+            gzip_file("tests/input/testvcf.vcf", dest)
+            self.run_parsing_tests_vcf(dest)
 
     def test_read_vcf_phased(self):
         self.run_parsing_tests_vcf("tests/input/testvcf_phased.vcf", phased=True)

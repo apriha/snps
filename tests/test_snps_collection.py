@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import gzip
 import os
 import shutil
+import tempfile
 
 from atomicwrites import atomic_write
 import numpy as np
@@ -110,10 +111,14 @@ class TestSNPsCollection(BaseSNPsTestCase):
 
     def test_load_snps_invalid_file(self):
         sc = SNPsCollection()
-        with atomic_write("tests/input/empty.txt", mode="w", overwrite=True):
-            pass
-        sc.load_snps(["tests/input/GRCh37.csv", "tests/input/empty.txt"])
-        pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37())
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest = os.path.join(tmpdir, "empty.txt")
+
+            with atomic_write(dest, mode="w", overwrite=True):
+                pass
+
+            sc.load_snps(["tests/input/GRCh37.csv", "tests/input/empty.txt"])
+            pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37())
 
     def test_load_snps_assembly_mismatch(self):
         sc = SNPsCollection()
@@ -160,80 +165,78 @@ class TestSNPsCollection(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36())
 
     def test_merging_files_discrepant_snps(self):
-        df = pd.read_csv(
-            "tests/input/discrepant_snps.csv",
-            skiprows=1,
-            na_values="--",
-            names=[
-                "rsid",
-                "chrom",
-                "pos_file1",
-                "pos_file2",
-                "genotype_file1",
-                "genotype_file2",
-                "discrepant_position",
-                "discrepant_genotype",
-                "expected_position",
-                "expected_genotype",
-            ],
-            index_col=0,
-            dtype={
-                "chrom": object,
-                "pos_file1": np.int64,
-                "pos_file2": np.int64,
-                "discrepant_position": bool,
-                "discrepant_genotype": bool,
-            },
-        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest1 = os.path.join(tmpdir, "discrepant_snps1.csv")
+            dest2 = os.path.join(tmpdir, "discrepant_snps2.csv")
 
-        df1 = df[["chrom", "pos_file1", "genotype_file1"]]
-        df2 = df[["chrom", "pos_file2", "genotype_file2"]]
+            df = pd.read_csv(
+                "tests/input/discrepant_snps.csv",
+                skiprows=1,
+                na_values="--",
+                names=[
+                    "rsid",
+                    "chrom",
+                    "pos_file1",
+                    "pos_file2",
+                    "genotype_file1",
+                    "genotype_file2",
+                    "discrepant_position",
+                    "discrepant_genotype",
+                    "expected_position",
+                    "expected_genotype",
+                ],
+                index_col=0,
+                dtype={
+                    "chrom": object,
+                    "pos_file1": np.int64,
+                    "pos_file2": np.int64,
+                    "discrepant_position": bool,
+                    "discrepant_genotype": bool,
+                },
+            )
 
-        df1.to_csv(
-            "tests/input/discrepant_snps1.csv",
-            na_rep="--",
-            header=["chromosome", "position", "genotype"],
-        )
+            df1 = df[["chrom", "pos_file1", "genotype_file1"]]
+            df2 = df[["chrom", "pos_file2", "genotype_file2"]]
 
-        df2.to_csv(
-            "tests/input/discrepant_snps2.csv",
-            na_rep="--",
-            header=["chromosome", "position", "genotype"],
-        )
+            df1.to_csv(
+                dest1, na_rep="--", header=["chromosome", "position", "genotype"]
+            )
 
-        sc = SNPsCollection(
-            ["tests/input/discrepant_snps1.csv", "tests/input/discrepant_snps2.csv"]
-        )
+            df2.to_csv(
+                dest2, na_rep="--", header=["chromosome", "position", "genotype"]
+            )
 
-        expected = df[
-            [
-                "chrom",
-                "discrepant_position",
-                "discrepant_genotype",
-                "expected_position",
-                "expected_genotype",
+            sc = SNPsCollection([dest1, dest2])
+
+            expected = df[
+                [
+                    "chrom",
+                    "discrepant_position",
+                    "discrepant_genotype",
+                    "expected_position",
+                    "expected_genotype",
+                ]
             ]
-        ]
-        expected = expected.rename(
-            columns={"expected_position": "pos", "expected_genotype": "genotype"}
-        )
-        expected_snps = SNPs()
-        expected_snps._snps = expected
-        expected_snps.sort_snps()
-        expected = expected_snps.snps
+            expected = expected.rename(
+                columns={"expected_position": "pos", "expected_genotype": "genotype"}
+            )
+            expected_snps = SNPs()
+            expected_snps._snps = expected
+            expected_snps.sort_snps()
+            expected = expected_snps.snps
 
-        pd.testing.assert_index_equal(
-            sc.discrepant_positions.index,
-            expected.loc[expected["discrepant_position"] == True].index,
-        )
+            pd.testing.assert_index_equal(
+                sc.discrepant_positions.index,
+                expected.loc[expected["discrepant_position"] == True].index,
+            )
 
-        pd.testing.assert_index_equal(
-            sc.discrepant_genotypes.index,
-            expected.loc[expected["discrepant_genotype"] == True].index,
-        )
+            pd.testing.assert_index_equal(
+                sc.discrepant_genotypes.index,
+                expected.loc[expected["discrepant_genotype"] == True].index,
+            )
 
-        pd.testing.assert_series_equal(sc.snps["pos"], expected["pos"])
-        pd.testing.assert_series_equal(sc.snps["genotype"], expected["genotype"])
+            pd.testing.assert_series_equal(sc.snps["pos"], expected["pos"])
+            pd.testing.assert_series_equal(sc.snps["genotype"], expected["genotype"])
 
     def test_save_discrepant_positions(self):
         sc = SNPsCollection()

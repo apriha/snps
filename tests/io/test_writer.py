@@ -32,13 +32,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import os
-from atomicwrites import atomic_write
-import gzip
+import tempfile
+
 import pandas as pd
-import shutil
 
 from snps import SNPs
 from snps.resources import Resources, ReferenceSequence
+from snps.utils import gzip_file
 from tests import BaseSNPsTestCase
 
 
@@ -69,18 +69,17 @@ class TestWriter(BaseSNPsTestCase):
 
         r = Resources()
         r._reference_sequences["GRCh37"] = {}
-        with open("tests/input/generic.fa", "rb") as f_in:
-            with atomic_write(
-                "tests/input/generic.fa.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
 
-        seq = ReferenceSequence(ID="1", path="tests/input/generic.fa.gz")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest = os.path.join(tmpdir, "generic.fa.gz")
+            gzip_file("tests/input/generic.fa", dest)
 
-        r._reference_sequences["GRCh37"]["1"] = seq
+            seq = ReferenceSequence(ID="1", path=dest)
 
-        assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
+            r._reference_sequences["GRCh37"]["1"] = seq
+
+            assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
+
         s = SNPs("output/vcf_GRCh37.vcf")
         assert not s.phased
         pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
@@ -92,19 +91,18 @@ class TestWriter(BaseSNPsTestCase):
         # setup resource to use test FASTA reference sequence
         r = Resources()
         r._reference_sequences["GRCh37"] = {}
-        with open("tests/input/generic.fa", "rb") as f_in:
-            with atomic_write(
-                "tests/input/generic.fa.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
 
-        seq = ReferenceSequence(ID="1", path="tests/input/generic.fa.gz")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest = os.path.join(tmpdir, "generic.fa.gz")
+            gzip_file("tests/input/generic.fa", dest)
 
-        r._reference_sequences["GRCh37"]["1"] = seq
+            seq = ReferenceSequence(ID="1", path=dest)
 
-        # save phased data to VCF
-        assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
+            r._reference_sequences["GRCh37"]["1"] = seq
+
+            # save phased data to VCF
+            assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
+
         # read saved VCF
         s = SNPs("output/vcf_GRCh37.vcf")
         assert s.phased

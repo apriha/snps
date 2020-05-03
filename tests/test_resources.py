@@ -31,9 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 
-import gzip
 import os
-import shutil
+import tempfile
 import warnings
 import zipfile
 
@@ -41,6 +40,7 @@ from atomicwrites import atomic_write
 import numpy as np
 
 from snps.resources import Resources, ReferenceSequence
+from snps.utils import gzip_file
 from tests import BaseSNPsTestCase
 
 
@@ -251,48 +251,48 @@ class TestResources(BaseSNPsTestCase):
         assert seqs["MT"].length == 16569
 
     def test_reference_sequence_generic_load_sequence(self):
-        with open("tests/input/generic.fa", "rb") as f_in:
-            with atomic_write(
-                "tests/input/generic.fa.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest = os.path.join(tmpdir, "generic.fa.gz")
+            gzip_file("tests/input/generic.fa", dest)
 
-        seq = ReferenceSequence(ID="1", path="tests/input/generic.fa.gz")
-        assert seq.ID == "1"
-        assert seq.chrom == "1"
-        assert seq.path == "tests/input/generic.fa.gz"
-        np.testing.assert_array_equal(
-            seq.sequence,
-            np.array(
-                bytearray(
-                    "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNAGGCCGGACNNNNNNNN",
-                    encoding="utf-8",
-                    errors="strict",
+            seq = ReferenceSequence(ID="1", path=dest)
+            assert seq.ID == "1"
+            assert seq.chrom == "1"
+            assert seq.path == dest
+            np.testing.assert_array_equal(
+                seq.sequence,
+                np.array(
+                    bytearray(
+                        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNAGGCCGGACNNNNNNNN",
+                        encoding="utf-8",
+                        errors="strict",
+                    ),
+                    dtype=np.uint8,
                 ),
-                dtype=np.uint8,
-            ),
-        )
-        assert list("AGGCCGGAC") == list(map(chr, seq.sequence[100:109]))
-        assert seq.md5 == "6ac6176535ad0e38aba2d05d786c39b6"
-        assert seq.start == 1
-        assert seq.end == 117
-        assert seq.length == 117
+            )
+            assert list("AGGCCGGAC") == list(map(chr, seq.sequence[100:109]))
+            assert seq.md5 == "6ac6176535ad0e38aba2d05d786c39b6"
+            assert seq.start == 1
+            assert seq.end == 117
+            assert seq.length == 117
 
     def test_get_opensnp_datadump_filenames(self):
-        # temporarily set resources dir to tests
-        self.resource._resources_dir = "tests/resources"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # temporarily set resources dir to tests
+            self.resource._resources_dir = tmpdir
 
-        # write test openSNP datadump zip
-        with atomic_write(
-            "tests/resources/opensnp_datadump.current.zip", mode="wb", overwrite=True
-        ) as f:
-            with zipfile.ZipFile(f, "w") as f_zip:
-                f_zip.write("tests/input/generic.csv", arcname="generic1.csv")
-                f_zip.write("tests/input/generic.csv", arcname="generic2.csv")
+            # write test openSNP datadump zip
+            with atomic_write(
+                os.path.join(tmpdir, "opensnp_datadump.current.zip"),
+                mode="wb",
+                overwrite=True,
+            ) as f:
+                with zipfile.ZipFile(f, "w") as f_zip:
+                    f_zip.write("tests/input/generic.csv", arcname="generic1.csv")
+                    f_zip.write("tests/input/generic.csv", arcname="generic2.csv")
 
-        filenames = self.resource.get_opensnp_datadump_filenames()
+            filenames = self.resource.get_opensnp_datadump_filenames()
 
-        assert filenames == ["generic1.csv", "generic2.csv"]
+            assert filenames == ["generic1.csv", "generic2.csv"]
 
-        self.resource._resources_dir = "resources"
+            self.resource._resources_dir = "resources"

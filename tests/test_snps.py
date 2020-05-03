@@ -56,32 +56,6 @@ class TestSnps(BaseSNPsTestCase):
         )
         self.snps_none = SNPs(None)
 
-        with open("tests/input/chromosomes.csv", "r") as f:
-            self.snps_buffer = SNPs(f.read().encode("utf-8"))
-
-        with atomic_write(
-            "tests/input/chromosomes.csv.zip", mode="wb", overwrite=True
-        ) as f:
-            with zipfile.ZipFile(f, "w") as f_zip:
-                f_zip.write("tests/input/chromosomes.csv", arcname="chromosomes.csv")
-
-        with open("tests/input/chromosomes.csv.zip", "rb") as f:
-            data = f.read()
-            self.snps_buffer_zip = SNPs(data)
-        os.remove("tests/input/chromosomes.csv.zip")
-
-        with open("tests/input/chromosomes.csv", "rb") as f_in:
-            with atomic_write(
-                "tests/input/chromosomes.csv.gz", mode="wb", overwrite=True
-            ) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
-
-        with open("tests/input/chromosomes.csv.gz", "rb") as f:
-            data = f.read()
-            self.snps_buffer_gz = SNPs(data)
-        os.remove("tests/input/chromosomes.csv.gz")
-
     def snps_discrepant_pos(self):
         return self.create_snp_df(
             rsid=["rs3094315"], chrom=["1"], pos=[1], genotype=["AA"]
@@ -92,16 +66,6 @@ class TestSnps(BaseSNPsTestCase):
 
     def test_assembly_no_snps(self):
         assert self.snps_none.assembly == ""
-
-    def test_snp_buffer_zip(self):
-        assert self.snps_buffer_zip.snp_count == 6
-
-    def test_snp_buffer_gz(self):
-
-        assert self.snps_buffer_gz.snp_count == 6
-
-    def test_snp_buffer(self):
-        assert self.snps_buffer.snp_count == 6
 
     def test_build_no_snps(self):
         assert not self.snps_none.build

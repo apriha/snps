@@ -153,7 +153,3 @@ class TestReader(BaseSNPsTestCase):
 
     def test_read_generic_extra_column_tsv(self):
         self.run_parsing_tests("tests/input/generic_extra_column.tsv", "generic")
-
-    def test_source_generic(self):
-        s = SNPs("tests/input/NCBI36.csv")
-        assert s.source == "generic"

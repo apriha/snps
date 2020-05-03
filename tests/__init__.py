@@ -33,12 +33,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
 import shutil
+import tempfile
 from unittest import TestCase
 
 import numpy as np
 import pandas as pd
 
 from snps import SNPs
+from snps.utils import gzip_file, zip_file
 
 
 class BaseSNPsTestCase(TestCase):
@@ -180,6 +182,18 @@ class BaseSNPsTestCase(TestCase):
         self.make_parsing_assertions(self.parse_file(file), source, phased)
         self.make_parsing_assertions(self.parse_bytes(file), source, phased)
 
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = os.path.basename(file)
+            dest = os.path.join(tmpdir, "{}.gz".format(base))
+            gzip_file(file, dest)
+            self.make_parsing_assertions(self.parse_file(dest), source, phased)
+            self.make_parsing_assertions(self.parse_bytes(dest), source, phased)
+
+            dest = os.path.join(tmpdir, "{}.zip".format(base))
+            zip_file(file, dest, base)
+            self.make_parsing_assertions(self.parse_file(dest), source, phased)
+            self.make_parsing_assertions(self.parse_bytes(dest), source, phased)
+
     def run_parsing_tests_vcf(
         self, file, source="vcf", phased=False, unannotated=False, rsids=()
     ):
@@ -192,6 +206,17 @@ class BaseSNPsTestCase(TestCase):
         self.make_parsing_assertions_vcf(
             self.parse_bytes(file, rsids), source, phased, unannotated, rsids
         )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = os.path.basename(file)
+            dest = os.path.join(tmpdir, "{}.gz".format(base))
+            gzip_file(file, dest)
+            self.make_parsing_assertions_vcf(
+                self.parse_file(dest, rsids), source, phased, unannotated, rsids
+            )
+            self.make_parsing_assertions_vcf(
+                self.parse_file(dest, rsids), source, phased, unannotated, rsids
+            )
 
     def parse_file(self, file, rsids=()):
         return SNPs(file, rsids=rsids)

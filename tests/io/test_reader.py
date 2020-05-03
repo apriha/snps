@@ -35,7 +35,7 @@ import os
 import tempfile
 
 from snps.resources import Resources
-from snps.utils import zip_file, gzip_file
+from snps.utils import gzip_file
 from tests import BaseSNPsTestCase
 
 
@@ -66,12 +66,6 @@ class TestReader(BaseSNPsTestCase):
         # https://www.23andme.com
         self.run_parsing_tests("tests/input/23andme.txt", "23andMe")
 
-    def test_read_23andme_zip(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            dest = os.path.join(tmpdir, "23andme.txt.zip")
-            zip_file("tests/input/23andme.txt", dest, "23andme.txt")
-            self.run_parsing_tests(dest, "23andMe")
-
     def test_read_ancestry(self):
         # https://www.ancestry.com
         self.run_parsing_tests("tests/input/ancestry.txt", "AncestryDNA")
@@ -90,12 +84,6 @@ class TestReader(BaseSNPsTestCase):
     def test_read_ftdna(self):
         # https://www.familytreedna.com
         self.run_parsing_tests("tests/input/ftdna.csv", "FTDNA")
-
-    def test_read_ftdna_gzip(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            dest = os.path.join(tmpdir, "ftdna.csv.gz")
-            gzip_file("tests/input/ftdna.csv", dest)
-            self.run_parsing_tests(dest, "FTDNA")
 
     def test_read_ftdna_famfinder(self):
         # https://www.familytreedna.com
@@ -143,12 +131,6 @@ class TestReader(BaseSNPsTestCase):
 
     def test_read_vcf(self):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")
-
-    def test_read_vcf_gz(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            dest = os.path.join(tmpdir, "testvcf.vcf.gz")
-            gzip_file("tests/input/testvcf.vcf", dest)
-            self.run_parsing_tests_vcf(dest)
 
     def test_read_vcf_phased(self):
         self.run_parsing_tests_vcf("tests/input/testvcf_phased.vcf", phased=True)

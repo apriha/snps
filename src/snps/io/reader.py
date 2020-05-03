@@ -601,10 +601,20 @@ class Reader:
             gsa_resources = self._resources.get_gsa_resources()
 
             if isinstance(file, str):
-                with open(file, "rb") as f:
-                    first_line, comments, data = self._extract_comments(
-                        f, decode=True, include_data=True
-                    )
+                try:
+                    with open(file, "rb") as f:
+                        first_line, comments, data = self._extract_comments(
+                            f, decode=True, include_data=True
+                        )
+                except UnicodeDecodeError:
+                    # compressed file on filesystem
+                    with open(file, "rb") as f:
+                        (
+                            first_line,
+                            comments,
+                            data,
+                            compression,
+                        ) = self._handle_bytes_data(f.read(), include_data=True)
             else:
                 first_line, comments, data, compression = self._handle_bytes_data(
                     file.read(), include_data=True

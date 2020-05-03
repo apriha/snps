@@ -176,9 +176,9 @@ class BaseSNPsTestCase(TestCase):
             )
         )
 
-    def run_parsing_tests(self, file, source):
-        self.make_parsing_assertions(self.parse_file(file), source)
-        self.make_parsing_assertions(self.parse_bytes(file), source)
+    def run_parsing_tests(self, file, source, phased=False):
+        self.make_parsing_assertions(self.parse_file(file), source, phased)
+        self.make_parsing_assertions(self.parse_bytes(file), source, phased)
 
     def run_parsing_tests_vcf(
         self, file, source="vcf", phased=False, unannotated=False, rsids=()
@@ -200,9 +200,10 @@ class BaseSNPsTestCase(TestCase):
         with open(file, "rb") as f:
             return SNPs(f.read(), rsids=rsids)
 
-    def make_parsing_assertions(self, snps, source):
+    def make_parsing_assertions(self, snps, source, phased):
         self.assertEqual(snps.source, source)
         pd.testing.assert_frame_equal(snps.snps, self.generic_snps())
+        self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)
 
     def make_parsing_assertions_vcf(self, snps, source, phased, unannotated, rsids):
         self.assertEqual(snps.source, source)

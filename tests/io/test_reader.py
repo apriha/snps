@@ -149,7 +149,3 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests_vcf(
             "tests/input/unannotated_testvcf.vcf", unannotated=True
         )
-
-    def test_read_not_phased(self):
-        s = SNPs("tests/input/generic.csv")
-        assert not s.phased

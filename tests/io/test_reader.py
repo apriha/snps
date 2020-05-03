@@ -32,7 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import os
-import pandas as pd
 
 from snps import SNPs
 from snps.utils import create_dir, zip_file, gzip_file
@@ -117,61 +116,22 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests("tests/input/mapmygenome.txt", "Mapmygenome")
 
     def test_read_vcf(self):
-        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
-        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
-        # phased snps, and snps with missing rsID
-        s = SNPs("tests/input/testvcf.vcf")
-        assert s.source == "vcf"
-        assert not s.unannotated_vcf
-        assert not s.phased
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+        self.run_parsing_tests_vcf("tests/input/testvcf.vcf")
 
     def test_read_vcf_phased(self):
-        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
-        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
-        # phased snps, and snps with missing rsID
-        s = SNPs("tests/input/testvcf_phased.vcf")
-        assert s.source == "vcf"
-        assert not s.unannotated_vcf
-        assert s.phased
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+        self.run_parsing_tests_vcf("tests/input/testvcf_phased.vcf", phased=True)
 
     def test_read_vcf_rsids(self):
-        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
-        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
-        # phased snps, and snps with missing rsID
-        rsids = ["rs1", "rs2"]
-        s = SNPs("tests/input/testvcf.vcf", rsids=rsids)
-        assert s.source == "vcf"
-        assert not s.unannotated_vcf
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf().loc[rsids])
+        self.run_parsing_tests_vcf("tests/input/testvcf.vcf", rsids=["rs1", "rs2"])
 
     def test_read_vcf_gz(self):
-        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
-        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
-        # phased snps, and snps with missing rsID
         gzip_file("tests/input/testvcf.vcf", "tests/input/testvcf.vcf.gz")
-        s = SNPs("tests/input/testvcf.vcf.gz")
-        assert s.source == "vcf"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
-
-    def test_read_vcf_gz_rsids(self):
-        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
-        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
-        # phased snps, and snps with missing rsID
-        gzip_file("tests/input/testvcf.vcf", "tests/input/testvcf.vcf.gz")
-        rsids = ["rs1", "rs2"]
-        s = SNPs("tests/input/testvcf.vcf.gz", rsids=rsids)
-        assert s.source == "vcf"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf().loc[rsids])
+        self.run_parsing_tests_vcf("tests/input/testvcf.vcf.gz")
 
     def test_read_unannotated_vcf(self):
-        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
-        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
-        # phased snps, and snps with missing rsID
-        s = SNPs("tests/input/unannotated_testvcf.vcf")
-        assert s.source == "vcf"
-        assert s.unannotated_vcf
+        self.run_parsing_tests_vcf(
+            "tests/input/unannotated_testvcf.vcf", unannotated=True
+        )
 
     def test_read_not_phased(self):
         s = SNPs("tests/input/generic.csv")
@@ -193,50 +153,6 @@ class TestReader(BaseSNPsTestCase):
 
     def test_read_generic_extra_column_tsv(self):
         self.run_parsing_tests("tests/input/generic_extra_column.tsv", "generic")
-
-    def test_read_vcf_buffer(self):
-        with open("tests/input/testvcf.vcf", "r") as f:
-            snps_vcf_buffer = SNPs(f.read().encode("utf-8"))
-        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
-        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
-        # phased snps, and snps with missing rsID
-        assert snps_vcf_buffer.source == "vcf"
-        pd.testing.assert_frame_equal(snps_vcf_buffer.snps, self.generic_snps_vcf())
-
-    def test_read_vcf_buffer_rsids(self):
-        with open("tests/input/testvcf.vcf", "r") as f:
-            rsids = ["rs1", "rs2"]
-            df = SNPs(f.read().encode("utf-8"), rsids=rsids)
-        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
-        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
-        # phased snps, and snps with missing rsID
-        assert df.source == "vcf"
-        pd.testing.assert_frame_equal(df.snps, self.generic_snps_vcf().loc[rsids])
-
-    def test_read_vcf_buffer_gz(self):
-        gzip_file("tests/input/testvcf.vcf", "tests/input/testvcf.vcf.gz")
-        with open("tests/input/testvcf.vcf.gz", "rb") as f:
-            data = f.read()
-            s = SNPs(data)
-        os.remove("tests/input/testvcf.vcf.gz")
-        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
-        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
-        # phased snps, and snps with missing rsID
-        assert s.source == "vcf"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
-
-    def test_read_vcf_buffer_gz_rsids(self):
-        gzip_file("tests/input/testvcf.vcf", "tests/input/testvcf.vcf.gz")
-        with open("tests/input/testvcf.vcf.gz", "rb") as f:
-            rsids = ["rs1", "rs2"]
-            data = f.read()
-            s = SNPs(data, rsids=rsids)
-        os.remove("tests/input/testvcf.vcf.gz")
-        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
-        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
-        # phased snps, and snps with missing rsID
-        assert s.source == "vcf"
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf().loc[rsids])
 
     def test_source_generic(self):
         s = SNPs("tests/input/NCBI36.csv")

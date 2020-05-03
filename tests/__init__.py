@@ -180,13 +180,42 @@ class BaseSNPsTestCase(TestCase):
         self.make_parsing_assertions(self.parse_file(file), source)
         self.make_parsing_assertions(self.parse_bytes(file), source)
 
-    def parse_file(self, file):
-        return SNPs(file)
+    def run_parsing_tests_vcf(
+        self, file, source="vcf", phased=False, unannotated=False, rsids=()
+    ):
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        self.make_parsing_assertions_vcf(
+            self.parse_file(file, rsids), source, phased, unannotated, rsids
+        )
+        self.make_parsing_assertions_vcf(
+            self.parse_bytes(file, rsids), source, phased, unannotated, rsids
+        )
 
-    def parse_bytes(self, file):
+    def parse_file(self, file, rsids=()):
+        return SNPs(file, rsids=rsids)
+
+    def parse_bytes(self, file, rsids=()):
         with open(file, "rb") as f:
-            return SNPs(f.read())
+            return SNPs(f.read(), rsids=rsids)
 
     def make_parsing_assertions(self, snps, source):
         self.assertEqual(snps.source, source)
         pd.testing.assert_frame_equal(snps.snps, self.generic_snps())
+
+    def make_parsing_assertions_vcf(self, snps, source, phased, unannotated, rsids):
+        self.assertEqual(snps.source, source)
+
+        if unannotated:
+            self.assertTrue(snps.unannotated_vcf)
+            self.assertEqual(0, snps.snp_count)
+        else:
+            self.assertFalse(snps.unannotated_vcf)
+            pd.testing.assert_frame_equal(
+                snps.snps, self.generic_snps_vcf().loc[rsids]
+            ) if rsids else pd.testing.assert_frame_equal(
+                snps.snps, self.generic_snps_vcf()
+            )
+
+        self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)

@@ -939,6 +939,9 @@ class Reader:
                 ]
                 rows.append(record_array)
 
+            if len(rows) == 0:
+                phased = False
+
             df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
             df = df.astype(
                 {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}

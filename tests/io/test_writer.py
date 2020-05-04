@@ -34,8 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import os
 import tempfile
 
-import pandas as pd
-
 from snps import SNPs
 from snps.resources import Resources, ReferenceSequence
 from snps.utils import gzip_file
@@ -44,17 +42,9 @@ from tests import BaseSNPsTestCase
 
 class TestWriter(BaseSNPsTestCase):
     def test_save_snps(self):
-        snps = SNPs("tests/input/GRCh37.csv")
+        snps = SNPs("tests/input/generic.csv")
         assert os.path.relpath(snps.save_snps()) == "output/generic_GRCh37.csv"
-        s_saved = SNPs("output/generic_GRCh37.csv")
-        pd.testing.assert_frame_equal(s_saved.snps, self.snps_GRCh37())
-
-    def test_save_snps_bytes(self):
-        snps = SNPs("tests/input/GRCh37.csv")
-        assert os.path.relpath(snps.save_snps()) == "output/generic_GRCh37.csv"
-        with open("output/generic_GRCh37.csv", "rb") as f:
-            s_saved = SNPs(f.read())
-        pd.testing.assert_frame_equal(s_saved.snps, self.snps_GRCh37())
+        self.run_parsing_tests("output/generic_GRCh37.csv", "generic")
 
     def test_save_snps_tsv(self):
         snps = SNPs("tests/input/generic.csv")
@@ -80,9 +70,7 @@ class TestWriter(BaseSNPsTestCase):
 
             assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
 
-        s = SNPs("output/vcf_GRCh37.vcf")
-        assert not s.phased
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+        self.run_parsing_tests_vcf("output/vcf_GRCh37.vcf")
 
     def test_save_snps_vcf_phased(self):
         # read phased data
@@ -104,9 +92,7 @@ class TestWriter(BaseSNPsTestCase):
             assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
 
         # read saved VCF
-        s = SNPs("output/vcf_GRCh37.vcf")
-        assert s.phased
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+        self.run_parsing_tests_vcf("output/vcf_GRCh37.vcf", phased=True)
 
     def test_save_snps_csv_phased(self):
         # read phased data
@@ -114,12 +100,9 @@ class TestWriter(BaseSNPsTestCase):
         # save phased data to CSV
         assert os.path.relpath(s.save_snps()) == "output/vcf_GRCh37.csv"
         # read saved CSV
-        s = SNPs("output/vcf_GRCh37.csv")
-        assert s.phased
-        pd.testing.assert_frame_equal(s.snps, self.generic_snps_vcf())
+        self.run_parsing_tests_vcf("output/vcf_GRCh37.csv", phased=True)
 
     def test_save_snps_specify_file(self):
-        s = SNPs("tests/input/GRCh37.csv")
+        s = SNPs("tests/input/generic.csv")
         assert os.path.relpath(s.save_snps("snps.csv")) == "output/snps.csv"
-        s_saved = SNPs("output/snps.csv")
-        pd.testing.assert_frame_equal(s_saved.snps, self.snps_GRCh37())
+        self.run_parsing_tests("output/snps.csv", "generic")

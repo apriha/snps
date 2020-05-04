@@ -38,7 +38,9 @@ import zipfile
 
 from atomicwrites import atomic_write
 import numpy as np
+import pandas as pd
 
+from snps import SNPs
 from snps.resources import Resources, ReferenceSequence
 from snps.utils import gzip_file
 from tests import BaseSNPsTestCase
@@ -294,5 +296,28 @@ class TestResources(BaseSNPsTestCase):
             filenames = self.resource.get_opensnp_datadump_filenames()
 
             assert filenames == ["generic1.csv", "generic2.csv"]
+
+            self.resource._resources_dir = "resources"
+
+    def test_load_opensnp_datadump_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # temporarily set resources dir to tests
+            self.resource._resources_dir = tmpdir
+
+            # write test openSNP datadump zip
+            with atomic_write(
+                os.path.join(tmpdir, "opensnp_datadump.current.zip"),
+                mode="wb",
+                overwrite=True,
+            ) as f:
+                with zipfile.ZipFile(f, "w") as f_zip:
+                    f_zip.write("tests/input/generic.csv", arcname="generic1.csv")
+                    f_zip.write("tests/input/generic.csv", arcname="generic2.csv")
+
+            snps1 = SNPs(self.resource.load_opensnp_datadump_file("generic1.csv"))
+            snps2 = SNPs(self.resource.load_opensnp_datadump_file("generic2.csv"))
+
+            pd.testing.assert_frame_equal(snps1.snps, self.generic_snps())
+            pd.testing.assert_frame_equal(snps2.snps, self.generic_snps())
 
             self.resource._resources_dir = "resources"

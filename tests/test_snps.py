@@ -43,7 +43,6 @@ import numpy as np
 import pandas as pd
 
 from snps import SNPs
-from snps.resources import Resources
 from tests import BaseSNPsTestCase
 
 
@@ -354,30 +353,6 @@ class TestSnps(BaseSNPsTestCase):
     def test___repr__snps(self):
         s = SNPs("tests/input/GRCh37.csv")
         assert "SNPs('tests/input/GRCh37.csv')" == s.__repr__()
-
-    def test_load_opensnp_datadump_file(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # temporarily set resources dir to tests
-            r = Resources()
-            r._resources_dir = tmpdir
-
-            # write test openSNP datadump zip
-            with atomic_write(
-                os.path.join(tmpdir, "opensnp_datadump.current.zip"),
-                mode="wb",
-                overwrite=True,
-            ) as f:
-                with zipfile.ZipFile(f, "w") as f_zip:
-                    f_zip.write("tests/input/generic.csv", arcname="generic1.csv")
-                    f_zip.write("tests/input/generic.csv", arcname="generic2.csv")
-
-            snps1 = SNPs(r.load_opensnp_datadump_file("generic1.csv"))
-            snps2 = SNPs(r.load_opensnp_datadump_file("generic2.csv"))
-
-            pd.testing.assert_frame_equal(snps1.snps, self.generic_snps())
-            pd.testing.assert_frame_equal(snps2.snps, self.generic_snps())
-
-            r._resources_dir = "resources"
 
     def test_heterozygous_snps(self):
         s = SNPs("tests/input/generic.csv")

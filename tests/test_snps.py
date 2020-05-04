@@ -45,19 +45,16 @@ from tests import BaseSNPsTestCase
 
 class TestSnps(BaseSNPsTestCase):
     def setUp(self):
-        self.snps_GRCh38 = SNPs("tests/input/GRCh38.csv")
-        self.snps = SNPs("tests/input/chromosomes.csv")
-        self.snps_only_detect_source = SNPs(
-            "tests/input/chromosomes.csv", only_detect_source=True
-        )
-        self.snps_none = SNPs(None)
+        self.snps_empty = [SNPs()]
+        self.snps_empty.append(SNPs(b""))
 
-    def snps_discrepant_pos(self):
-        return self.create_snp_df(
-            rsid=["rs3094315"], chrom=["1"], pos=[1], genotype=["AA"]
-        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest = os.path.join(tmpdir, "empty.txt")
+            with atomic_write(dest, mode="w", overwrite=True):
+                pass
+            self.snps_empty.append(SNPs(dest))
 
-    def snps_GRCh38_func(self):
+    def snps_GRCh38(self):
         return self.create_snp_df(
             rsid=["rs3094315", "rsIndelTest", "rs2500347", "rs11928389"],
             chrom=["1", "1", "1", "3"],
@@ -79,18 +76,18 @@ class TestSnps(BaseSNPsTestCase):
 
     def test__lookup_build_with_snp_pos_None(self):
         snps = SNPs()
-        snps._snps = self.snps_discrepant_pos()
+        snps._snps = self.create_snp_df(
+            rsid=["rs3094315"], chrom=["1"], pos=[1], genotype=["AA"]
+        )
         assert not snps.detect_build()
 
-    def test__read_raw_data(self):
-        assert self.snps_none.snps.empty
-        assert self.snps_none.source == ""
-
     def test_assembly(self):
-        assert self.snps_GRCh38.assembly == "GRCh38"
+        s = SNPs("tests/input/GRCh38.csv")
+        assert s.assembly == "GRCh38"
 
     def test_assembly_no_snps(self):
-        assert self.snps_none.assembly == ""
+        for snps in self.snps_empty:
+            assert snps.assembly == ""
 
     def test_build(self):
         s = SNPs("tests/input/NCBI36.csv")
@@ -98,7 +95,8 @@ class TestSnps(BaseSNPsTestCase):
         assert s.assembly == "NCBI36"
 
     def test_build_detected_no_snps(self):
-        assert not self.snps_none.build_detected
+        for snps in self.snps_empty:
+            assert not snps.build_detected
 
     def test_build_detected_PAR_snps(self):
         if (
@@ -110,23 +108,24 @@ class TestSnps(BaseSNPsTestCase):
             assert snps.build_detected
 
     def test_build_no_snps(self):
-        assert not self.snps_none.build
+        for snps in self.snps_empty:
+            assert not snps.build
 
     def test_chromosomes(self):
         s = SNPs("tests/input/chromosomes.csv")
         assert s.chromosomes == ["1", "2", "3", "5", "PAR", "MT"]
 
     def test_chromosomes_no_snps(self):
-        s = SNPs()
-        assert s.chromosomes == []
+        for snps in self.snps_empty:
+            assert snps.chromosomes == []
 
     def test_chromosomes_summary(self):
         s = SNPs("tests/input/chromosomes.csv")
         assert s.chromosomes_summary == "1-3, 5, PAR, MT"
 
     def test_chromosomes_summary_no_snps(self):
-        s = SNPs()
-        assert s.chromosomes_summary == ""
+        for snps in self.snps_empty:
+            assert snps.chromosomes_summary == ""
 
     def test_deduplicate_false(self):
         snps = SNPs("tests/input/duplicate_rsids.csv", deduplicate=False)
@@ -151,29 +150,17 @@ class TestSnps(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(snps.duplicate_snps, duplicate_snps)
 
     def test_empty_dataframe(self):
-        s = SNPs()
-        assert s.snp_count == 0
-        assert list(s.snps.columns.values) == ["chrom", "pos", "genotype"]
-        assert s.snps.index.name == "rsid"
-
-    def test_empty_dataframe_file(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            dest = os.path.join(tmpdir, "empty.txt")
-
-            with atomic_write(dest, mode="w", overwrite=True):
-                pass
-
-            s = SNPs(dest)
-            assert s.snp_count == 0
-            assert list(s.snps.columns.values) == ["chrom", "pos", "genotype"]
-            assert s.snps.index.name == "rsid"
+        for snps in self.snps_empty:
+            assert list(snps.snps.columns.values) == ["chrom", "pos", "genotype"]
+            assert snps.snps.index.name == "rsid"
 
     def test_get_assembly_None(self):
         snps = SNPs()
         assert snps.get_assembly() is ""
 
     def test_get_summary(self):
-        assert self.snps_GRCh38.get_summary() == {
+        s = SNPs("tests/input/GRCh38.csv")
+        assert s.get_summary() == {
             "source": "generic",
             "assembly": "GRCh38",
             "build": 38,
@@ -184,7 +171,8 @@ class TestSnps(BaseSNPsTestCase):
         }
 
     def test_get_summary_no_snps(self):
-        assert not self.snps_none.get_summary()
+        for snps in self.snps_empty:
+            assert not snps.get_summary()
 
     def test_heterozygous_snps(self):
         s = SNPs("tests/input/generic.csv")
@@ -199,14 +187,12 @@ class TestSnps(BaseSNPsTestCase):
         )
 
     def test_is_valid_False(self):
-        assert not self.snps_none.is_valid()
+        for snps in self.snps_empty:
+            assert not snps.is_valid()
 
     def test_is_valid_True(self):
-        assert self.snps_GRCh38.is_valid()
-
-    def test_no_snps(self):
-        s = SNPs()
-        assert s.snps.empty
+        s = SNPs("tests/input/generic.csv")
+        assert s.is_valid()
 
     def test_not_null_snps(self):
         s = SNPs("tests/input/generic.csv")
@@ -215,7 +201,9 @@ class TestSnps(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(s.not_null_snps(), snps)
 
     def test_only_detect_source(self):
-        assert self.snps_only_detect_source.source == "generic"
+        s = SNPs("tests/input/generic.csv", only_detect_source=True)
+        assert s.source == "generic"
+        assert s.snp_count == 0
 
     def test_remap_snps_36_to_37(self):
         s = SNPs("tests/input/NCBI36.csv")
@@ -251,7 +239,7 @@ class TestSnps(BaseSNPsTestCase):
         assert s.assembly == "GRCh38"
         assert len(chromosomes_remapped) == 2
         assert len(chromosomes_not_remapped) == 0
-        pd.testing.assert_frame_equal(s.snps, self.snps_GRCh38_func())
+        pd.testing.assert_frame_equal(s.snps, self.snps_GRCh38())
 
     def test_remap_snps_37_to_38_with_PAR_SNP(self):
         if (
@@ -293,8 +281,9 @@ class TestSnps(BaseSNPsTestCase):
         assert len(chromosomes_not_remapped) == 0
 
     def test_save_snps_buffer(self):
+        s = SNPs("tests/input/generic.csv")
         out = io.StringIO()
-        self.snps.save_snps(out)
+        s.save_snps(out)
         assert out.read().startswith("# Generated by snps")
 
     def test_save_snps_no_snps(self):
@@ -306,11 +295,10 @@ class TestSnps(BaseSNPsTestCase):
         assert not s.save_snps(vcf=True)
 
     def test_save_snps_source(self):
-        assert (
-            os.path.relpath(self.snps_GRCh38.save_snps()) == "output/generic_GRCh38.csv"
-        )
+        s = SNPs("tests/input/GRCh38.csv")
+        assert os.path.relpath(s.save_snps()) == "output/generic_GRCh38.csv"
         snps = SNPs("output/generic_GRCh38.csv")
-        pd.testing.assert_frame_equal(snps.snps, self.snps_GRCh38.snps)
+        pd.testing.assert_frame_equal(snps.snps, self.snps_GRCh38())
 
     def test_sex_Female_X_chrom(self):
         s = self.simulate_snps(
@@ -359,12 +347,22 @@ class TestSnps(BaseSNPsTestCase):
         assert s.sex == ""
 
     def test_sex_no_snps(self):
-        assert self.snps_none.sex == ""
+        for snps in self.snps_empty:
+            assert snps.sex == ""
+
+    def test_source(self):
+        s = SNPs("tests/input/generic.csv")
+        assert s.source == "generic"
+
+    def test_source_no_snps(self):
+        for snps in self.snps_empty:
+            assert snps.source == ""
 
     def test_snp_count(self):
         s = SNPs("tests/input/NCBI36.csv")
         assert s.snp_count == 4
 
     def test_snp_count_no_snps(self):
-        s = SNPs()
-        assert s.snp_count == 0
+        for snps in self.snps_empty:
+            assert snps.snp_count == 0
+            assert snps.snps.empty

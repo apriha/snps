@@ -53,6 +53,35 @@ class TestSNPsCollection(BaseSNPsTestCase):
             genotype=["AA", np.nan, "ID", np.nan],
         )
 
+    def test_snps_not_phased(self):
+        s = SNPs("tests/input/generic.csv")
+        assert not s.phased
+
+    def test_snps_generic_csv(self):
+        s = SNPs("tests/input/generic.csv")
+        assert s.source == "generic"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
+    def test_snps_generic_tsv(self):
+        s = SNPs("tests/input/generic.tsv")
+        assert s.source == "generic"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
+    def test_snps_generic_non_standard_columns(self):
+        s = SNPs("tests/input/generic_non_standard_columns.tsv")
+        assert s.source == "generic"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
+    def test_snps_generic_multi_rsid_tsv(self):
+        s = SNPs("tests/input/generic_multi_rsid.tsv")
+        assert s.source == "generic"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
+    def test_snps_generic_extra_column_tsv(self):
+        s = SNPs("tests/input/generic_extra_column.tsv")
+        assert s.source == "generic"
+        pd.testing.assert_frame_equal(s.snps, self.generic_snps())
+
     def test_source_lineage_file(self):
         sc = SNPsCollection("tests/input/GRCh37.csv")
         assert sc.source == "generic"

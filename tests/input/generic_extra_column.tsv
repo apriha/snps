@@ -1,0 +1,9 @@
+rsid    chromosome  position    genotype	extra
+rs1	1	101	AA	1
+rs2	1	102	CC	1
+rs3	1	103	GG	2
+rs4	1	104	TT	2
+rs5	1	105	--	2
+rs6	1	106	GC	2
+rs7	1	107	TC	2
+rs8	1	108	AT	2

@@ -96,7 +96,7 @@ class TestReader(BaseSNPsTestCase):
         temp = SNPs()
         temp._resources._gsa_resources = {}
 
-        create_dir("resources")
+        create_dir("../resources")
 
         with open("tests/resources/gsa_rsid_map.txt", "rb") as f_in:
             with atomic_write(

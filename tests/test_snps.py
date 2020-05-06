@@ -72,31 +72,31 @@ class TestSnps(BaseSNPsTestCase):
 
     def test___repr__snps(self):
         s = SNPs("tests/input/GRCh37.csv")
-        assert "SNPs('tests/input/GRCh37.csv')" == s.__repr__()
+        self.assertEqual("SNPs('tests/input/GRCh37.csv')", s.__repr__())
 
     def test__lookup_build_with_snp_pos_None(self):
         snps = SNPs()
         snps._snps = self.create_snp_df(
             rsid=["rs3094315"], chrom=["1"], pos=[1], genotype=["AA"]
         )
-        assert not snps.detect_build()
+        self.assertFalse(snps.detect_build())
 
     def test_assembly(self):
         s = SNPs("tests/input/GRCh38.csv")
-        assert s.assembly == "GRCh38"
+        self.assertEqual(s.assembly, "GRCh38")
 
     def test_assembly_no_snps(self):
         for snps in self.snps_empty:
-            assert snps.assembly == ""
+            self.assertFalse(snps.assembly)
 
     def test_build(self):
         s = SNPs("tests/input/NCBI36.csv")
-        assert s.build == 36
-        assert s.assembly == "NCBI36"
+        self.assertEqual(s.build, 36)
+        self.assertEqual(s.assembly, "NCBI36")
 
     def test_build_detected_no_snps(self):
         for snps in self.snps_empty:
-            assert not snps.build_detected
+            self.assertFalse(snps.build_detected)
 
     def test_build_detected_PAR_snps(self):
         if (
@@ -104,28 +104,28 @@ class TestSnps(BaseSNPsTestCase):
             or os.getenv("DOWNLOADS_ENABLED") == "true"
         ):
             snps = SNPs("tests/input/GRCh37_PAR.csv")
-            assert snps.build == 37
-            assert snps.build_detected
+            self.assertEqual(snps.build, 37)
+            self.assertTrue(snps.build_detected)
 
     def test_build_no_snps(self):
         for snps in self.snps_empty:
-            assert not snps.build
+            self.assertFalse(snps.build)
 
     def test_chromosomes(self):
         s = SNPs("tests/input/chromosomes.csv")
-        assert s.chromosomes == ["1", "2", "3", "5", "PAR", "MT"]
+        self.assertListEqual(s.chromosomes, ["1", "2", "3", "5", "PAR", "MT"])
 
     def test_chromosomes_no_snps(self):
         for snps in self.snps_empty:
-            assert snps.chromosomes == []
+            self.assertFalse(snps.chromosomes)
 
     def test_chromosomes_summary(self):
         s = SNPs("tests/input/chromosomes.csv")
-        assert s.chromosomes_summary == "1-3, 5, PAR, MT"
+        self.assertEqual(s.chromosomes_summary, "1-3, 5, PAR, MT")
 
     def test_chromosomes_summary_no_snps(self):
         for snps in self.snps_empty:
-            assert snps.chromosomes_summary == ""
+            self.assertFalse(snps.chromosomes_summary)
 
     def test_deduplicate_false(self):
         snps = SNPs("tests/input/duplicate_rsids.csv", deduplicate=False)
@@ -151,28 +151,33 @@ class TestSnps(BaseSNPsTestCase):
 
     def test_empty_dataframe(self):
         for snps in self.snps_empty:
-            assert list(snps.snps.columns.values) == ["chrom", "pos", "genotype"]
-            assert snps.snps.index.name == "rsid"
+            self.assertListEqual(
+                list(snps.snps.columns.values), ["chrom", "pos", "genotype"]
+            )
+            self.assertEqual(snps.snps.index.name, "rsid")
 
     def test_get_assembly_None(self):
         snps = SNPs()
-        assert snps.get_assembly() is ""
+        self.assertFalse(snps.get_assembly())
 
     def test_get_summary(self):
         s = SNPs("tests/input/GRCh38.csv")
-        assert s.get_summary() == {
-            "source": "generic",
-            "assembly": "GRCh38",
-            "build": 38,
-            "build_detected": True,
-            "snp_count": 4,
-            "chromosomes": "1, 3",
-            "sex": "",
-        }
+        self.assertDictEqual(
+            s.get_summary(),
+            {
+                "source": "generic",
+                "assembly": "GRCh38",
+                "build": 38,
+                "build_detected": True,
+                "snp_count": 4,
+                "chromosomes": "1, 3",
+                "sex": "",
+            },
+        )
 
     def test_get_summary_no_snps(self):
         for snps in self.snps_empty:
-            assert not snps.get_summary()
+            self.assertFalse(snps.get_summary())
 
     def test_heterozygous_snps(self):
         s = SNPs("tests/input/generic.csv")
@@ -188,11 +193,11 @@ class TestSnps(BaseSNPsTestCase):
 
     def test_is_valid_False(self):
         for snps in self.snps_empty:
-            assert not snps.is_valid()
+            self.assertFalse(snps.is_valid())
 
     def test_is_valid_True(self):
         s = SNPs("tests/input/generic.csv")
-        assert s.is_valid()
+        self.assertTrue(s.is_valid())
 
     def test_not_null_snps(self):
         s = SNPs("tests/input/generic.csv")
@@ -202,43 +207,43 @@ class TestSnps(BaseSNPsTestCase):
 
     def test_only_detect_source(self):
         s = SNPs("tests/input/generic.csv", only_detect_source=True)
-        assert s.source == "generic"
-        assert s.snp_count == 0
+        self.assertEqual(s.source, "generic")
+        self.assertEqual(s.snp_count, 0)
 
     def test_remap_snps_36_to_37(self):
         s = SNPs("tests/input/NCBI36.csv")
         chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
-        assert s.build == 37
-        assert s.assembly == "GRCh37"
-        assert len(chromosomes_remapped) == 2
-        assert len(chromosomes_not_remapped) == 0
+        self.assertEqual(s.build, 37)
+        self.assertEqual(s.assembly, "GRCh37")
+        self.assertEqual(len(chromosomes_remapped), 2)
+        self.assertEqual(len(chromosomes_not_remapped), 0)
         pd.testing.assert_frame_equal(s.snps, self.snps_GRCh37())
 
     def test_remap_snps_36_to_37_multiprocessing(self):
         s = SNPs("tests/input/NCBI36.csv", parallelize=True)
         chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
-        assert s.build == 37
-        assert s.assembly == "GRCh37"
-        assert len(chromosomes_remapped) == 2
-        assert len(chromosomes_not_remapped) == 0
+        self.assertEqual(s.build, 37)
+        self.assertEqual(s.assembly, "GRCh37")
+        self.assertEqual(len(chromosomes_remapped), 2)
+        self.assertEqual(len(chromosomes_not_remapped), 0)
         pd.testing.assert_frame_equal(s.snps, self.snps_GRCh37())
 
     def test_remap_snps_37_to_36(self):
         s = SNPs("tests/input/GRCh37.csv")
         chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(36)
-        assert s.build == 36
-        assert s.assembly == "NCBI36"
-        assert len(chromosomes_remapped) == 2
-        assert len(chromosomes_not_remapped) == 0
+        self.assertEqual(s.build, 36)
+        self.assertEqual(s.assembly, "NCBI36")
+        self.assertEqual(len(chromosomes_remapped), 2)
+        self.assertEqual(len(chromosomes_not_remapped), 0)
         pd.testing.assert_frame_equal(s.snps, self.snps_NCBI36())
 
     def test_remap_snps_37_to_38(self):
         s = SNPs("tests/input/GRCh37.csv")
         chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
-        assert s.build == 38
-        assert s.assembly == "GRCh38"
-        assert len(chromosomes_remapped) == 2
-        assert len(chromosomes_not_remapped) == 0
+        self.assertEqual(s.build, 38)
+        self.assertEqual(s.assembly, "GRCh38")
+        self.assertEqual(len(chromosomes_remapped), 2)
+        self.assertEqual(len(chromosomes_not_remapped), 0)
         pd.testing.assert_frame_equal(s.snps, self.snps_GRCh38())
 
     def test_remap_snps_37_to_38_with_PAR_SNP(self):
@@ -247,56 +252,56 @@ class TestSnps(BaseSNPsTestCase):
             or os.getenv("DOWNLOADS_ENABLED") == "true"
         ):
             s = SNPs("tests/input/GRCh37_PAR.csv")
-            assert s.snp_count == 4
+            self.assertEqual(s.snp_count, 4)
             chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
-            assert s.build == 38
-            assert s.assembly == "GRCh38"
-            assert len(chromosomes_remapped) == 2
-            assert len(chromosomes_not_remapped) == 1
-            assert s.snp_count == 3
+            self.assertEqual(s.build, 38)
+            self.assertEqual(s.assembly, "GRCh38")
+            self.assertEqual(len(chromosomes_remapped), 2)
+            self.assertEqual(len(chromosomes_not_remapped), 1)
+            self.assertEqual(s.snp_count, 3)
             pd.testing.assert_frame_equal(s.snps, self.snps_GRCh38_PAR())
 
     def test_remap_snps_37_to_37(self):
         s = SNPs("tests/input/GRCh37.csv")
         chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
-        assert s.build == 37
-        assert s.assembly == "GRCh37"
-        assert len(chromosomes_remapped) == 0
-        assert len(chromosomes_not_remapped) == 2
+        self.assertEqual(s.build, 37)
+        self.assertEqual(s.assembly, "GRCh37")
+        self.assertEqual(len(chromosomes_remapped), 0)
+        self.assertEqual(len(chromosomes_not_remapped), 2)
         pd.testing.assert_frame_equal(s.snps, self.snps_GRCh37())
 
     def test_remap_snps_invalid_assembly(self):
         s = SNPs("tests/input/GRCh37.csv")
         chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(-1)
-        assert s.build == 37
-        assert s.assembly == "GRCh37"
-        assert len(chromosomes_remapped) == 0
-        assert len(chromosomes_not_remapped) == 2
+        self.assertEqual(s.build, 37)
+        self.assertEqual(s.assembly, "GRCh37")
+        self.assertEqual(len(chromosomes_remapped), 0)
+        self.assertEqual(len(chromosomes_not_remapped), 2)
 
     def test_remap_snps_no_snps(self):
         s = SNPs()
         chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
-        assert not s.build
-        assert len(chromosomes_remapped) == 0
-        assert len(chromosomes_not_remapped) == 0
+        self.assertFalse(s.build)
+        self.assertEqual(len(chromosomes_remapped), 0)
+        self.assertEqual(len(chromosomes_not_remapped), 0)
 
     def test_save_snps_buffer(self):
         s = SNPs("tests/input/generic.csv")
         out = io.StringIO()
         s.save_snps(out)
-        assert out.read().startswith("# Generated by snps")
+        self.assertTrue(out.read().startswith("# Generated by snps"))
 
     def test_save_snps_no_snps(self):
         s = SNPs()
-        assert not s.save_snps()
+        self.assertFalse(s.save_snps())
 
     def test_save_snps_no_snps_vcf(self):
         s = SNPs()
-        assert not s.save_snps(vcf=True)
+        self.assertFalse(s.save_snps(vcf=True))
 
     def test_save_snps_source(self):
         s = SNPs("tests/input/GRCh38.csv")
-        assert os.path.relpath(s.save_snps()) == "output/generic_GRCh38.csv"
+        self.assertEqual(os.path.relpath(s.save_snps()), "output/generic_GRCh38.csv")
         snps = SNPs("output/generic_GRCh38.csv")
         pd.testing.assert_frame_equal(snps.snps, self.snps_GRCh38())
 
@@ -304,65 +309,65 @@ class TestSnps(BaseSNPsTestCase):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AC"
         )
-        assert s.sex == "Female"
+        self.assertEqual(s.sex, "Female")
 
     def test_sex_Female_Y_chrom(self):
         s = self.simulate_snps(
             chrom="Y", pos_start=1, pos_max=59373566, pos_step=10000, null_snp_step=1
         )
-        assert s.sex == "Female"
+        self.assertEqual(s.sex, "Female")
 
     def test_sex_Male_X_chrom(self):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
         )
-        assert s.snp_count == 15528
+        self.assertEqual(s.snp_count, 15528)
         s._deduplicate_XY_chrom()
-        assert s.snp_count == 15528
-        assert len(s.discrepant_XY_snps) == 0
-        assert s.sex == "Male"
+        self.assertEqual(s.snp_count, 15528)
+        self.assertEqual(len(s.discrepant_XY_snps), 0)
+        self.assertEqual(s.sex, "Male")
 
     def test_sex_Male_X_chrom_discrepant_XY_snps(self):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
         )
-        assert s.snp_count == 15528
+        self.assertEqual(s.snp_count, 15528)
         s._snps.loc["rs8001", "genotype"] = "AC"
         s._deduplicate_XY_chrom()
-        assert s.snp_count == 15527
+        self.assertEqual(s.snp_count, 15527)
         result = self.create_snp_df(
             rsid=["rs8001"], chrom=["X"], pos=[80000001], genotype=["AC"]
         )
         pd.testing.assert_frame_equal(s.discrepant_XY_snps, result)
-        assert s.sex == "Male"
+        self.assertEqual(s.sex, "Male")
 
     def test_sex_Male_Y_chrom(self):
         s = self.simulate_snps(chrom="Y", pos_start=1, pos_max=59373566, pos_step=10000)
-        assert s.sex == "Male"
+        self.assertEqual(s.sex, "Male")
 
     def test_sex_not_determined(self):
         s = self.simulate_snps(
             chrom="1", pos_start=1, pos_max=249250621, pos_step=10000
         )
-        assert s.sex == ""
+        self.assertEqual(s.sex, "")
 
     def test_sex_no_snps(self):
         for snps in self.snps_empty:
-            assert snps.sex == ""
+            self.assertFalse(snps.sex)
 
     def test_source(self):
         s = SNPs("tests/input/generic.csv")
-        assert s.source == "generic"
+        self.assertEqual(s.source, "generic")
 
     def test_source_no_snps(self):
         for snps in self.snps_empty:
-            assert snps.source == ""
+            self.assertFalse(snps.source)
 
     def test_snp_count(self):
         s = SNPs("tests/input/NCBI36.csv")
-        assert s.snp_count == 4
+        self.assertEqual(s.snp_count, 4)
 
     def test_snp_count_no_snps(self):
         for snps in self.snps_empty:
-            assert snps.snp_count == 0
-            assert snps.snps.empty
+            self.assertFalse(snps.snp_count)
+            self.assertTrue(snps.snps.empty)

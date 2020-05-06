@@ -56,33 +56,33 @@ class TestSNPsCollection(BaseSNPsTestCase):
 
     def test_source_lineage_file(self):
         sc = SNPsCollection("tests/input/GRCh37.csv")
-        assert sc.source == "generic"
+        self.assertEqual(sc.source, "generic")
         sc.load_snps("tests/input/23andme.txt")
-        assert sc.source == "generic, 23andMe"
+        self.assertEqual(sc.source, "generic, 23andMe")
         file = sc.save_snps()
         s = SNPs(file)
-        assert s.source == "generic, 23andMe"
+        self.assertEqual(s.source, "generic, 23andMe")
         pd.testing.assert_frame_equal(sc.snps, s.snps)
 
     def test_source_lineage_file_gzip(self):
         sc = SNPsCollection("tests/input/GRCh37.csv")
-        assert sc.source == "generic"
+        self.assertEqual(sc.source, "generic")
         sc.load_snps("tests/input/23andme.txt")
-        assert sc.source == "generic, 23andMe"
+        self.assertEqual(sc.source, "generic, 23andMe")
         file = sc.save_snps()
         with open(file, "rb") as f_in:
             with atomic_write(file + ".gz", mode="wb", overwrite=True) as f_out:
                 with gzip.open(f_out, "wb") as f_gzip:
                     shutil.copyfileobj(f_in, f_gzip)
         s = SNPs(file + ".gz")
-        assert s.source == "generic, 23andMe"
+        self.assertEqual(s.source, "generic, 23andMe")
         pd.testing.assert_frame_equal(sc.snps, s.snps)
 
     def test_load_snps_list(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/GRCh37.csv", "tests/input/GRCh37.csv"])
         pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37())
-        assert sc.source == "generic, generic"
+        self.assertEqual(sc.source, "generic, generic")
 
     def test_load_snps_None(self):
         sc = SNPsCollection()
@@ -92,17 +92,17 @@ class TestSNPsCollection(BaseSNPsTestCase):
     def test_discrepant_positions(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert len(sc.discrepant_positions) == 4
+        self.assertEqual(len(sc.discrepant_positions), 4)
 
     def test_discrepant_genotypes(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert len(sc.discrepant_genotypes) == 1
+        self.assertEqual(len(sc.discrepant_genotypes), 1)
 
     def test_discrepant_snps(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert len(sc.discrepant_snps) == 4
+        self.assertEqual(len(sc.discrepant_snps), 4)
 
     def test_load_snps_non_existent_file(self):
         sc = SNPsCollection()
@@ -123,10 +123,10 @@ class TestSNPsCollection(BaseSNPsTestCase):
     def test_load_snps_assembly_mismatch(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert not os.path.exists("output/ind_discrepant_positions_1.csv")
-        assert not os.path.exists("output/ind_discrepant_genotypes_1.csv")
-        assert len(sc.discrepant_positions) == 4
-        assert len(sc.discrepant_genotypes) == 1
+        self.assertFalse(os.path.exists("output/ind_discrepant_positions_1.csv"))
+        self.assertFalse(os.path.exists("output/ind_discrepant_genotypes_1.csv"))
+        self.assertEqual(len(sc.discrepant_positions), 4)
+        self.assertEqual(len(sc.discrepant_genotypes), 1)
         pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36_discrepant_snps())
 
     def test_load_snps_assembly_mismatch_save_output(self):
@@ -134,10 +134,10 @@ class TestSNPsCollection(BaseSNPsTestCase):
         sc.load_snps(
             ["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"], save_output=True
         )
-        assert os.path.exists("output/discrepant_positions_1.csv")
-        assert os.path.exists("output/discrepant_genotypes_1.csv")
-        assert len(sc.discrepant_positions) == 4
-        assert len(sc.discrepant_genotypes) == 1
+        self.assertTrue(os.path.exists("output/discrepant_positions_1.csv"))
+        self.assertTrue(os.path.exists("output/discrepant_genotypes_1.csv"))
+        self.assertEqual(len(sc.discrepant_positions), 4)
+        self.assertEqual(len(sc.discrepant_genotypes), 1)
         pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36_discrepant_snps())
 
     def test_load_snps_assembly_mismatch_exceed_discrepant_positions_threshold(self):
@@ -146,10 +146,10 @@ class TestSNPsCollection(BaseSNPsTestCase):
             ["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"],
             discrepant_snp_positions_threshold=0,
         )
-        assert not os.path.exists("output/discrepant_positions_1.csv")
-        assert not os.path.exists("output/discrepant_genotypes_1.csv")
-        assert len(sc.discrepant_positions) == 4
-        assert len(sc.discrepant_genotypes) == 0
+        self.assertFalse(os.path.exists("output/discrepant_positions_1.csv"))
+        self.assertFalse(os.path.exists("output/discrepant_genotypes_1.csv"))
+        self.assertEqual(len(sc.discrepant_positions), 4)
+        self.assertEqual(len(sc.discrepant_genotypes), 0)
         pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36())
 
     def test_load_snps_assembly_mismatch_exceed_discrepant_genotypes_threshold(self):
@@ -158,10 +158,10 @@ class TestSNPsCollection(BaseSNPsTestCase):
             ["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"],
             discrepant_genotypes_threshold=0,
         )
-        assert not os.path.exists("output/discrepant_positions_1.csv")
-        assert not os.path.exists("output/discrepant_genotypes_1.csv")
-        assert len(sc.discrepant_positions) == 4
-        assert len(sc.discrepant_genotypes) == 1
+        self.assertFalse(os.path.exists("output/discrepant_positions_1.csv"))
+        self.assertFalse(os.path.exists("output/discrepant_genotypes_1.csv"))
+        self.assertEqual(len(sc.discrepant_positions), 4)
+        self.assertEqual(len(sc.discrepant_genotypes), 1)
         pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36())
 
     def test_merging_files_discrepant_snps(self):
@@ -241,97 +241,101 @@ class TestSNPsCollection(BaseSNPsTestCase):
     def test_save_discrepant_positions(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert len(sc.discrepant_positions) == 4
+        self.assertEqual(len(sc.discrepant_positions), 4)
         discrepant_positions_file = sc.save_discrepant_positions()
-        assert (
-            os.path.relpath(discrepant_positions_file)
-            == "output/discrepant_positions.csv"
+        self.assertEqual(
+            os.path.relpath(discrepant_positions_file),
+            "output/discrepant_positions.csv",
         )
-        assert os.path.exists(discrepant_positions_file)
+        self.assertTrue(os.path.exists(discrepant_positions_file))
 
     def test_save_discrepant_positions_specify_file(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert len(sc.discrepant_positions) == 4
+        self.assertEqual(len(sc.discrepant_positions), 4)
         discrepant_positions_file = sc.save_discrepant_positions(
             "discrepant_positions.csv"
         )
-        assert (
-            os.path.relpath(discrepant_positions_file)
-            == "output/discrepant_positions.csv"
+        self.assertEqual(
+            os.path.relpath(discrepant_positions_file),
+            "output/discrepant_positions.csv",
         )
-        assert os.path.exists(discrepant_positions_file)
+        self.assertTrue(os.path.exists(discrepant_positions_file))
 
     def test_save_discrepant_positions_no_discrepant_snps(self):
         sc = SNPsCollection()
-        assert len(sc.discrepant_positions) == 0
-        assert not sc.save_discrepant_positions()
+        self.assertEqual(len(sc.discrepant_positions), 0)
+        self.assertFalse(sc.save_discrepant_positions())
 
     def test_save_discrepant_positions_exception(self):
         sc = SNPsCollection()
         sc._discrepant_positions = "invalid"
-        assert not sc.save_discrepant_positions()
+        self.assertFalse(sc.save_discrepant_positions())
 
     def test_save_discrepant_genotypes(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert len(sc.discrepant_genotypes) == 1
+        self.assertEqual(len(sc.discrepant_genotypes), 1)
         discrepant_genotypes_file = sc.save_discrepant_genotypes()
-        assert (
-            os.path.relpath(discrepant_genotypes_file)
-            == "output/discrepant_genotypes.csv"
+        self.assertEqual(
+            os.path.relpath(discrepant_genotypes_file),
+            "output/discrepant_genotypes.csv",
         )
-        assert os.path.exists(discrepant_genotypes_file)
+        self.assertTrue(os.path.exists(discrepant_genotypes_file))
 
     def test_save_discrepant_genotypes_specify_file(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert len(sc.discrepant_genotypes) == 1
+        self.assertEqual(len(sc.discrepant_genotypes), 1)
         discrepant_genotypes_file = sc.save_discrepant_genotypes(
             "discrepant_genotypes.csv"
         )
-        assert (
-            os.path.relpath(discrepant_genotypes_file)
-            == "output/discrepant_genotypes.csv"
+        self.assertEqual(
+            os.path.relpath(discrepant_genotypes_file),
+            "output/discrepant_genotypes.csv",
         )
-        assert os.path.exists(discrepant_genotypes_file)
+        self.assertTrue(os.path.exists(discrepant_genotypes_file))
 
     def test_save_discrepant_genotypes_no_discrepant_snps(self):
         sc = SNPsCollection()
-        assert len(sc.discrepant_genotypes) == 0
-        assert not sc.save_discrepant_genotypes()
+        self.assertEqual(len(sc.discrepant_genotypes), 0)
+        self.assertFalse(sc.save_discrepant_genotypes())
 
     def test_save_discrepant_genotypes_exception(self):
         sc = SNPsCollection()
         sc._discrepant_genotypes = "invalid"
-        assert not sc.save_discrepant_genotypes()
+        self.assertFalse(sc.save_discrepant_genotypes())
 
     def test_save_discrepant_snps(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert len(sc.discrepant_snps) == 4
+        self.assertEqual(len(sc.discrepant_snps), 4)
         discrepant_snps_file = sc.save_discrepant_snps()
-        assert os.path.relpath(discrepant_snps_file) == "output/discrepant_snps.csv"
-        assert os.path.exists(discrepant_snps_file)
+        self.assertEqual(
+            os.path.relpath(discrepant_snps_file), "output/discrepant_snps.csv"
+        )
+        self.assertTrue(os.path.exists(discrepant_snps_file))
 
     def test_save_discrepant_snps_specify_file(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        assert len(sc.discrepant_snps) == 4
+        self.assertEqual(len(sc.discrepant_snps), 4)
         discrepant_snps_file = sc.save_discrepant_snps("discrepant_snps.csv")
-        assert os.path.relpath(discrepant_snps_file) == "output/discrepant_snps.csv"
-        assert os.path.exists(discrepant_snps_file)
+        self.assertEqual(
+            os.path.relpath(discrepant_snps_file), "output/discrepant_snps.csv"
+        )
+        self.assertTrue(os.path.exists(discrepant_snps_file))
 
     def test_save_discrepant_snps_no_discrepant_snps(self):
         sc = SNPsCollection()
-        assert len(sc.discrepant_snps) == 0
-        assert not sc.save_discrepant_snps()
+        self.assertEqual(len(sc.discrepant_snps), 0)
+        self.assertFalse(sc.save_discrepant_snps())
 
     def test_save_discrepant_snps_exception(self):
         sc = SNPsCollection()
         sc._discrepant_snps = "invalid"
-        assert not sc.save_discrepant_snps()
+        self.assertFalse(sc.save_discrepant_snps())
 
     def test___repr__snps_collection(self):
         sc = SNPsCollection()
-        assert "SNPsCollection(name='')" == sc.__repr__()
+        self.assertEqual("SNPsCollection(name='')", sc.__repr__())

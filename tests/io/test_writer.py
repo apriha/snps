@@ -43,14 +43,14 @@ from tests import BaseSNPsTestCase
 class TestWriter(BaseSNPsTestCase):
     def test_save_snps(self):
         snps = SNPs("tests/input/generic.csv")
-        assert os.path.relpath(snps.save_snps()) == "output/generic_GRCh37.csv"
+        self.assertEqual(os.path.relpath(snps.save_snps()), "output/generic_GRCh37.csv")
         self.run_parsing_tests("output/generic_GRCh37.csv", "generic")
 
     def test_save_snps_tsv(self):
         snps = SNPs("tests/input/generic.csv")
-        assert (
-            os.path.relpath(snps.save_snps("generic.tsv", sep="\t"))
-            == "output/generic.tsv"
+        self.assertEqual(
+            os.path.relpath(snps.save_snps("generic.tsv", sep="\t")),
+            "output/generic.tsv",
         )
         self.run_parsing_tests("output/generic.tsv", "generic")
 
@@ -68,7 +68,9 @@ class TestWriter(BaseSNPsTestCase):
 
             r._reference_sequences["GRCh37"]["1"] = seq
 
-            assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
+            self.assertEqual(
+                os.path.relpath(s.save_snps(vcf=True)), "output/vcf_GRCh37.vcf"
+            )
 
         self.run_parsing_tests_vcf("output/vcf_GRCh37.vcf")
 
@@ -89,7 +91,9 @@ class TestWriter(BaseSNPsTestCase):
             r._reference_sequences["GRCh37"]["1"] = seq
 
             # save phased data to VCF
-            assert os.path.relpath(s.save_snps(vcf=True)) == "output/vcf_GRCh37.vcf"
+            self.assertEqual(
+                os.path.relpath(s.save_snps(vcf=True)), "output/vcf_GRCh37.vcf"
+            )
 
         # read saved VCF
         self.run_parsing_tests_vcf("output/vcf_GRCh37.vcf", phased=True)
@@ -98,11 +102,11 @@ class TestWriter(BaseSNPsTestCase):
         # read phased data
         s = SNPs("tests/input/testvcf_phased.vcf")
         # save phased data to CSV
-        assert os.path.relpath(s.save_snps()) == "output/vcf_GRCh37.csv"
+        self.assertEqual(os.path.relpath(s.save_snps()), "output/vcf_GRCh37.csv")
         # read saved CSV
         self.run_parsing_tests_vcf("output/vcf_GRCh37.csv", phased=True)
 
     def test_save_snps_specify_file(self):
         s = SNPs("tests/input/generic.csv")
-        assert os.path.relpath(s.save_snps("snps.csv")) == "output/snps.csv"
+        self.assertEqual(os.path.relpath(s.save_snps("snps.csv")), "output/snps.csv")
         self.run_parsing_tests("output/snps.csv", "generic")

@@ -44,15 +44,9 @@ from tests import BaseSNPsTestCase
 
 
 class TestSnps(BaseSNPsTestCase):
-    def setUp(self):
-        self.snps_empty = [SNPs()]
-        self.snps_empty.append(SNPs(b""))
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            dest = os.path.join(tmpdir, "empty.txt")
-            with atomic_write(dest, mode="w", overwrite=True):
-                pass
-            self.snps_empty.append(SNPs(dest))
+    @staticmethod
+    def empty_snps():
+        return [SNPs(), SNPs(b""), SNPs("tests/input/empty.txt")]
 
     def snps_GRCh38(self):
         return self.create_snp_df(
@@ -86,7 +80,7 @@ class TestSnps(BaseSNPsTestCase):
         self.assertEqual(s.assembly, "GRCh38")
 
     def test_assembly_no_snps(self):
-        for snps in self.snps_empty:
+        for snps in self.empty_snps():
             self.assertFalse(snps.assembly)
 
     def test_build(self):
@@ -95,7 +89,7 @@ class TestSnps(BaseSNPsTestCase):
         self.assertEqual(s.assembly, "NCBI36")
 
     def test_build_detected_no_snps(self):
-        for snps in self.snps_empty:
+        for snps in self.empty_snps():
             self.assertFalse(snps.build_detected)
 
     def test_build_detected_PAR_snps(self):
@@ -108,7 +102,7 @@ class TestSnps(BaseSNPsTestCase):
             self.assertTrue(snps.build_detected)
 
     def test_build_no_snps(self):
-        for snps in self.snps_empty:
+        for snps in self.empty_snps():
             self.assertFalse(snps.build)
 
     def test_chromosomes(self):
@@ -116,7 +110,7 @@ class TestSnps(BaseSNPsTestCase):
         self.assertListEqual(s.chromosomes, ["1", "2", "3", "5", "PAR", "MT"])
 
     def test_chromosomes_no_snps(self):
-        for snps in self.snps_empty:
+        for snps in self.empty_snps():
             self.assertFalse(snps.chromosomes)
 
     def test_chromosomes_summary(self):
@@ -124,7 +118,7 @@ class TestSnps(BaseSNPsTestCase):
         self.assertEqual(s.chromosomes_summary, "1-3, 5, PAR, MT")
 
     def test_chromosomes_summary_no_snps(self):
-        for snps in self.snps_empty:
+        for snps in self.empty_snps():
             self.assertFalse(snps.chromosomes_summary)
 
     def test_deduplicate_false(self):
@@ -150,7 +144,7 @@ class TestSnps(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(snps.duplicate_snps, duplicate_snps)
 
     def test_empty_dataframe(self):
-        for snps in self.snps_empty:
+        for snps in self.empty_snps():
             self.assertListEqual(
                 list(snps.snps.columns.values), ["chrom", "pos", "genotype"]
             )
@@ -176,7 +170,7 @@ class TestSnps(BaseSNPsTestCase):
         )
 
     def test_get_summary_no_snps(self):
-        for snps in self.snps_empty:
+        for snps in self.empty_snps():
             self.assertFalse(snps.get_summary())
 
     def test_heterozygous_snps(self):
@@ -192,7 +186,7 @@ class TestSnps(BaseSNPsTestCase):
         )
 
     def test_is_valid_False(self):
-        for snps in self.snps_empty:
+        for snps in self.empty_snps():
             self.assertFalse(snps.is_valid())
 
     def test_is_valid_True(self):
@@ -352,7 +346,7 @@ class TestSnps(BaseSNPsTestCase):
         self.assertEqual(s.sex, "")
 
     def test_sex_no_snps(self):
-        for snps in self.snps_empty:
+        for snps in self.empty_snps():
             self.assertFalse(snps.sex)
 
     def test_source(self):
@@ -360,7 +354,7 @@ class TestSnps(BaseSNPsTestCase):
         self.assertEqual(s.source, "generic")
 
     def test_source_no_snps(self):
-        for snps in self.snps_empty:
+        for snps in self.empty_snps():
             self.assertFalse(snps.source)
 
     def test_snp_count(self):
@@ -368,6 +362,6 @@ class TestSnps(BaseSNPsTestCase):
         self.assertEqual(s.snp_count, 4)
 
     def test_snp_count_no_snps(self):
-        for snps in self.snps_empty:
+        for snps in self.empty_snps():
             self.assertFalse(snps.snp_count)
             self.assertTrue(snps.snps.empty)

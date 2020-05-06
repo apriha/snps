@@ -111,14 +111,8 @@ class TestSNPsCollection(BaseSNPsTestCase):
 
     def test_load_snps_invalid_file(self):
         sc = SNPsCollection()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            dest = os.path.join(tmpdir, "empty.txt")
-
-            with atomic_write(dest, mode="w", overwrite=True):
-                pass
-
-            sc.load_snps(["tests/input/GRCh37.csv", "tests/input/empty.txt"])
-            pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37())
+        sc.load_snps(["tests/input/GRCh37.csv", "tests/input/empty.txt"])
+        pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37())
 
     def test_load_snps_assembly_mismatch(self):
         sc = SNPsCollection()

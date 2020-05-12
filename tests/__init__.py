@@ -33,12 +33,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
 import shutil
+import tempfile
 from unittest import TestCase
 
 import numpy as np
 import pandas as pd
 
 from snps import SNPs
+from snps.utils import gzip_file, zip_file
 
 
 class BaseSNPsTestCase(TestCase):
@@ -140,3 +142,106 @@ class BaseSNPsTestCase(TestCase):
         )
         df = df.set_index("rsid")
         return df
+
+    def snps_NCBI36(self):
+        return self.create_snp_df(
+            rsid=["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
+            chrom=["1", "1", "1", "3"],
+            pos=[742429, 143649677, 143649678, 50908372],
+            genotype=["AA", np.nan, "ID", "AG"],
+        )
+
+    def snps_GRCh37(self):
+        return self.create_snp_df(
+            rsid=["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
+            chrom=["1", "1", "1", "3"],
+            pos=[752566, 144938320, 144938321, 50927009],
+            genotype=["AA", np.nan, "ID", "TC"],
+        )
+
+    def generic_snps(self):
+        return self.create_snp_df(
+            rsid=["rs" + str(i) for i in range(1, 9)],
+            chrom=["1"] * 8,
+            pos=list(range(101, 109)),
+            genotype=["AA", "CC", "GG", "TT", np.nan, "GC", "TC", "AT"],
+        )
+
+    def generic_snps_vcf(self):
+        df = self.generic_snps()
+        return df.append(
+            self.create_snp_df(
+                rsid=["rs" + str(i) for i in range(12, 18)],
+                chrom=["1"] * 6,
+                pos=list(range(112, 118)),
+                genotype=[np.nan] * 6,
+            )
+        )
+
+    def run_parsing_tests(self, file, source, phased=False):
+        self.make_parsing_assertions(self.parse_file(file), source, phased)
+        self.make_parsing_assertions(self.parse_bytes(file), source, phased)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = os.path.basename(file)
+            dest = os.path.join(tmpdir, "{}.gz".format(base))
+            gzip_file(file, dest)
+            self.make_parsing_assertions(self.parse_file(dest), source, phased)
+            self.make_parsing_assertions(self.parse_bytes(dest), source, phased)
+
+            dest = os.path.join(tmpdir, "{}.zip".format(base))
+            zip_file(file, dest, base)
+            self.make_parsing_assertions(self.parse_file(dest), source, phased)
+            self.make_parsing_assertions(self.parse_bytes(dest), source, phased)
+
+    def run_parsing_tests_vcf(
+        self, file, source="vcf", phased=False, unannotated=False, rsids=()
+    ):
+        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # this tests for homozygous snps, heterozygous snps, multiallelic snps,
+        # phased snps, and snps with missing rsID
+        self.make_parsing_assertions_vcf(
+            self.parse_file(file, rsids), source, phased, unannotated, rsids
+        )
+        self.make_parsing_assertions_vcf(
+            self.parse_bytes(file, rsids), source, phased, unannotated, rsids
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = os.path.basename(file)
+            dest = os.path.join(tmpdir, "{}.gz".format(base))
+            gzip_file(file, dest)
+            self.make_parsing_assertions_vcf(
+                self.parse_file(dest, rsids), source, phased, unannotated, rsids
+            )
+            self.make_parsing_assertions_vcf(
+                self.parse_file(dest, rsids), source, phased, unannotated, rsids
+            )
+
+    def parse_file(self, file, rsids=()):
+        return SNPs(file, rsids=rsids)
+
+    def parse_bytes(self, file, rsids=()):
+        with open(file, "rb") as f:
+            return SNPs(f.read(), rsids=rsids)
+
+    def make_parsing_assertions(self, snps, source, phased):
+        self.assertEqual(snps.source, source)
+        pd.testing.assert_frame_equal(snps.snps, self.generic_snps())
+        self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)
+
+    def make_parsing_assertions_vcf(self, snps, source, phased, unannotated, rsids):
+        self.assertEqual(snps.source, source)
+
+        if unannotated:
+            self.assertTrue(snps.unannotated_vcf)
+            self.assertEqual(0, snps.snp_count)
+        else:
+            self.assertFalse(snps.unannotated_vcf)
+            pd.testing.assert_frame_equal(
+                snps.snps, self.generic_snps_vcf().loc[rsids]
+            ) if rsids else pd.testing.assert_frame_equal(
+                snps.snps, self.generic_snps_vcf()
+            )
+
+        self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)

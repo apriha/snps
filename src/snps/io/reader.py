@@ -92,7 +92,12 @@ class Reader:
         """
         file = self._file
         compression = "infer"
-        d = {"snps": get_empty_snps_dataframe(), "source": "", "phased": False}
+        d = {
+            "snps": get_empty_snps_dataframe(),
+            "source": "",
+            "phased": False,
+            "build": 0,
+        }
 
         # peek into files to determine the data format
         if isinstance(file, str) and os.path.exists(file):
@@ -119,35 +124,37 @@ class Reader:
             return d
 
         if "23andMe" in first_line:
-            return self.read_23andme(file, compression)
+            d = self.read_23andme(file, compression)
         elif "Ancestry" in first_line:
-            return self.read_ancestry(file, compression)
+            d = self.read_ancestry(file, compression)
         elif first_line.startswith("RSID"):
-            return self.read_ftdna(file, compression)
+            d = self.read_ftdna(file, compression)
         elif "famfinder" in first_line:
-            return self.read_ftdna_famfinder(file, compression)
+            d = self.read_ftdna_famfinder(file, compression)
         elif "MyHeritage" in first_line:
-            return self.read_myheritage(file, compression)
+            d = self.read_myheritage(file, compression)
         elif "Living DNA" in first_line:
-            return self.read_livingdna(file, compression)
+            d = self.read_livingdna(file, compression)
         elif "SNP Name	rsID	Sample.ID	Allele1...Top" in first_line:
-            return self.read_mapmygenome(file, compression)
+            d = self.read_mapmygenome(file, compression)
         elif "lineage" in first_line or "snps" in first_line:
-            return self.read_snps_csv(file, comments, compression)
+            d = self.read_snps_csv(file, comments, compression)
         elif first_line.startswith("rsid"):
-            return self.read_generic(file, compression)
+            d = self.read_generic(file, compression)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
-            return self.read_vcf(file, compression, self._rsids)
+            d = self.read_vcf(file, compression, self._rsids)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
-            return self.read_genes_for_good(file, compression)
+            d = self.read_genes_for_good(file, compression)
         elif "DNA.Land" in comments:
-            return self.read_dnaland(file, compression)
+            d = self.read_dnaland(file, compression)
         elif "CODIGO46" in comments:
-            return self.read_codigo46(file)
+            d = self.read_codigo46(file)
         elif "SANO" in comments:
-            return self.read_sano(file)
-        else:
-            return d
+            d = self.read_sano(file)
+
+        d.update({"build": self._detect_build_from_comments(comments)})
+
+        return d
 
     @classmethod
     def read_file(cls, file, only_detect_source, resources, rsids):
@@ -208,6 +215,17 @@ class Reader:
         if not isinstance(f, zipfile.ZipExtFile):
             f.seek(0)
         return first_line, comments, data
+
+    def _detect_build_from_comments(self, comments):
+        if "build 37" in comments.lower():
+            return 37
+        elif "build 36" in comments.lower():
+            return 36
+        elif "b37" in comments.lower():
+            return 37
+        elif "hg19" in comments.lower():
+            return 37
+        return 0
 
     def _handle_bytes_data(self, file, include_data=False):
         compression = "infer"

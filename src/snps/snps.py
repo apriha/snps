@@ -121,6 +121,8 @@ class SNPs:
             self._snps = d["snps"]
             self._source = d["source"]
             self._phased = d["phased"]
+            self._build = d["build"]
+            self._build_detected = True if d["build"] else False
 
             if not self._snps.empty:
                 self.sort_snps()
@@ -128,12 +130,13 @@ class SNPs:
                 if deduplicate:
                     self._deduplicate_rsids()
 
-                self._build = self.detect_build()
+                if not self._build_detected:
+                    self._build = self.detect_build()
 
-                if not self._build:
-                    self._build = 37  # assume Build 37 / GRCh37 if not detected
-                else:
-                    self._build_detected = True
+                    if not self._build:
+                        self._build = 37  # assume Build 37 / GRCh37 if not detected
+                    else:
+                        self._build_detected = True
 
                 if deduplicate_XY_chrom:
                     if self.determine_sex() == "Male":

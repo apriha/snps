@@ -178,33 +178,66 @@ class BaseSNPsTestCase(TestCase):
             )
         )
 
-    def run_parsing_tests(self, file, source, phased=False):
-        self.make_parsing_assertions(self.parse_file(file), source, phased)
-        self.make_parsing_assertions(self.parse_bytes(file), source, phased)
+    def run_parsing_tests(
+        self, file, source, phased=False, build=37, build_detected=False
+    ):
+        self.make_parsing_assertions(
+            self.parse_file(file), source, phased, build, build_detected
+        )
+        self.make_parsing_assertions(
+            self.parse_bytes(file), source, phased, build, build_detected
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             base = os.path.basename(file)
             dest = os.path.join(tmpdir, "{}.gz".format(base))
             gzip_file(file, dest)
-            self.make_parsing_assertions(self.parse_file(dest), source, phased)
-            self.make_parsing_assertions(self.parse_bytes(dest), source, phased)
+            self.make_parsing_assertions(
+                self.parse_file(dest), source, phased, build, build_detected
+            )
+            self.make_parsing_assertions(
+                self.parse_bytes(dest), source, phased, build, build_detected
+            )
 
             dest = os.path.join(tmpdir, "{}.zip".format(base))
             zip_file(file, dest, base)
-            self.make_parsing_assertions(self.parse_file(dest), source, phased)
-            self.make_parsing_assertions(self.parse_bytes(dest), source, phased)
+            self.make_parsing_assertions(
+                self.parse_file(dest), source, phased, build, build_detected
+            )
+            self.make_parsing_assertions(
+                self.parse_bytes(dest), source, phased, build, build_detected
+            )
 
     def run_parsing_tests_vcf(
-        self, file, source="vcf", phased=False, unannotated=False, rsids=()
+        self,
+        file,
+        source="vcf",
+        phased=False,
+        unannotated=False,
+        rsids=(),
+        build=37,
+        build_detected=False,
     ):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID
         self.make_parsing_assertions_vcf(
-            self.parse_file(file, rsids), source, phased, unannotated, rsids
+            self.parse_file(file, rsids),
+            source,
+            phased,
+            unannotated,
+            rsids,
+            build,
+            build_detected,
         )
         self.make_parsing_assertions_vcf(
-            self.parse_bytes(file, rsids), source, phased, unannotated, rsids
+            self.parse_bytes(file, rsids),
+            source,
+            phased,
+            unannotated,
+            rsids,
+            build,
+            build_detected,
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -212,10 +245,22 @@ class BaseSNPsTestCase(TestCase):
             dest = os.path.join(tmpdir, "{}.gz".format(base))
             gzip_file(file, dest)
             self.make_parsing_assertions_vcf(
-                self.parse_file(dest, rsids), source, phased, unannotated, rsids
+                self.parse_file(dest, rsids),
+                source,
+                phased,
+                unannotated,
+                rsids,
+                build,
+                build_detected,
             )
             self.make_parsing_assertions_vcf(
-                self.parse_file(dest, rsids), source, phased, unannotated, rsids
+                self.parse_file(dest, rsids),
+                source,
+                phased,
+                unannotated,
+                rsids,
+                build,
+                build_detected,
             )
 
     def parse_file(self, file, rsids=()):
@@ -225,12 +270,18 @@ class BaseSNPsTestCase(TestCase):
         with open(file, "rb") as f:
             return SNPs(f.read(), rsids=rsids)
 
-    def make_parsing_assertions(self, snps, source, phased):
+    def make_parsing_assertions(self, snps, source, phased, build, build_detected):
         self.assertEqual(snps.source, source)
         pd.testing.assert_frame_equal(snps.snps, self.generic_snps())
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)
+        self.assertEqual(snps.build, build)
+        self.assertTrue(snps.build_detected) if build_detected else self.assertFalse(
+            snps.build_detected
+        )
 
-    def make_parsing_assertions_vcf(self, snps, source, phased, unannotated, rsids):
+    def make_parsing_assertions_vcf(
+        self, snps, source, phased, unannotated, rsids, build, build_detected
+    ):
         self.assertEqual(snps.source, source)
 
         if unannotated:
@@ -245,3 +296,7 @@ class BaseSNPsTestCase(TestCase):
             )
 
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)
+        self.assertEqual(snps.build, build)
+        self.assertTrue(snps.build_detected) if build_detected else self.assertFalse(
+            snps.build_detected
+        )

@@ -66,6 +66,16 @@ class TestReader(BaseSNPsTestCase):
         # https://www.23andme.com
         self.run_parsing_tests("tests/input/23andme.txt", "23andMe")
 
+    def test_read_23andme_build36(self):
+        self.run_parsing_tests(
+            "tests/input/23andme_build36.txt", "23andMe", build=36, build_detected=True
+        )
+
+    def test_read_23andme_build37(self):
+        self.run_parsing_tests(
+            "tests/input/23andme_build37.txt", "23andMe", build=37, build_detected=True
+        )
+
     def test_read_ancestry(self):
         # https://www.ancestry.com
         self.run_parsing_tests("tests/input/ancestry.txt", "AncestryDNA")
@@ -132,6 +142,16 @@ class TestReader(BaseSNPsTestCase):
     def test_read_vcf(self):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")
 
+    def test_read_vcf_b37(self):
+        self.run_parsing_tests_vcf(
+            "tests/input/testvcf_b37.vcf", build=37, build_detected=True
+        )
+
+    def test_read_vcf_hg19(self):
+        self.run_parsing_tests_vcf(
+            "tests/input/testvcf_hg19.vcf", build=37, build_detected=True
+        )
+
     def test_read_vcf_phased(self):
         self.run_parsing_tests_vcf("tests/input/testvcf_phased.vcf", phased=True)
 
@@ -140,5 +160,5 @@ class TestReader(BaseSNPsTestCase):
 
     def test_read_unannotated_vcf(self):
         self.run_parsing_tests_vcf(
-            "tests/input/unannotated_testvcf.vcf", unannotated=True
+            "tests/input/unannotated_testvcf.vcf", unannotated=True, build=0
         )

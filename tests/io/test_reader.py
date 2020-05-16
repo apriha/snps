@@ -152,6 +152,9 @@ class TestReader(BaseSNPsTestCase):
             "tests/input/testvcf_hg19.vcf", build=37, build_detected=True
         )
 
+    def test_read_vcf_multi_sample(self):
+        self.run_parsing_tests_vcf("tests/input/testvcf_multi_sample.vcf")
+
     def test_read_vcf_phased(self):
         self.run_parsing_tests_vcf("tests/input/testvcf_phased.vcf", phased=True)
 

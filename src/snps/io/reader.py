@@ -906,6 +906,8 @@ class Reader:
         else:
             f = buffer
 
+        logged_multi_sample = False
+
         with io.TextIOWrapper(io.BufferedReader(f)) as file:
 
             for line in file:
@@ -924,8 +926,9 @@ class Reader:
                 line_split = line_strip.split("\t")
 
                 # snps does not yet support multi-sample vcf.
-                if len(line_split) > 10:
+                if not logged_multi_sample and len(line_split) > 10:
                     logger.info("Multiple samples detected in the vcf file")
+                    logged_multi_sample = True
 
                 ref = line_split[3]
                 alt = line_split[4]

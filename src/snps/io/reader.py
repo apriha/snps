@@ -40,6 +40,7 @@ import io
 import gzip
 import zipfile
 import binascii
+import re
 from copy import deepcopy
 
 import numpy as np
@@ -139,7 +140,7 @@ class Reader:
             d = self.read_mapmygenome(file, compression)
         elif "lineage" in first_line or "snps" in first_line:
             d = self.read_snps_csv(file, comments, compression)
-        elif first_line.startswith("rsid"):
+        elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
             d = self.read_generic(file, compression)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
             d = self.read_vcf(file, compression, self._rsids)

@@ -142,6 +142,8 @@ class Reader:
             d = self.read_snps_csv(file, comments, compression)
         elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
             d = self.read_generic(file, compression)
+        elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
+            d = self.read_generic(file, compression, skip=0)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
             d = self.read_vcf(file, compression, self._rsids)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
@@ -790,7 +792,7 @@ class Reader:
 
         return self.read_helper(source, parser)
 
-    def read_generic(self, file, compression):
+    def read_generic(self, file, compression, skip=1):
         """ Read and parse generic CSV or TSV file.
 
         Notes
@@ -820,7 +822,7 @@ class Reader:
                 return pd.read_csv(
                     file,
                     sep=sep,
-                    skiprows=1,
+                    skiprows=skip,
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
@@ -844,7 +846,7 @@ class Reader:
                         file,
                         sep=None,
                         na_values="--",
-                        skiprows=1,
+                        skiprows=skip,
                         engine="python",
                         names=["rsid", "chrom", "pos", "genotype"],
                         usecols=[0, 1, 2, 3],

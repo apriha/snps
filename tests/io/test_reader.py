@@ -116,6 +116,9 @@ class TestReader(BaseSNPsTestCase):
     def test_read_generic_multi_rsid_tsv(self):
         self.run_parsing_tests("tests/input/generic_multi_rsid.tsv", "generic")
 
+    def test_read_generic_no_header(self):
+        self.run_parsing_tests("tests/input/generic_no_header.tsv", "generic")
+
     def test_read_generic_extra_column_tsv(self):
         self.run_parsing_tests("tests/input/generic_extra_column.tsv", "generic")
 

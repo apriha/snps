@@ -105,13 +105,11 @@ class TestReader(BaseSNPsTestCase):
     def test_read_generic_tsv(self):
         self.run_parsing_tests("tests/input/generic.tsv", "generic")
 
+    def test_read_generic_extra_column_tsv(self):
+        self.run_parsing_tests("tests/input/generic_extra_column.tsv", "generic")
+
     def test_read_generic_header_comment(self):
         self.run_parsing_tests("tests/input/generic_header_comment.tsv", "generic")
-
-    def test_read_generic_non_standard_columns(self):
-        self.run_parsing_tests(
-            "tests/input/generic_non_standard_columns.tsv", "generic"
-        )
 
     def test_read_generic_multi_rsid_tsv(self):
         self.run_parsing_tests("tests/input/generic_multi_rsid.tsv", "generic")
@@ -119,8 +117,10 @@ class TestReader(BaseSNPsTestCase):
     def test_read_generic_no_header(self):
         self.run_parsing_tests("tests/input/generic_no_header.tsv", "generic")
 
-    def test_read_generic_extra_column_tsv(self):
-        self.run_parsing_tests("tests/input/generic_extra_column.tsv", "generic")
+    def test_read_generic_non_standard_columns(self):
+        self.run_parsing_tests(
+            "tests/input/generic_non_standard_columns.tsv", "generic"
+        )
 
     def test_read_genes_for_good(self):
         # https://genesforgood.sph.umich.edu/

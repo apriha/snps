@@ -36,6 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 from itertools import groupby, count
+import logging
 import os
 import re
 
@@ -47,8 +48,6 @@ from snps.ensembl import EnsemblRestClient
 from snps.resources import Resources
 from snps.io import Reader, Writer
 from snps.utils import Parallelizer, get_empty_snps_dataframe
-
-import logging
 
 logger = logging.getLogger(__name__)
 

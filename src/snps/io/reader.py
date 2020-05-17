@@ -35,20 +35,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 
-import os
-import io
-import gzip
-import zipfile
 import binascii
-import re
 from copy import deepcopy
+import gzip
+import io
+import logging
+import os
+import re
+import zipfile
 
 import numpy as np
 import pandas as pd
 
 from snps.utils import get_empty_snps_dataframe
 
-import logging
 
 logger = logging.getLogger(__name__)
 

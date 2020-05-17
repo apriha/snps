@@ -42,6 +42,7 @@ import io
 import logging
 import os
 import re
+import warnings
 import zipfile
 
 import numpy as np
@@ -51,6 +52,9 @@ from snps.utils import get_empty_snps_dataframe
 
 
 logger = logging.getLogger(__name__)
+
+# raise exception if `pd.errors.DtypeWarning` occurs
+warnings.filterwarnings("error", category=pd.errors.DtypeWarning)
 
 
 class Reader:
@@ -454,17 +458,35 @@ class Reader:
         """
 
         def parser():
-            df = pd.read_csv(
-                file,
-                comment="#",
-                header=0,
-                sep="\t",
-                na_values=0,
-                names=["rsid", "chrom", "pos", "allele1", "allele2"],
-                index_col=0,
-                dtype={"chrom": object},
-                compression=compression,
-            )
+            try:
+                df = pd.read_csv(
+                    file,
+                    comment="#",
+                    header=0,
+                    sep="\t",
+                    na_values=0,
+                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
+            except pd.errors.DtypeWarning:
+                if isinstance(file, io.BytesIO):
+                    file.seek(0)
+
+                # read files with multiple separator tabs
+                df = pd.read_csv(
+                    file,
+                    comment="#",
+                    header=0,
+                    sep="\t+",
+                    engine="python",
+                    na_values=0,
+                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
 
             # create genotype column from allele columns
             df["genotype"] = df["allele1"] + df["allele2"]

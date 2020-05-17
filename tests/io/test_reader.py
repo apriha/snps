@@ -33,6 +33,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
 import tempfile
+import warnings
+
+import pandas as pd
 
 from snps.resources import Resources
 from snps.utils import gzip_file
@@ -40,6 +43,11 @@ from tests import BaseSNPsTestCase
 
 
 class TestReader(BaseSNPsTestCase):
+    def setUp(self):
+        # set warnings filter (test runner overrides statement in `io/reader.py`)
+        warnings.filterwarnings("error", category=pd.errors.DtypeWarning)
+        super().setUp()
+
     @staticmethod
     def _setup_gsa_test(resources_dir):
         # reset resource if already loaded
@@ -79,6 +87,33 @@ class TestReader(BaseSNPsTestCase):
     def test_read_ancestry(self):
         # https://www.ancestry.com
         self.run_parsing_tests("tests/input/ancestry.txt", "AncestryDNA")
+
+    def test_read_ancestry_extra_tab(self):
+        # https://www.ancestry.com
+
+        # we need a large file to generate the `pd.errors.DtypeWarning`
+        total_snps = 500000
+        s = "#Ancestry\r\n"
+        s += "rsid\tchromosome\tposition\tallele1\tallele2\r\n"
+        # add extra tab separator in first line
+        s += "rs1\t1\t101\t\tA\tA\r\n"
+        # generate remainder of lines
+        for i in range(1, total_snps):
+            s += "rs{}\t1\t{}\tA\tA\r\n".format(1 + i, 101 + i)
+
+        snps_df = self.create_snp_df(
+            rsid=["rs{}".format(1 + i) for i in range(0, total_snps)],
+            chrom="1",
+            pos=[101 + i for i in range(0, total_snps)],
+            genotype="AA",
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "ancestry_extra_tab.txt")
+            with open(path, "w") as f:
+                f.write(s)
+
+            self.run_parsing_tests(path, "AncestryDNA", snps_df=snps_df)
 
     def test_read_codigo46(self):
         # https://codigo46.com.mx

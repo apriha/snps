@@ -134,6 +134,38 @@ class TestReader(BaseSNPsTestCase):
         # https://www.familytreedna.com
         self.run_parsing_tests("tests/input/ftdna_famfinder.csv", "FTDNA")
 
+    def test_read_ftdna_second_header(self):
+        # https://www.familytreedna.com
+
+        # we need a large file to generate the `pd.errors.DtypeWarning`
+        total_snps1 = 500000
+        total_snps2 = 10000
+        s = "RSID,CHROMOSOME,POSITION,RESULT\n"
+        # generate first chunk of lines
+        for i in range(0, total_snps1):
+            s += '"rs{}","1","{}","AA"\n'.format(1 + i, 101 + i)
+        # add second header
+        s += "RSID,CHROMOSOME,POSITION,RESULT\n"
+        # generate second chunk of lines
+        for i in range(0, total_snps2):
+            s += '"rs{}","1","{}","AA"\n'.format(
+                total_snps1 + 1 + i, total_snps1 + 101 + i
+            )
+
+        snps_df = self.create_snp_df(
+            rsid=["rs{}".format(1 + i) for i in range(0, total_snps1 + total_snps2)],
+            chrom="1",
+            pos=[101 + i for i in range(0, total_snps1 + total_snps2)],
+            genotype="AA",
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "ftdna_second_header.txt")
+            with open(path, "w") as f:
+                f.write(s)
+
+            self.run_parsing_tests(path, "FTDNA", snps_df=snps_df)
+
     def test_read_generic_csv(self):
         self.run_parsing_tests("tests/input/generic.csv", "generic")
 

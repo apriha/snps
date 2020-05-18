@@ -219,6 +219,10 @@ class Reader:
                 while line:
                     data += line
                     line = self._read_line(f, decode)
+        if not data and include_data:
+            data = f.read()
+            if decode:
+                data = data.decode()
         if not isinstance(f, zipfile.ZipExtFile):
             f.seek(0)
         return first_line, comments, data
@@ -380,23 +384,40 @@ class Reader:
         """
 
         def parser():
-            df = pd.read_csv(
-                file,
-                skiprows=1,
-                na_values="--",
-                names=["rsid", "chrom", "pos", "genotype"],
-                index_col=0,
-                dtype={"chrom": object},
-                compression=compression,
-            )
+            try:
+                df = pd.read_csv(
+                    file,
+                    skiprows=1,
+                    na_values="--",
+                    names=["rsid", "chrom", "pos", "genotype"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
+            except pd.errors.DtypeWarning:
+                # read files with second header for concatenated data
+                if isinstance(file, io.BytesIO):
+                    file.seek(0)
+                    (*data,) = self._handle_bytes_data(file.read(), include_data=True)
+                    file.seek(0)
+                else:
+                    with open(file, "rb") as f:
+                        (*data,) = self._handle_bytes_data(f.read(), include_data=True)
+                # reconstruct file content from `_handle_bytes_data` results
+                lines = data[0] + data[2]
+                lines = [line.strip() for line in lines.split("\n")]
+                # find index of second header
+                second_header_idx = lines.index("RSID,CHROMOSOME,POSITION,RESULT", 1)
 
-            # remove incongruous data
-            df = df.drop(
-                df.loc[df.index == "RSID"].index
-            )  # second header for concatenated data
-
-            # if second header existed, pos dtype will be object (should be np.int64)
-            df["pos"] = df["pos"].astype(np.int64)
+                df = pd.read_csv(
+                    file,
+                    skiprows=[0, second_header_idx],
+                    na_values="--",
+                    names=["rsid", "chrom", "pos", "genotype"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
 
             return (df,)
 

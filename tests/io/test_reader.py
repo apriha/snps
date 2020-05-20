@@ -130,6 +130,67 @@ class TestReader(BaseSNPsTestCase):
         # https://www.familytreedna.com
         self.run_parsing_tests("tests/input/ftdna.csv", "FTDNA")
 
+    def test_read_ftdna_concat_gzip_extra_data(self):
+        # https://www.familytreedna.com
+
+        total_snps1 = 10
+        total_snps2 = 10
+        # generate content of first file
+        s1 = "RSID,CHROMOSOME,POSITION,RESULT\r\n"
+        for i in range(0, total_snps1):
+            s1 += '"rs{}","1","{}","AA"\r\n'.format(1 + i, 101 + i)
+
+        # generate content of second file
+        s2 = "RSID,CHROMOSOME,POSITION,RESULT\r\n"
+        for i in range(0, total_snps2):
+            s2 += '"rs{}","1","{}","AA"\r\n'.format(
+                total_snps1 + 1 + i, total_snps1 + 101 + i
+            )
+
+        snps_df = self.create_snp_df(
+            rsid=["rs{}".format(1 + i) for i in range(0, total_snps1 + total_snps2)],
+            chrom="1",
+            pos=[101 + i for i in range(0, total_snps1 + total_snps2)],
+            genotype="AA",
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file1 = os.path.join(tmpdir, "ftdna_concat_gzip1.csv")
+            file1_gz = "{}.gz".format(file1)
+            file2 = os.path.join(tmpdir, "ftdna_concat_gzip2.csv")
+            file2_gz = "{}.gz".format(file2)
+            path = os.path.join(tmpdir, "ftdna_concat_gzip.csv.gz")
+
+            # write individual files
+            with open(file1, "w") as f:
+                f.write(s1)
+            with open(file2, "w") as f:
+                f.write(s2)
+
+            # compress files
+            gzip_file(file1, file1_gz)
+            gzip_file(file2, file2_gz)
+
+            # concatenate gzips
+            with open(file1_gz, "rb") as f:
+                data = f.read()
+            with open(file2_gz, "rb") as f:
+                data += f.read()
+
+            # add extra data
+            data += b"extra data"
+
+            # write file with concatenated gzips and extra data
+            with open(path, "wb") as f:
+                f.write(data)
+
+            self.make_parsing_assertions(
+                self.parse_file(path), "FTDNA", False, 37, False, snps_df
+            )
+            self.make_parsing_assertions(
+                self.parse_bytes(path), "FTDNA", False, 37, False, snps_df
+            )
+
     def test_read_ftdna_famfinder(self):
         # https://www.familytreedna.com
         self.run_parsing_tests("tests/input/ftdna_famfinder.csv", "FTDNA")

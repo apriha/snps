@@ -44,6 +44,7 @@ import os
 import re
 import warnings
 import zipfile
+import zlib
 
 import numpy as np
 import pandas as pd
@@ -419,6 +420,37 @@ class Reader:
                     index_col=0,
                     dtype={"chrom": object},
                     compression=compression,
+                )
+            except OSError:
+                # read concatenated gzip files with extra data
+                if isinstance(file, io.BytesIO):
+                    file.seek(0)
+                    data = file.getbuffer()
+                else:
+                    with open(file, "rb") as f:
+                        data = f.read()
+
+                # https://stackoverflow.com/q/4928560
+                # https://stackoverflow.com/a/37042747
+                decompressor = zlib.decompressobj(31)
+
+                # decompress data from first concatenated gzip file
+                data = decompressor.decompress(data)
+
+                # decompress data from second concatenated gzip file
+                additional_data = zlib.decompress(decompressor.unused_data, 31)
+                data += additional_data[33:]  # skip over second header
+
+                new_file = io.BytesIO(data)
+
+                df = pd.read_csv(
+                    new_file,
+                    skiprows=1,
+                    na_values="--",
+                    names=["rsid", "chrom", "pos", "genotype"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=None,  # already decompressed
                 )
 
             return (df,)

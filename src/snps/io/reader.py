@@ -117,8 +117,10 @@ class Reader:
                 with gzip.open(file, "rt") as f:
                     first_line, comments, data = self._extract_comments(f)
             else:
-                with open(file, "r") as f:
-                    first_line, comments, data = self._extract_comments(f)
+                with open(file, "rb") as f:
+                    first_line, comments, data, compression = self._handle_bytes_data(
+                        f.read()
+                    )
 
         elif isinstance(file, bytes):
 

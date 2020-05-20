@@ -198,6 +198,16 @@ class BaseSNPsTestCase(TestCase):
             self.make_parsing_assertions(
                 self.parse_bytes(dest), source, phased, build, build_detected, snps_df
             )
+            # remove .gz extension
+            shutil.move(dest, dest[:-3])
+            self.make_parsing_assertions(
+                self.parse_file(dest[:-3]),
+                source,
+                phased,
+                build,
+                build_detected,
+                snps_df,
+            )
 
             dest = os.path.join(tmpdir, "{}.zip".format(base))
             zip_file(file, dest, base)
@@ -206,6 +216,16 @@ class BaseSNPsTestCase(TestCase):
             )
             self.make_parsing_assertions(
                 self.parse_bytes(dest), source, phased, build, build_detected, snps_df
+            )
+            # remove .zip extension
+            shutil.move(dest, dest[:-4])
+            self.make_parsing_assertions(
+                self.parse_file(dest[:-4]),
+                source,
+                phased,
+                build,
+                build_detected,
+                snps_df,
             )
 
     def run_parsing_tests_vcf(
@@ -255,6 +275,17 @@ class BaseSNPsTestCase(TestCase):
             )
             self.make_parsing_assertions_vcf(
                 self.parse_bytes(dest, rsids),
+                source,
+                phased,
+                unannotated,
+                rsids,
+                build,
+                build_detected,
+            )
+            # remove .gz extension
+            shutil.move(dest, dest[:-3])
+            self.make_parsing_assertions_vcf(
+                self.parse_file(dest[:-3], rsids),
                 source,
                 phased,
                 unannotated,

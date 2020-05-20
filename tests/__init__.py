@@ -254,7 +254,7 @@ class BaseSNPsTestCase(TestCase):
                 build_detected,
             )
             self.make_parsing_assertions_vcf(
-                self.parse_file(dest, rsids),
+                self.parse_bytes(dest, rsids),
                 source,
                 phased,
                 unannotated,

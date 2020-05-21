@@ -489,6 +489,8 @@ class SNPs:
         rs2500347 : plus strand in 36 and 37, minus strand in 38
         rs964481 : plus strand in 36, 37, and 38
         rs2341354 : plus strand in 36, 37, and 38
+        rs3850290 : plus strand in 36, 37, and 38
+        rs1329546 : plus strand in 36, 37, and 38
 
         Returns
         -------
@@ -505,8 +507,8 @@ class SNPs:
            Jan 1;29(1):308-11.
         4. Database of Single Nucleotide Polymorphisms (dbSNP). Bethesda (MD): National Center
            for Biotechnology Information, National Library of Medicine. dbSNP accession: rs3094315,
-           rs11928389, rs2500347, rs964481, and rs2341354 (dbSNP Build ID: 151). Available from:
-           http://www.ncbi.nlm.nih.gov/SNP/
+           rs11928389, rs2500347, rs964481, rs2341354, rs3850290, and rs1329546
+           (dbSNP Build ID: 151). Available from: http://www.ncbi.nlm.nih.gov/SNP/
         """
 
         def lookup_build_with_snp_pos(pos, s):
@@ -517,12 +519,44 @@ class SNPs:
 
         build = 0
 
-        rsids = ["rs3094315", "rs11928389", "rs2500347", "rs964481", "rs2341354"]
+        rsids = [
+            "rs3094315",
+            "rs11928389",
+            "rs2500347",
+            "rs964481",
+            "rs2341354",
+            "rs3850290",
+            "rs1329546",
+        ]
         df = pd.DataFrame(
             {
-                36: [742429, 50908372, 143649677, 27566744, 908436],
-                37: [752566, 50927009, 144938320, 27656823, 918573],
-                38: [817186, 50889578, 148946169, 27638706, 983193],
+                36: [
+                    742429,
+                    50908372,
+                    143649677,
+                    27566744,
+                    908436,
+                    22315141,
+                    135302086,
+                ],
+                37: [
+                    752566,
+                    50927009,
+                    144938320,
+                    27656823,
+                    918573,
+                    23245301,
+                    135474420,
+                ],
+                38: [
+                    817186,
+                    50889578,
+                    148946169,
+                    27638706,
+                    983193,
+                    22776092,
+                    136392261,
+                ],
             },
             index=rsids,
         )

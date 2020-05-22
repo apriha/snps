@@ -97,7 +97,7 @@ class TestSnps(BaseSNPsTestCase):
             not os.getenv("DOWNLOADS_ENABLED")
             or os.getenv("DOWNLOADS_ENABLED") == "true"
         ):
-            snps = SNPs("tests/input/GRCh37_PAR.csv")
+            snps = SNPs("tests/input/GRCh37_PAR.csv", assign_par_snps=True)
             self.assertEqual(snps.build, 37)
             self.assertTrue(snps.build_detected)
 
@@ -245,7 +245,7 @@ class TestSnps(BaseSNPsTestCase):
             not os.getenv("DOWNLOADS_ENABLED")
             or os.getenv("DOWNLOADS_ENABLED") == "true"
         ):
-            s = SNPs("tests/input/GRCh37_PAR.csv")
+            s = SNPs("tests/input/GRCh37_PAR.csv", assign_par_snps=True)
             self.assertEqual(s.snp_count, 4)
             chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
             self.assertEqual(s.build, 38)

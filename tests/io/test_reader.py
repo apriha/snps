@@ -115,6 +115,10 @@ class TestReader(BaseSNPsTestCase):
 
             self.run_parsing_tests(path, "AncestryDNA", snps_df=snps_df)
 
+    def test_read_ancestry_multi_sep(self):
+        # https://www.ancestry.com
+        self.run_parsing_tests("tests/input/ancestry_multi_sep.txt", "AncestryDNA")
+
     def test_read_codigo46(self):
         # https://codigo46.com.mx
         with tempfile.TemporaryDirectory() as tmpdir:

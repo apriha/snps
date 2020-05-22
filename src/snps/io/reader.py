@@ -542,6 +542,23 @@ class Reader:
                     dtype={"chrom": object},
                     compression=compression,
                 )
+            except pd.errors.ParserError:
+                if isinstance(file, io.BytesIO):
+                    file.seek(0)
+
+                # read files with multiple separators
+                df = pd.read_csv(
+                    file,
+                    comment="#",
+                    header=0,
+                    sep="\s+|\t+|\s+\t+|\t+\s+",  # https://stackoverflow.com/a/41320761
+                    engine="python",
+                    na_values=0,
+                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
 
             # create genotype column from allele columns
             df["genotype"] = df["allele1"] + df["allele2"]

@@ -32,7 +32,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import os
+import socket
 import tempfile
+from unittest.mock import Mock, patch
 import warnings
 import zipfile
 
@@ -167,6 +169,12 @@ class TestResources(BaseSNPsTestCase):
         paths[0] = ""
         seqs = self.resource._create_reference_sequences(assembly, chroms, urls, paths)
         self.assertEqual(len(seqs), 0)
+
+    def test_download_file_socket_timeout(self):
+        mock = Mock(side_effect=socket.timeout)
+        with patch("urllib.request.urlopen", mock):
+            path = self.resource._download_file("http://url", "test.txt")
+        self.assertEqual(path, "")
 
     def test_get_reference_sequences(self):
         seqs = self.resource.get_reference_sequences(chroms=["MT"])

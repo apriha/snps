@@ -141,6 +141,7 @@ class SNPs:
 
                 if assign_par_snps:
                     self._assign_par_snps()
+                    self.sort_snps()
             else:
                 logger.warning("no SNPs loaded...")
 

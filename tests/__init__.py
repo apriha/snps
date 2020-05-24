@@ -99,6 +99,19 @@ class BaseSNPsTestCase(TestCase):
 
         return s
 
+    @property
+    def downloads_enabled(self):
+        """ Property indicating if downloads are enabled.
+
+        Only download from external resources when an environment variable named
+        "DOWNLOADS_ENABLED" is set to "true".
+
+        Returns
+        -------
+        bool
+        """
+        return True if os.getenv("DOWNLOADS_ENABLED") == "true" else False
+
     @staticmethod
     def get_complement(base):
         if base == "A":

@@ -93,10 +93,7 @@ class TestSnps(BaseSNPsTestCase):
             self.assertFalse(snps.build_detected)
 
     def test_build_detected_PAR_snps(self):
-        if (
-            not os.getenv("DOWNLOADS_ENABLED")
-            or os.getenv("DOWNLOADS_ENABLED") == "true"
-        ):
+        if self.downloads_enabled:
             snps = SNPs("tests/input/GRCh37_PAR.csv")
             self.assertEqual(snps.build, 37)
             self.assertTrue(snps.build_detected)
@@ -241,10 +238,7 @@ class TestSnps(BaseSNPsTestCase):
         pd.testing.assert_frame_equal(s.snps, self.snps_GRCh38())
 
     def test_remap_snps_37_to_38_with_PAR_SNP(self):
-        if (
-            not os.getenv("DOWNLOADS_ENABLED")
-            or os.getenv("DOWNLOADS_ENABLED") == "true"
-        ):
+        if self.downloads_enabled:
             s = SNPs("tests/input/GRCh37_PAR.csv")
             self.assertEqual(s.snp_count, 4)
             chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)

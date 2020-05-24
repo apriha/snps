@@ -156,6 +156,133 @@ class BaseSNPsTestCase(TestCase):
         df = df.set_index("rsid")
         return df
 
+    def _get_test_assembly_mapping_data(self, source, target, strands, mappings):
+        return {
+            "1": {
+                "mappings": [
+                    {
+                        "original": {
+                            "seq_region_name": "1",
+                            "strand": strands[0],
+                            "start": mappings[0],
+                            "end": mappings[0],
+                            "assembly": "{}".format(source),
+                        },
+                        "mapped": {
+                            "seq_region_name": "1",
+                            "strand": strands[1],
+                            "start": mappings[1],
+                            "end": mappings[1],
+                            "assembly": "{}".format(target),
+                        },
+                    },
+                    {
+                        "original": {
+                            "seq_region_name": "1",
+                            "strand": strands[2],
+                            "start": mappings[2],
+                            "end": mappings[2],
+                            "assembly": "{}".format(source),
+                        },
+                        "mapped": {
+                            "seq_region_name": "1",
+                            "strand": strands[3],
+                            "start": mappings[3],
+                            "end": mappings[3],
+                            "assembly": "{}".format(target),
+                        },
+                    },
+                    {
+                        "original": {
+                            "seq_region_name": "1",
+                            "strand": strands[4],
+                            "start": mappings[4],
+                            "end": mappings[4],
+                            "assembly": "{}".format(source),
+                        },
+                        "mapped": {
+                            "seq_region_name": "1",
+                            "strand": strands[5],
+                            "start": mappings[5],
+                            "end": mappings[5],
+                            "assembly": "{}".format(target),
+                        },
+                    },
+                ]
+            },
+            "3": {
+                "mappings": [
+                    {
+                        "original": {
+                            "seq_region_name": "3",
+                            "strand": strands[6],
+                            "start": mappings[6],
+                            "end": mappings[6],
+                            "assembly": "{}".format(source),
+                        },
+                        "mapped": {
+                            "seq_region_name": "3",
+                            "strand": strands[7],
+                            "start": mappings[7],
+                            "end": mappings[7],
+                            "assembly": "{}".format(target),
+                        },
+                    }
+                ]
+            },
+        }
+
+    def NCBI36_GRCh37(self):
+        return self._get_test_assembly_mapping_data(
+            "NCBI36",
+            "GRCh37",
+            [1, 1, 1, 1, 1, 1, 1, -1],
+            [
+                742429,
+                752566,
+                143649677,
+                144938320,
+                143649678,
+                144938321,
+                50908372,
+                50927009,
+            ],
+        )
+
+    def GRCh37_NCBI36(self):
+        return self._get_test_assembly_mapping_data(
+            "GRCh37",
+            "NCBI36",
+            [1, 1, 1, 1, 1, 1, 1, -1],
+            [
+                752566,
+                742429,
+                144938320,
+                143649677,
+                144938321,
+                143649678,
+                50927009,
+                50908372,
+            ],
+        )
+
+    def GRCh37_GRCh38(self):
+        return self._get_test_assembly_mapping_data(
+            "GRCh37",
+            "GRCh38",
+            [1, 1, 1, -1, 1, -1, 1, 1],
+            [
+                752566,
+                817186,
+                144938320,
+                148946169,
+                144938321,
+                148946168,
+                50927009,
+                50889578,
+            ],
+        )
+
     def snps_NCBI36(self):
         return self.create_snp_df(
             rsid=["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],

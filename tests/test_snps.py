@@ -100,25 +100,25 @@ class TestSnps(BaseSNPsTestCase):
             self.assertFalse(snps.build_detected)
 
     def test_build_detected_PAR_snps(self):
-        if self.downloads_enabled:
-            self._run_test_build_detected_PAR_snps()
-        else:
-            self._run_mock_PAR_test(self._run_test_build_detected_PAR_snps)
-
-    def _run_test_build_detected_PAR_snps(self):
-        snps = SNPs("tests/input/GRCh37_PAR.csv", assign_par_snps=True)
+        snps = self._load_assign_PAR_SNPs("tests/input/GRCh37_PAR.csv")
         self.assertEqual(snps.build, 37)
         self.assertTrue(snps.build_detected)
         pd.testing.assert_frame_equal(
             snps.snps, self.snps_GRCh37_PAR(), check_exact=True
         )
 
-    def _run_mock_PAR_test(self, f):
-        """ Mock PAR test with a minimal subset of the real responses.
+    def _load_assign_PAR_SNPs(self, path):
+        """ Load and assign PAR SNPs.
+
+        If downloads are not enabled, use a minimal subset of the real responses.
 
         Parameters
         ----------
-        f : func
+        path : str
+
+        Returns
+        -------
+        SNPs
 
         References
         ----------
@@ -257,9 +257,12 @@ class TestSnps(BaseSNPsTestCase):
             },
         ]
 
-        mock = Mock(side_effect=effects)
-        with patch("snps.ensembl.EnsemblRestClient.perform_rest_action", mock):
-            f()
+        if self.downloads_enabled:
+            return SNPs(path, assign_par_snps=True)
+        else:
+            mock = Mock(side_effect=effects)
+            with patch("snps.ensembl.EnsemblRestClient.perform_rest_action", mock):
+                return SNPs(path, assign_par_snps=True)
 
     def test_build_no_snps(self):
         for snps in self.empty_snps():
@@ -364,119 +367,136 @@ class TestSnps(BaseSNPsTestCase):
         self.assertEqual(s.source, "generic")
         self.assertEqual(s.snp_count, 0)
 
+    def _run_remap_test(self, f, mappings):
+        if self.downloads_enabled:
+            f()
+        else:
+            mock = Mock(return_value=mappings)
+            with patch("snps.resources.Resources.get_assembly_mapping_data", mock):
+                f()
+
     def test_remap_snps_36_to_37(self):
-        s = SNPs("tests/input/NCBI36.csv")
-        chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
-        self.assertEqual(s.build, 37)
-        self.assertEqual(s.assembly, "GRCh37")
-        self.assertEqual(len(chromosomes_remapped), 2)
-        self.assertEqual(len(chromosomes_not_remapped), 0)
-        pd.testing.assert_frame_equal(s.snps, self.snps_GRCh37())
+        def f():
+            s = SNPs("tests/input/NCBI36.csv")
+            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
+            self.assertEqual(s.build, 37)
+            self.assertEqual(s.assembly, "GRCh37")
+            self.assertEqual(len(chromosomes_remapped), 2)
+            self.assertEqual(len(chromosomes_not_remapped), 0)
+            pd.testing.assert_frame_equal(s.snps, self.snps_GRCh37(), check_exact=True)
+
+        self._run_remap_test(f, self.NCBI36_GRCh37())
 
     def test_remap_snps_36_to_37_multiprocessing(self):
-        s = SNPs("tests/input/NCBI36.csv", parallelize=True)
-        chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
-        self.assertEqual(s.build, 37)
-        self.assertEqual(s.assembly, "GRCh37")
-        self.assertEqual(len(chromosomes_remapped), 2)
-        self.assertEqual(len(chromosomes_not_remapped), 0)
-        pd.testing.assert_frame_equal(s.snps, self.snps_GRCh37())
+        def f():
+            s = SNPs("tests/input/NCBI36.csv", parallelize=True)
+            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
+            self.assertEqual(s.build, 37)
+            self.assertEqual(s.assembly, "GRCh37")
+            self.assertEqual(len(chromosomes_remapped), 2)
+            self.assertEqual(len(chromosomes_not_remapped), 0)
+            pd.testing.assert_frame_equal(s.snps, self.snps_GRCh37(), check_exact=True)
+
+        self._run_remap_test(f, self.NCBI36_GRCh37())
 
     def test_remap_snps_37_to_36(self):
-        s = SNPs("tests/input/GRCh37.csv")
-        chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(36)
-        self.assertEqual(s.build, 36)
-        self.assertEqual(s.assembly, "NCBI36")
-        self.assertEqual(len(chromosomes_remapped), 2)
-        self.assertEqual(len(chromosomes_not_remapped), 0)
-        pd.testing.assert_frame_equal(s.snps, self.snps_NCBI36())
+        def f():
+            s = SNPs("tests/input/GRCh37.csv")
+            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(36)
+            self.assertEqual(s.build, 36)
+            self.assertEqual(s.assembly, "NCBI36")
+            self.assertEqual(len(chromosomes_remapped), 2)
+            self.assertEqual(len(chromosomes_not_remapped), 0)
+            pd.testing.assert_frame_equal(s.snps, self.snps_NCBI36(), check_exact=True)
+
+        self._run_remap_test(f, self.GRCh37_NCBI36())
 
     def test_remap_snps_37_to_38(self):
-        s = SNPs("tests/input/GRCh37.csv")
-        chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
-        self.assertEqual(s.build, 38)
-        self.assertEqual(s.assembly, "GRCh38")
-        self.assertEqual(len(chromosomes_remapped), 2)
-        self.assertEqual(len(chromosomes_not_remapped), 0)
-        pd.testing.assert_frame_equal(s.snps, self.snps_GRCh38())
+        def f():
+            s = SNPs("tests/input/GRCh37.csv")
+            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
+            self.assertEqual(s.build, 38)
+            self.assertEqual(s.assembly, "GRCh38")
+            self.assertEqual(len(chromosomes_remapped), 2)
+            self.assertEqual(len(chromosomes_not_remapped), 0)
+            pd.testing.assert_frame_equal(s.snps, self.snps_GRCh38(), check_exact=True)
+
+        self._run_remap_test(f, self.GRCh37_GRCh38())
 
     def test_remap_snps_37_to_38_with_PAR_SNP(self):
-        if self.downloads_enabled:
-            self._run_test_remap_snps_37_to_38_with_PAR_SNP()
-        else:
-            assembly_mapping_data = {
-                "X": {
-                    "mappings": [
-                        {
-                            "original": {
-                                "seq_region_name": "X",
-                                "strand": 1,
-                                "start": 220770,
-                                "end": 220770,
-                                "assembly": "GRCh37",
-                            },
-                            "mapped": {
-                                "seq_region_name": "X",
-                                "strand": 1,
-                                "start": 304103,
-                                "end": 304103,
-                                "assembly": "GRCh38",
-                            },
-                        },
-                        {
-                            "original": {
-                                "seq_region_name": "X",
-                                "strand": 1,
-                                "start": 91941056,
-                                "end": 91941056,
-                                "assembly": "GRCh37",
-                            },
-                            "mapped": {
-                                "seq_region_name": "X",
-                                "strand": 1,
-                                "start": 92686057,
-                                "end": 92686057,
-                                "assembly": "GRCh38",
-                            },
-                        },
-                    ]
-                },
-                "Y": {
-                    "mappings": [
-                        {
-                            "original": {
-                                "seq_region_name": "Y",
-                                "strand": 1,
-                                "start": 535258,
-                                "end": 535258,
-                                "assembly": "GRCh37",
-                            },
-                            "mapped": {
-                                "seq_region_name": "Y",
-                                "strand": 1,
-                                "start": 624523,
-                                "end": 624523,
-                                "assembly": "GRCh38",
-                            },
-                        }
-                    ]
-                },
-            }
+        def f():
+            s = self._load_assign_PAR_SNPs("tests/input/GRCh37_PAR.csv")
+            self.assertEqual(s.snp_count, 4)
+            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
+            self.assertEqual(s.build, 38)
+            self.assertEqual(s.assembly, "GRCh38")
+            self.assertEqual(len(chromosomes_remapped), 2)
+            self.assertEqual(len(chromosomes_not_remapped), 1)
+            self.assertEqual(s.snp_count, 3)
+            pd.testing.assert_frame_equal(
+                s.snps, self.snps_GRCh38_PAR(), check_exact=True
+            )
 
-            mock = Mock(return_value=assembly_mapping_data)
-            with patch("snps.resources.Resources.get_assembly_mapping_data", mock):
-                self._run_mock_PAR_test(self._run_test_remap_snps_37_to_38_with_PAR_SNP)
+        assembly_mapping_data = {
+            "X": {
+                "mappings": [
+                    {
+                        "original": {
+                            "seq_region_name": "X",
+                            "strand": 1,
+                            "start": 220770,
+                            "end": 220770,
+                            "assembly": "GRCh37",
+                        },
+                        "mapped": {
+                            "seq_region_name": "X",
+                            "strand": 1,
+                            "start": 304103,
+                            "end": 304103,
+                            "assembly": "GRCh38",
+                        },
+                    },
+                    {
+                        "original": {
+                            "seq_region_name": "X",
+                            "strand": 1,
+                            "start": 91941056,
+                            "end": 91941056,
+                            "assembly": "GRCh37",
+                        },
+                        "mapped": {
+                            "seq_region_name": "X",
+                            "strand": 1,
+                            "start": 92686057,
+                            "end": 92686057,
+                            "assembly": "GRCh38",
+                        },
+                    },
+                ]
+            },
+            "Y": {
+                "mappings": [
+                    {
+                        "original": {
+                            "seq_region_name": "Y",
+                            "strand": 1,
+                            "start": 535258,
+                            "end": 535258,
+                            "assembly": "GRCh37",
+                        },
+                        "mapped": {
+                            "seq_region_name": "Y",
+                            "strand": 1,
+                            "start": 624523,
+                            "end": 624523,
+                            "assembly": "GRCh38",
+                        },
+                    }
+                ]
+            },
+        }
 
-    def _run_test_remap_snps_37_to_38_with_PAR_SNP(self):
-        s = SNPs("tests/input/GRCh37_PAR.csv")
-        self.assertEqual(s.snp_count, 4)
-        chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
-        self.assertEqual(s.build, 38)
-        self.assertEqual(s.assembly, "GRCh38")
-        self.assertEqual(len(chromosomes_remapped), 2)
-        self.assertEqual(len(chromosomes_not_remapped), 1)
-        self.assertEqual(s.snp_count, 3)
-        pd.testing.assert_frame_equal(s.snps, self.snps_GRCh38_PAR(), check_exact=True)
+        self._run_remap_test(f, assembly_mapping_data)
 
     def test_remap_snps_37_to_37(self):
         s = SNPs("tests/input/GRCh37.csv")

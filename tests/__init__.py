@@ -367,7 +367,7 @@ class BaseSNPsTestCase(TestCase):
 
     def make_parsing_assertions(self, snps, source, phased):
         self.assertEqual(snps.source, source)
-        pd.testing.assert_frame_equal(snps.snps, self.generic_snps())
+        pd.testing.assert_frame_equal(snps.snps, self.generic_snps(), check_exact=True)
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)
 
     def make_parsing_assertions_vcf(self, snps, source, phased, unannotated, rsids):
@@ -379,9 +379,9 @@ class BaseSNPsTestCase(TestCase):
         else:
             self.assertFalse(snps.unannotated_vcf)
             pd.testing.assert_frame_equal(
-                snps.snps, self.generic_snps_vcf().loc[rsids]
+                snps.snps, self.generic_snps_vcf().loc[rsids], check_exact=True
             ) if rsids else pd.testing.assert_frame_equal(
-                snps.snps, self.generic_snps_vcf()
+                snps.snps, self.generic_snps_vcf(), check_exact=True
             )
 
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)

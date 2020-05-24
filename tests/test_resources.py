@@ -325,7 +325,11 @@ class TestResources(BaseSNPsTestCase):
             snps1 = SNPs(self.resource.load_opensnp_datadump_file("generic1.csv"))
             snps2 = SNPs(self.resource.load_opensnp_datadump_file("generic2.csv"))
 
-            pd.testing.assert_frame_equal(snps1.snps, self.generic_snps())
-            pd.testing.assert_frame_equal(snps2.snps, self.generic_snps())
+            pd.testing.assert_frame_equal(
+                snps1.snps, self.generic_snps(), check_exact=True
+            )
+            pd.testing.assert_frame_equal(
+                snps2.snps, self.generic_snps(), check_exact=True
+            )
 
             self.resource._resources_dir = "resources"

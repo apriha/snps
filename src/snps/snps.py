@@ -862,6 +862,9 @@ class SNPs:
         ----------
         1. Ensembl, Assembly Map Endpoint,
            http://rest.ensembl.org/documentation/info/assembly_map
+        2. Yates et. al. (doi:10.1093/bioinformatics/btu613),
+           `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
+        3. Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
         """
         chromosomes_remapped = []
         chromosomes_not_remapped = []

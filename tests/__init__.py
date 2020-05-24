@@ -299,6 +299,30 @@ class BaseSNPsTestCase(TestCase):
             genotype=["AA", np.nan, "ID", "TC"],
         )
 
+    def snps_GRCh38(self):
+        return self.create_snp_df(
+            rsid=["rs3094315", "rsIndelTest", "rs2500347", "rs11928389"],
+            chrom=["1", "1", "1", "3"],
+            pos=[817186, 148946168, 148946169, 50889578],
+            genotype=["AA", "ID", np.nan, "TC"],
+        )
+
+    def snps_GRCh37_PAR(self):
+        return self.create_snp_df(
+            rsid=["rs28736870", "rs113378274", "rs113313554", "rs758419898"],
+            chrom=["X", "X", "Y", "PAR"],
+            pos=[220770, 91941056, 535258, 1],
+            genotype=["AA", "AA", "AA", "AA"],
+        )
+
+    def snps_GRCh38_PAR(self):
+        return self.create_snp_df(
+            rsid=["rs28736870", "rs113378274", "rs113313554"],
+            chrom=["X", "X", "Y"],
+            pos=[304103, 92686057, 624523],
+            genotype=["AA", "AA", "AA"],
+        )
+
     def generic_snps(self):
         return self.create_snp_df(
             rsid=["rs" + str(i) for i in range(1, 9)],

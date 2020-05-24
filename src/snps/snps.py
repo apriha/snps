@@ -965,8 +965,8 @@ class SNPs:
         for mapping in mappings["mappings"]:
             # skip if mapping is outside of range of SNP positions
             if (
-                mapping["original"]["end"] <= pos_start
-                or mapping["original"]["start"] >= pos_end
+                mapping["original"]["end"] < pos_start
+                or mapping["original"]["start"] > pos_end
             ):
                 continue
 

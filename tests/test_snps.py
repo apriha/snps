@@ -35,7 +35,6 @@ import io
 import os
 from unittest.mock import Mock, patch
 
-import numpy as np
 import pandas as pd
 
 from snps import SNPs
@@ -76,169 +75,12 @@ class TestSnps(BaseSNPsTestCase):
             self.assertFalse(snps.build_detected)
 
     def test_build_detected_PAR_snps(self):
-        snps = self._load_assign_PAR_SNPs("tests/input/GRCh37_PAR.csv")
+        snps = self.load_assign_PAR_SNPs("tests/input/GRCh37_PAR.csv")
         self.assertEqual(snps.build, 37)
         self.assertTrue(snps.build_detected)
         pd.testing.assert_frame_equal(
             snps.snps, self.snps_GRCh37_PAR(), check_exact=True
         )
-
-    def _load_assign_PAR_SNPs(self, path):
-        """ Load and assign PAR SNPs.
-
-        If downloads are not enabled, use a minimal subset of the real responses.
-
-        Parameters
-        ----------
-        path : str
-
-        Returns
-        -------
-        SNPs
-
-        References
-        ----------
-        1. National Center for Biotechnology Information, Variation Services, RefSNP,
-           https://api.ncbi.nlm.nih.gov/variation/v0/
-        2. Yates et. al. (doi:10.1093/bioinformatics/btu613),
-           `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
-        3. Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
-        4. Sherry ST, Ward MH, Kholodov M, Baker J, Phan L, Smigielski EM, Sirotkin K.
-           dbSNP: the NCBI database of genetic variation. Nucleic Acids Res. 2001 Jan 1;
-           29(1):308-11.
-        5. Database of Single Nucleotide Polymorphisms (dbSNP). Bethesda (MD): National Center
-           for Biotechnology Information, National Library of Medicine. dbSNP accession:
-           rs28736870, rs113313554, rs758419898, and rs113378274 (dbSNP Build ID: 151).
-           Available from: http://www.ncbi.nlm.nih.gov/SNP/
-        """
-        effects = [
-            {
-                "refsnp_id": "758419898",
-                "create_date": "2015-04-1T22:25Z",
-                "last_update_date": "2019-07-14T04:19Z",
-                "last_update_build_id": "153",
-                "primary_snapshot_data": {
-                    "placements_with_allele": [
-                        {
-                            "seq_id": "NC_000024.9",
-                            "placement_annot": {
-                                "seq_id_traits_by_assembly": [
-                                    {"assembly_name": "GRCh37.p13"}
-                                ]
-                            },
-                            "alleles": [
-                                {
-                                    "allele": {
-                                        "spdi": {
-                                            "seq_id": "NC_000024.9",
-                                            "position": 7364103,
-                                        }
-                                    }
-                                }
-                            ],
-                        }
-                    ]
-                },
-            },
-            {
-                "refsnp_id": "28736870",
-                "create_date": "2005-05-24T14:43Z",
-                "last_update_date": "2019-07-14T04:18Z",
-                "last_update_build_id": "153",
-                "primary_snapshot_data": {
-                    "placements_with_allele": [
-                        {
-                            "seq_id": "NC_000023.10",
-                            "placement_annot": {
-                                "seq_id_traits_by_assembly": [
-                                    {"assembly_name": "GRCh37.p13"}
-                                ]
-                            },
-                            "alleles": [
-                                {
-                                    "allele": {
-                                        "spdi": {
-                                            "seq_id": "NC_000023.10",
-                                            "position": 220769,
-                                        }
-                                    }
-                                }
-                            ],
-                        }
-                    ]
-                },
-            },
-            {
-                "refsnp_id": "113313554",
-                "create_date": "2010-07-4T18:13Z",
-                "last_update_date": "2019-07-14T04:18Z",
-                "last_update_build_id": "153",
-                "primary_snapshot_data": {
-                    "placements_with_allele": [
-                        {
-                            "seq_id": "NC_000024.9",
-                            "placement_annot": {
-                                "seq_id_traits_by_assembly": [
-                                    {"assembly_name": "GRCh37.p13"}
-                                ]
-                            },
-                            "alleles": [
-                                {
-                                    "allele": {
-                                        "spdi": {
-                                            "seq_id": "NC_000024.9",
-                                            "position": 535257,
-                                        }
-                                    }
-                                }
-                            ],
-                        }
-                    ]
-                },
-            },
-            {
-                "refsnp_id": "113378274",
-                "create_date": "2010-07-4T18:14Z",
-                "last_update_date": "2016-03-3T10:51Z",
-                "last_update_build_id": "147",
-                "merged_snapshot_data": {"merged_into": ["72608386"]},
-            },
-            {
-                "refsnp_id": "72608386",
-                "create_date": "2009-02-14T01:08Z",
-                "last_update_date": "2019-07-14T04:05Z",
-                "last_update_build_id": "153",
-                "primary_snapshot_data": {
-                    "placements_with_allele": [
-                        {
-                            "seq_id": "NC_000023.10",
-                            "placement_annot": {
-                                "seq_id_traits_by_assembly": [
-                                    {"assembly_name": "GRCh37.p13"}
-                                ]
-                            },
-                            "alleles": [
-                                {
-                                    "allele": {
-                                        "spdi": {
-                                            "seq_id": "NC_000023.10",
-                                            "position": 91941055,
-                                        }
-                                    }
-                                }
-                            ],
-                        }
-                    ]
-                },
-            },
-        ]
-
-        if self.downloads_enabled:
-            return SNPs(path, assign_par_snps=True)
-        else:
-            mock = Mock(side_effect=effects)
-            with patch("snps.ensembl.EnsemblRestClient.perform_rest_action", mock):
-                return SNPs(path, assign_par_snps=True)
 
     def test_build_no_snps(self):
         for snps in self.empty_snps():
@@ -404,7 +246,7 @@ class TestSnps(BaseSNPsTestCase):
 
     def test_remap_snps_37_to_38_with_PAR_SNP(self):
         def f():
-            s = self._load_assign_PAR_SNPs("tests/input/GRCh37_PAR.csv")
+            s = self.load_assign_PAR_SNPs("tests/input/GRCh37_PAR.csv")
             self.assertEqual(s.snp_count, 4)
             chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
             self.assertEqual(s.build, 38)
@@ -416,66 +258,7 @@ class TestSnps(BaseSNPsTestCase):
                 s.snps, self.snps_GRCh38_PAR(), check_exact=True
             )
 
-        assembly_mapping_data = {
-            "X": {
-                "mappings": [
-                    {
-                        "original": {
-                            "seq_region_name": "X",
-                            "strand": 1,
-                            "start": 220770,
-                            "end": 220770,
-                            "assembly": "GRCh37",
-                        },
-                        "mapped": {
-                            "seq_region_name": "X",
-                            "strand": 1,
-                            "start": 304103,
-                            "end": 304103,
-                            "assembly": "GRCh38",
-                        },
-                    },
-                    {
-                        "original": {
-                            "seq_region_name": "X",
-                            "strand": 1,
-                            "start": 91941056,
-                            "end": 91941056,
-                            "assembly": "GRCh37",
-                        },
-                        "mapped": {
-                            "seq_region_name": "X",
-                            "strand": 1,
-                            "start": 92686057,
-                            "end": 92686057,
-                            "assembly": "GRCh38",
-                        },
-                    },
-                ]
-            },
-            "Y": {
-                "mappings": [
-                    {
-                        "original": {
-                            "seq_region_name": "Y",
-                            "strand": 1,
-                            "start": 535258,
-                            "end": 535258,
-                            "assembly": "GRCh37",
-                        },
-                        "mapped": {
-                            "seq_region_name": "Y",
-                            "strand": 1,
-                            "start": 624523,
-                            "end": 624523,
-                            "assembly": "GRCh38",
-                        },
-                    }
-                ]
-            },
-        }
-
-        self._run_remap_test(f, assembly_mapping_data)
+        self._run_remap_test(f, self.GRCh37_GRCh38_PAR())
 
     def test_remap_snps_37_to_37(self):
         s = SNPs("tests/input/GRCh37.csv")

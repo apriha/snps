@@ -551,7 +551,7 @@ class Reader:
                     file,
                     comment="#",
                     header=0,
-                    sep="\s+|\t+|\s+\t+|\t+\s+",  # https://stackoverflow.com/a/41320761
+                    sep=r"\s+|\t+|\s+\t+|\t+\s+",  # https://stackoverflow.com/a/41320761
                     engine="python",
                     na_values=0,
                     names=["rsid", "chrom", "pos", "allele1", "allele2"],

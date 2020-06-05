@@ -33,8 +33,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import gzip
 import os
+import socket
 import tempfile
 from unittest.mock import Mock, mock_open, patch
+import urllib.error
 import warnings
 import zipfile
 
@@ -253,6 +255,20 @@ class TestResources(BaseSNPsTestCase):
             self.assertEqual(len(seqs), 0)
 
         self.run_reference_sequences_test(f)
+
+    def test_download_file_socket_timeout(self):
+        mock = Mock(side_effect=socket.timeout)
+        with patch("urllib.request.urlopen", mock):
+            path = self.resource._download_file("http://url", "test.txt")
+        self.assertEqual(path, "")
+
+    def test_download_file_URL_error(self):
+        mock = Mock(side_effect=urllib.error.URLError("test error"))
+        with patch("urllib.request.urlopen", mock):
+            path1 = self.resource._download_file("http://url", "test.txt")
+            path2 = self.resource._download_file("ftp://url", "test.txt")
+        self.assertEqual(path1, "")
+        self.assertEqual(path2, "")
 
     def test_get_reference_sequences(self):
         def f():

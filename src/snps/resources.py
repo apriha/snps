@@ -51,6 +51,7 @@ import hashlib
 import itertools
 import json
 import os
+import socket
 import tarfile
 import tempfile
 import urllib.error
@@ -664,6 +665,9 @@ class Resources(metaclass=Singleton):
                         compress=compress,
                         timeout=timeout,
                     )
+            except socket.timeout:
+                logger.warning("Timeout downloading {}".format(url))
+                destination = ""
 
         return destination
 

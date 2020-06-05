@@ -522,33 +522,8 @@ class Resources(metaclass=Singleton):
         if not create_dir(self._resources_dir):
             return ""
 
-        chroms = [
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "18",
-            "19",
-            "20",
-            "21",
-            "22",
-            "X",
-            "Y",
-            "MT",
-        ]
+        chroms = [str(i) for i in range(1, 23)]
+        chroms.extend(["X", "Y", "MT"])
 
         assembly_mapping_data = source_assembly + "_" + target_assembly
         destination = os.path.join(

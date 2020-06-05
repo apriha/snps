@@ -25,10 +25,10 @@ script:
   - |
     if [[ $TRAVIS_PULL_REQUEST != "false" && $SELECTED_JOB == $JOB_ID ]]; then
       # download resources for selected job on a pull request
-      DOWNLOADS_ENABLED=true
+      export DOWNLOADS_ENABLED=true
     elif [[ $TRAVIS_BRANCH == "master" && $SELECTED_JOB == $JOB_ID ]]; then
       # download resources for selected job on master branch
-      DOWNLOADS_ENABLED=true
+      export DOWNLOADS_ENABLED=true
     fi
   - pytest --cov=snps tests
   - |

@@ -62,7 +62,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         file = sc.save_snps()
         s = SNPs(file)
         self.assertEqual(s.source, "generic, 23andMe")
-        pd.testing.assert_frame_equal(sc.snps, s.snps)
+        pd.testing.assert_frame_equal(sc.snps, s.snps, check_exact=True)
 
     def test_source_lineage_file_gzip(self):
         sc = SNPsCollection("tests/input/GRCh37.csv")
@@ -76,12 +76,12 @@ class TestSNPsCollection(BaseSNPsTestCase):
                     shutil.copyfileobj(f_in, f_gzip)
         s = SNPs(file + ".gz")
         self.assertEqual(s.source, "generic, 23andMe")
-        pd.testing.assert_frame_equal(sc.snps, s.snps)
+        pd.testing.assert_frame_equal(sc.snps, s.snps, check_exact=True)
 
     def test_load_snps_list(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/GRCh37.csv", "tests/input/GRCh37.csv"])
-        pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37())
+        pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37(), check_exact=True)
         self.assertEqual(sc.source, "generic, generic")
 
     def test_load_snps_None(self):
@@ -107,12 +107,12 @@ class TestSNPsCollection(BaseSNPsTestCase):
     def test_load_snps_non_existent_file(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/GRCh37.csv", "tests/input/non_existent_file.csv"])
-        pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37())
+        pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37(), check_exact=True)
 
     def test_load_snps_invalid_file(self):
         sc = SNPsCollection()
         sc.load_snps(["tests/input/GRCh37.csv", "tests/input/empty.txt"])
-        pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37())
+        pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37(), check_exact=True)
 
     def test_load_snps_assembly_mismatch(self):
         sc = SNPsCollection()
@@ -121,7 +121,9 @@ class TestSNPsCollection(BaseSNPsTestCase):
         self.assertFalse(os.path.exists("output/ind_discrepant_genotypes_1.csv"))
         self.assertEqual(len(sc.discrepant_positions), 4)
         self.assertEqual(len(sc.discrepant_genotypes), 1)
-        pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36_discrepant_snps())
+        pd.testing.assert_frame_equal(
+            sc.snps, self.snps_NCBI36_discrepant_snps(), check_exact=True
+        )
 
     def test_load_snps_assembly_mismatch_save_output(self):
         sc = SNPsCollection()
@@ -132,7 +134,9 @@ class TestSNPsCollection(BaseSNPsTestCase):
         self.assertTrue(os.path.exists("output/discrepant_genotypes_1.csv"))
         self.assertEqual(len(sc.discrepant_positions), 4)
         self.assertEqual(len(sc.discrepant_genotypes), 1)
-        pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36_discrepant_snps())
+        pd.testing.assert_frame_equal(
+            sc.snps, self.snps_NCBI36_discrepant_snps(), check_exact=True
+        )
 
     def test_load_snps_assembly_mismatch_exceed_discrepant_positions_threshold(self):
         sc = SNPsCollection()
@@ -144,7 +148,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         self.assertFalse(os.path.exists("output/discrepant_genotypes_1.csv"))
         self.assertEqual(len(sc.discrepant_positions), 4)
         self.assertEqual(len(sc.discrepant_genotypes), 0)
-        pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36())
+        pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36(), check_exact=True)
 
     def test_load_snps_assembly_mismatch_exceed_discrepant_genotypes_threshold(self):
         sc = SNPsCollection()
@@ -156,7 +160,7 @@ class TestSNPsCollection(BaseSNPsTestCase):
         self.assertFalse(os.path.exists("output/discrepant_genotypes_1.csv"))
         self.assertEqual(len(sc.discrepant_positions), 4)
         self.assertEqual(len(sc.discrepant_genotypes), 1)
-        pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36())
+        pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36(), check_exact=True)
 
     def test_merging_files_discrepant_snps(self):
         with tempfile.TemporaryDirectory() as tmpdir:

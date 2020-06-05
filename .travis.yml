@@ -9,35 +9,26 @@ language: python
 
 before_install:
   - pip install --upgrade pip setuptools wheel
-  - pip install pytest-cov codecov awscli
+  - pip install pytest-cov codecov
 
 install:
   - pip install .
 
 script:
-  # for testing, limit downloads from the resource servers by using cached resources;
-  # note that the master branch is tested weekly via `cron`, so this ensures all Python
-  # versions will be periodically integration tested with the resource servers
+  # for testing, limit downloads from the resource servers to only the selected job for
+  # PRs and the master branch; note that the master branch is tested weekly via `cron`,
+  # so this ensures all Python versions will be periodically integration tested with the
+  # resource servers
   - set -e
   - NUM_JOBS=4
   - SELECTED_JOB=$((10#$(date +%V) % $NUM_JOBS))  # identify a job based on week of the year
-  - DOWNLOADS_ENABLED=false
   - |
-    if [[ $TRAVIS_PULL_REQUEST != "false" ]]; then
-      # download resources for all jobs on a pull request
+    if [[ $TRAVIS_PULL_REQUEST != "false" && $SELECTED_JOB == $JOB_ID ]]; then
+      # download resources for selected job on a pull request
       DOWNLOADS_ENABLED=true
     elif [[ $TRAVIS_BRANCH == "master" && $SELECTED_JOB == $JOB_ID ]]; then
       # download resources for selected job on master branch
       DOWNLOADS_ENABLED=true
-    fi
-  - |
-    if [[ $DOWNLOADS_ENABLED == "false" ]]; then
-      # use cached resources on Amazon S3
-      aws s3 cp s3://snps-resources/resources.tar.gz resources.tar.gz
-      if [[ -f resources.tar.gz ]]; then
-        tar -xzf resources.tar.gz
-        rm resources.tar.gz
-      fi
     fi
   - pytest --cov=snps tests
   - |

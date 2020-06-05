@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 
+import logging
 import os
 
 import numpy as np
@@ -42,8 +43,6 @@ import pandas as pd
 
 from snps.snps import SNPs
 from snps.utils import save_df_as_csv, clean_str
-
-import logging
 
 logger = logging.getLogger(__name__)
 

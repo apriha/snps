@@ -36,6 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 from itertools import groupby, count
+import logging
 import os
 import re
 
@@ -47,8 +48,6 @@ from snps.ensembl import EnsemblRestClient
 from snps.resources import Resources
 from snps.io import Reader, Writer
 from snps.utils import Parallelizer, get_empty_snps_dataframe
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +120,8 @@ class SNPs:
             self._snps = d["snps"]
             self._source = d["source"]
             self._phased = d["phased"]
+            self._build = d["build"]
+            self._build_detected = True if d["build"] else False
 
             if not self._snps.empty:
                 self.sort_snps()
@@ -128,12 +129,13 @@ class SNPs:
                 if deduplicate:
                     self._deduplicate_rsids()
 
-                self._build = self.detect_build()
+                if not self._build_detected:
+                    self._build = self.detect_build()
 
-                if not self._build:
-                    self._build = 37  # assume Build 37 / GRCh37 if not detected
-                else:
-                    self._build_detected = True
+                    if not self._build:
+                        self._build = 37  # assume Build 37 / GRCh37 if not detected
+                    else:
+                        self._build_detected = True
 
                 if deduplicate_XY_chrom:
                     if self.determine_sex() == "Male":
@@ -141,6 +143,7 @@ class SNPs:
 
                 if assign_par_snps:
                     self._assign_par_snps()
+                    self.sort_snps()
             else:
                 logger.warning("no SNPs loaded...")
 
@@ -487,6 +490,8 @@ class SNPs:
         rs2500347 : plus strand in 36 and 37, minus strand in 38
         rs964481 : plus strand in 36, 37, and 38
         rs2341354 : plus strand in 36, 37, and 38
+        rs3850290 : plus strand in 36, 37, and 38
+        rs1329546 : plus strand in 36, 37, and 38
 
         Returns
         -------
@@ -503,8 +508,8 @@ class SNPs:
            Jan 1;29(1):308-11.
         4. Database of Single Nucleotide Polymorphisms (dbSNP). Bethesda (MD): National Center
            for Biotechnology Information, National Library of Medicine. dbSNP accession: rs3094315,
-           rs11928389, rs2500347, rs964481, and rs2341354 (dbSNP Build ID: 151). Available from:
-           http://www.ncbi.nlm.nih.gov/SNP/
+           rs11928389, rs2500347, rs964481, rs2341354, rs3850290, and rs1329546
+           (dbSNP Build ID: 151). Available from: http://www.ncbi.nlm.nih.gov/SNP/
         """
 
         def lookup_build_with_snp_pos(pos, s):
@@ -515,12 +520,44 @@ class SNPs:
 
         build = 0
 
-        rsids = ["rs3094315", "rs11928389", "rs2500347", "rs964481", "rs2341354"]
+        rsids = [
+            "rs3094315",
+            "rs11928389",
+            "rs2500347",
+            "rs964481",
+            "rs2341354",
+            "rs3850290",
+            "rs1329546",
+        ]
         df = pd.DataFrame(
             {
-                36: [742429, 50908372, 143649677, 27566744, 908436],
-                37: [752566, 50927009, 144938320, 27656823, 918573],
-                38: [817186, 50889578, 148946169, 27638706, 983193],
+                36: [
+                    742429,
+                    50908372,
+                    143649677,
+                    27566744,
+                    908436,
+                    22315141,
+                    135302086,
+                ],
+                37: [
+                    752566,
+                    50927009,
+                    144938320,
+                    27656823,
+                    918573,
+                    23245301,
+                    135474420,
+                ],
+                38: [
+                    817186,
+                    50889578,
+                    148946169,
+                    27638706,
+                    983193,
+                    22776092,
+                    136392261,
+                ],
             },
             index=rsids,
         )
@@ -861,6 +898,9 @@ class SNPs:
         ----------
         1. Ensembl, Assembly Map Endpoint,
            http://rest.ensembl.org/documentation/info/assembly_map
+        2. Yates et. al. (doi:10.1093/bioinformatics/btu613),
+           `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
+        3. Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
         """
         chromosomes_remapped = []
         chromosomes_not_remapped = []
@@ -961,8 +1001,8 @@ class SNPs:
         for mapping in mappings["mappings"]:
             # skip if mapping is outside of range of SNP positions
             if (
-                mapping["original"]["end"] <= pos_start
-                or mapping["original"]["start"] >= pos_end
+                mapping["original"]["end"] < pos_start
+                or mapping["original"]["start"] > pos_end
             ):
                 continue
 

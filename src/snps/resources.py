@@ -50,7 +50,9 @@ import gzip
 import hashlib
 import itertools
 import json
+import logging
 import os
+import socket
 import tarfile
 import tempfile
 import urllib.error
@@ -62,8 +64,6 @@ import numpy as np
 
 from snps.ensembl import EnsemblRestClient
 from snps.utils import create_dir, Singleton
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -521,33 +521,8 @@ class Resources(metaclass=Singleton):
         if not create_dir(self._resources_dir):
             return ""
 
-        chroms = [
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "18",
-            "19",
-            "20",
-            "21",
-            "22",
-            "X",
-            "Y",
-            "MT",
-        ]
+        chroms = [str(i) for i in range(1, 23)]
+        chroms.extend(["X", "Y", "MT"])
 
         assembly_mapping_data = source_assembly + "_" + target_assembly
         destination = os.path.join(
@@ -689,6 +664,9 @@ class Resources(metaclass=Singleton):
                         compress=compress,
                         timeout=timeout,
                     )
+            except socket.timeout:
+                logger.warning("Timeout downloading {}".format(url))
+                destination = ""
 
         return destination
 

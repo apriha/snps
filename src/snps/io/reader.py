@@ -35,21 +35,27 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 
-import os
-import io
-import gzip
-import zipfile
 import binascii
 from copy import deepcopy
+import gzip
+import io
+import logging
+import os
+import re
+import warnings
+import zipfile
+import zlib
 
 import numpy as np
 import pandas as pd
 
 from snps.utils import get_empty_snps_dataframe
 
-import logging
 
 logger = logging.getLogger(__name__)
+
+# raise exception if `pd.errors.DtypeWarning` occurs
+warnings.filterwarnings("error", category=pd.errors.DtypeWarning)
 
 
 class Reader:
@@ -92,7 +98,12 @@ class Reader:
         """
         file = self._file
         compression = "infer"
-        d = {"snps": get_empty_snps_dataframe(), "source": "", "phased": False}
+        d = {
+            "snps": get_empty_snps_dataframe(),
+            "source": "",
+            "phased": False,
+            "build": 0,
+        }
 
         # peek into files to determine the data format
         if isinstance(file, str) and os.path.exists(file):
@@ -107,8 +118,10 @@ class Reader:
                 with gzip.open(file, "rt") as f:
                     first_line, comments, data = self._extract_comments(f)
             else:
-                with open(file, "r") as f:
-                    first_line, comments, data = self._extract_comments(f)
+                with open(file, "rb") as f:
+                    first_line, comments, data, compression = self._handle_bytes_data(
+                        f.read()
+                    )
 
         elif isinstance(file, bytes):
 
@@ -119,35 +132,39 @@ class Reader:
             return d
 
         if "23andMe" in first_line:
-            return self.read_23andme(file, compression)
+            d = self.read_23andme(file, compression)
         elif "Ancestry" in first_line:
-            return self.read_ancestry(file, compression)
+            d = self.read_ancestry(file, compression)
         elif first_line.startswith("RSID"):
-            return self.read_ftdna(file, compression)
+            d = self.read_ftdna(file, compression)
         elif "famfinder" in first_line:
-            return self.read_ftdna_famfinder(file, compression)
+            d = self.read_ftdna_famfinder(file, compression)
         elif "MyHeritage" in first_line:
-            return self.read_myheritage(file, compression)
+            d = self.read_myheritage(file, compression)
         elif "Living DNA" in first_line:
-            return self.read_livingdna(file, compression)
+            d = self.read_livingdna(file, compression)
         elif "SNP Name	rsID	Sample.ID	Allele1...Top" in first_line:
-            return self.read_mapmygenome(file, compression)
+            d = self.read_mapmygenome(file, compression)
         elif "lineage" in first_line or "snps" in first_line:
-            return self.read_snps_csv(file, comments, compression)
-        elif first_line.startswith("rsid"):
-            return self.read_generic(file, compression)
+            d = self.read_snps_csv(file, comments, compression)
+        elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
+            d = self.read_generic(file, compression)
+        elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
+            d = self.read_generic(file, compression, skip=0)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
-            return self.read_vcf(file, compression, self._rsids)
+            d = self.read_vcf(file, compression, self._rsids)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
-            return self.read_genes_for_good(file, compression)
+            d = self.read_genes_for_good(file, compression)
         elif "DNA.Land" in comments:
-            return self.read_dnaland(file, compression)
+            d = self.read_dnaland(file, compression)
         elif "CODIGO46" in comments:
-            return self.read_codigo46(file)
+            d = self.read_codigo46(file)
         elif "SANO" in comments:
-            return self.read_sano(file)
-        else:
-            return d
+            d = self.read_sano(file)
+
+        d.update({"build": self._detect_build_from_comments(comments)})
+
+        return d
 
     @classmethod
     def read_file(cls, file, only_detect_source, resources, rsids):
@@ -205,9 +222,24 @@ class Reader:
                 while line:
                     data += line
                     line = self._read_line(f, decode)
+        if not data and include_data:
+            data = f.read()
+            if decode:
+                data = data.decode()
         if not isinstance(f, zipfile.ZipExtFile):
             f.seek(0)
         return first_line, comments, data
+
+    def _detect_build_from_comments(self, comments):
+        if "build 37" in comments.lower():
+            return 37
+        elif "build 36" in comments.lower():
+            return 36
+        elif "b37" in comments.lower():
+            return 37
+        elif "hg19" in comments.lower():
+            return 37
+        return 0
 
     def _handle_bytes_data(self, file, include_data=False):
         compression = "infer"
@@ -355,23 +387,71 @@ class Reader:
         """
 
         def parser():
-            df = pd.read_csv(
-                file,
-                skiprows=1,
-                na_values="--",
-                names=["rsid", "chrom", "pos", "genotype"],
-                index_col=0,
-                dtype={"chrom": object},
-                compression=compression,
-            )
+            try:
+                df = pd.read_csv(
+                    file,
+                    skiprows=1,
+                    na_values="--",
+                    names=["rsid", "chrom", "pos", "genotype"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
+            except pd.errors.DtypeWarning:
+                # read files with second header for concatenated data
+                if isinstance(file, io.BytesIO):
+                    file.seek(0)
+                    (*data,) = self._handle_bytes_data(file.read(), include_data=True)
+                    file.seek(0)
+                else:
+                    with open(file, "rb") as f:
+                        (*data,) = self._handle_bytes_data(f.read(), include_data=True)
+                # reconstruct file content from `_handle_bytes_data` results
+                lines = data[0] + data[2]
+                lines = [line.strip() for line in lines.split("\n")]
+                # find index of second header
+                second_header_idx = lines.index("RSID,CHROMOSOME,POSITION,RESULT", 1)
 
-            # remove incongruous data
-            df = df.drop(
-                df.loc[df.index == "RSID"].index
-            )  # second header for concatenated data
+                df = pd.read_csv(
+                    file,
+                    skiprows=[0, second_header_idx],
+                    na_values="--",
+                    names=["rsid", "chrom", "pos", "genotype"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
+            except OSError:
+                # read concatenated gzip files with extra data
+                if isinstance(file, io.BytesIO):
+                    file.seek(0)
+                    data = file.getbuffer()
+                else:
+                    with open(file, "rb") as f:
+                        data = f.read()
 
-            # if second header existed, pos dtype will be object (should be np.int64)
-            df["pos"] = df["pos"].astype(np.int64)
+                # https://stackoverflow.com/q/4928560
+                # https://stackoverflow.com/a/37042747
+                decompressor = zlib.decompressobj(31)
+
+                # decompress data from first concatenated gzip file
+                data = decompressor.decompress(data)
+
+                # decompress data from second concatenated gzip file
+                additional_data = zlib.decompress(decompressor.unused_data, 31)
+                data += additional_data[33:]  # skip over second header
+
+                new_file = io.BytesIO(data)
+
+                df = pd.read_csv(
+                    new_file,
+                    skiprows=1,
+                    na_values="--",
+                    names=["rsid", "chrom", "pos", "genotype"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=None,  # already decompressed
+                )
 
             return (df,)
 
@@ -433,17 +513,52 @@ class Reader:
         """
 
         def parser():
-            df = pd.read_csv(
-                file,
-                comment="#",
-                header=0,
-                sep="\t",
-                na_values=0,
-                names=["rsid", "chrom", "pos", "allele1", "allele2"],
-                index_col=0,
-                dtype={"chrom": object},
-                compression=compression,
-            )
+            try:
+                df = pd.read_csv(
+                    file,
+                    comment="#",
+                    header=0,
+                    sep="\t",
+                    na_values=0,
+                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
+            except pd.errors.DtypeWarning:
+                if isinstance(file, io.BytesIO):
+                    file.seek(0)
+
+                # read files with multiple separator tabs
+                df = pd.read_csv(
+                    file,
+                    comment="#",
+                    header=0,
+                    sep="\t+",
+                    engine="python",
+                    na_values=0,
+                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
+            except pd.errors.ParserError:
+                if isinstance(file, io.BytesIO):
+                    file.seek(0)
+
+                # read files with multiple separators
+                df = pd.read_csv(
+                    file,
+                    comment="#",
+                    header=0,
+                    sep=r"\s+|\t+|\s+\t+|\t+\s+",  # https://stackoverflow.com/a/41320761
+                    engine="python",
+                    na_values=0,
+                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
 
             # create genotype column from allele columns
             df["genotype"] = df["allele1"] + df["allele2"]
@@ -771,7 +886,7 @@ class Reader:
 
         return self.read_helper(source, parser)
 
-    def read_generic(self, file, compression):
+    def read_generic(self, file, compression, skip=1):
         """ Read and parse generic CSV or TSV file.
 
         Notes
@@ -801,7 +916,7 @@ class Reader:
                 return pd.read_csv(
                     file,
                     sep=sep,
-                    skiprows=1,
+                    skiprows=skip,
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
@@ -825,7 +940,7 @@ class Reader:
                         file,
                         sep=None,
                         na_values="--",
-                        skiprows=1,
+                        skiprows=skip,
                         engine="python",
                         names=["rsid", "chrom", "pos", "genotype"],
                         usecols=[0, 1, 2, 3],
@@ -888,6 +1003,8 @@ class Reader:
         else:
             f = buffer
 
+        logged_multi_sample = False
+
         with io.TextIOWrapper(io.BufferedReader(f)) as file:
 
             for line in file:
@@ -906,8 +1023,9 @@ class Reader:
                 line_split = line_strip.split("\t")
 
                 # snps does not yet support multi-sample vcf.
-                if len(line_split) > 10:
+                if not logged_multi_sample and len(line_split) > 10:
                     logger.info("Multiple samples detected in the vcf file")
+                    logged_multi_sample = True
 
                 ref = line_split[3]
                 alt = line_split[4]

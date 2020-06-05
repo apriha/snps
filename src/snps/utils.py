@@ -36,16 +36,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import datetime
+import gzip
 import io
+import logging
 from multiprocessing import Pool
 import os
 import re
+import shutil
+import zipfile
 
 from atomicwrites import atomic_write
 import pandas as pd
 
 import snps
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -223,3 +226,49 @@ def get_empty_snps_dataframe():
     df = pd.DataFrame(columns=["rsid", "chrom", "pos", "genotype"])
     df.set_index("rsid", inplace=True)
     return df
+
+
+def zip_file(src, dest, arcname):
+    """ Zip a file.
+
+    Parameters
+    ----------
+    src : str
+        path to file to zip
+    dest : str
+        path to output zip file
+    arcname : str
+        name of file in zip archive
+
+    Returns
+    -------
+    str
+        path to zipped file
+    """
+    with atomic_write(dest, mode="wb", overwrite=True) as f:
+        with zipfile.ZipFile(f, "w") as f_zip:
+            # https://stackoverflow.com/a/16104667
+            f_zip.write(src, arcname=arcname)
+    return dest
+
+
+def gzip_file(src, dest):
+    """ Gzip a file.
+
+    Parameters
+    ----------
+    src : str
+        path to file to gzip
+    dest : str
+        path to output gzip file
+
+    Returns
+    -------
+    str
+        path to gzipped file
+    """
+    with open(src, "rb") as f_in:
+        with atomic_write(dest, mode="wb", overwrite=True) as f_out:
+            with gzip.open(f_out, "wb") as f_gzip:
+                shutil.copyfileobj(f_in, f_gzip)
+    return dest

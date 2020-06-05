@@ -1,13 +1,7 @@
-""" `snps`
-
-tools for reading, writing, merging, and remapping SNPs
-
-"""
-
 """
 BSD 3-Clause License
 
-Copyright (c) 2019, Andrew Riha
+Copyright (c) 2020, Andrew Riha
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -37,11 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 
-from snps.snps import SNPs
-from snps.snps_collection import SNPsCollection
 
-# set version string with Versioneer
-from snps._version import get_versions
-
-__version__ = get_versions()["version"]
-del get_versions
+from .reader import Reader
+from .writer import Writer

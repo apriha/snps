@@ -1,4 +1,4 @@
-""" Classes for reading and writing SNPs.
+""" Class for reading SNPs.
 
 """
 
@@ -35,23 +35,27 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 
-import datetime
-import os
-import io
-import gzip
-import zipfile
 import binascii
 from copy import deepcopy
+import gzip
+import io
+import logging
+import os
+import re
+import warnings
+import zipfile
+import zlib
 
 import numpy as np
 import pandas as pd
 
-import snps
-from snps.utils import save_df_as_csv, clean_str, get_empty_snps_dataframe
+from snps.utils import get_empty_snps_dataframe
 
-import logging
 
 logger = logging.getLogger(__name__)
+
+# raise exception if `pd.errors.DtypeWarning` occurs
+warnings.filterwarnings("error", category=pd.errors.DtypeWarning)
 
 
 class Reader:
@@ -94,7 +98,12 @@ class Reader:
         """
         file = self._file
         compression = "infer"
-        d = {"snps": get_empty_snps_dataframe(), "source": "", "phased": False}
+        d = {
+            "snps": get_empty_snps_dataframe(),
+            "source": "",
+            "phased": False,
+            "build": 0,
+        }
 
         # peek into files to determine the data format
         if isinstance(file, str) and os.path.exists(file):
@@ -109,8 +118,10 @@ class Reader:
                 with gzip.open(file, "rt") as f:
                     first_line, comments, data = self._extract_comments(f)
             else:
-                with open(file, "r") as f:
-                    first_line, comments, data = self._extract_comments(f)
+                with open(file, "rb") as f:
+                    first_line, comments, data, compression = self._handle_bytes_data(
+                        f.read()
+                    )
 
         elif isinstance(file, bytes):
 
@@ -121,35 +132,39 @@ class Reader:
             return d
 
         if "23andMe" in first_line:
-            return self.read_23andme(file, compression)
+            d = self.read_23andme(file, compression)
         elif "Ancestry" in first_line:
-            return self.read_ancestry(file, compression)
+            d = self.read_ancestry(file, compression)
         elif first_line.startswith("RSID"):
-            return self.read_ftdna(file, compression)
+            d = self.read_ftdna(file, compression)
         elif "famfinder" in first_line:
-            return self.read_ftdna_famfinder(file, compression)
+            d = self.read_ftdna_famfinder(file, compression)
         elif "MyHeritage" in first_line:
-            return self.read_myheritage(file, compression)
+            d = self.read_myheritage(file, compression)
         elif "Living DNA" in first_line:
-            return self.read_livingdna(file, compression)
+            d = self.read_livingdna(file, compression)
         elif "SNP Name	rsID	Sample.ID	Allele1...Top" in first_line:
-            return self.read_mapmygenome(file, compression)
+            d = self.read_mapmygenome(file, compression)
         elif "lineage" in first_line or "snps" in first_line:
-            return self.read_snps_csv(file, comments, compression)
-        elif first_line.startswith("rsid"):
-            return self.read_generic_csv(file, compression)
+            d = self.read_snps_csv(file, comments, compression)
+        elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
+            d = self.read_generic(file, compression)
+        elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
+            d = self.read_generic(file, compression, skip=0)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
-            return self.read_vcf(file, compression, self._rsids)
+            d = self.read_vcf(file, compression, self._rsids)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
-            return self.read_genes_for_good(file, compression)
+            d = self.read_genes_for_good(file, compression)
         elif "DNA.Land" in comments:
-            return self.read_dnaland(file, compression)
+            d = self.read_dnaland(file, compression)
         elif "CODIGO46" in comments:
-            return self.read_codigo46(file)
+            d = self.read_codigo46(file)
         elif "SANO" in comments:
-            return self.read_sano(file)
-        else:
-            return d
+            d = self.read_sano(file)
+
+        d.update({"build": self._detect_build_from_comments(comments)})
+
+        return d
 
     @classmethod
     def read_file(cls, file, only_detect_source, resources, rsids):
@@ -207,9 +222,24 @@ class Reader:
                 while line:
                     data += line
                     line = self._read_line(f, decode)
+        if not data and include_data:
+            data = f.read()
+            if decode:
+                data = data.decode()
         if not isinstance(f, zipfile.ZipExtFile):
             f.seek(0)
         return first_line, comments, data
+
+    def _detect_build_from_comments(self, comments):
+        if "build 37" in comments.lower():
+            return 37
+        elif "build 36" in comments.lower():
+            return 36
+        elif "b37" in comments.lower():
+            return 37
+        elif "hg19" in comments.lower():
+            return 37
+        return 0
 
     def _handle_bytes_data(self, file, include_data=False):
         compression = "infer"
@@ -357,23 +387,71 @@ class Reader:
         """
 
         def parser():
-            df = pd.read_csv(
-                file,
-                skiprows=1,
-                na_values="--",
-                names=["rsid", "chrom", "pos", "genotype"],
-                index_col=0,
-                dtype={"chrom": object},
-                compression=compression,
-            )
+            try:
+                df = pd.read_csv(
+                    file,
+                    skiprows=1,
+                    na_values="--",
+                    names=["rsid", "chrom", "pos", "genotype"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
+            except pd.errors.DtypeWarning:
+                # read files with second header for concatenated data
+                if isinstance(file, io.BytesIO):
+                    file.seek(0)
+                    (*data,) = self._handle_bytes_data(file.read(), include_data=True)
+                    file.seek(0)
+                else:
+                    with open(file, "rb") as f:
+                        (*data,) = self._handle_bytes_data(f.read(), include_data=True)
+                # reconstruct file content from `_handle_bytes_data` results
+                lines = data[0] + data[2]
+                lines = [line.strip() for line in lines.split("\n")]
+                # find index of second header
+                second_header_idx = lines.index("RSID,CHROMOSOME,POSITION,RESULT", 1)
 
-            # remove incongruous data
-            df = df.drop(
-                df.loc[df.index == "RSID"].index
-            )  # second header for concatenated data
+                df = pd.read_csv(
+                    file,
+                    skiprows=[0, second_header_idx],
+                    na_values="--",
+                    names=["rsid", "chrom", "pos", "genotype"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
+            except OSError:
+                # read concatenated gzip files with extra data
+                if isinstance(file, io.BytesIO):
+                    file.seek(0)
+                    data = file.getbuffer()
+                else:
+                    with open(file, "rb") as f:
+                        data = f.read()
 
-            # if second header existed, pos dtype will be object (should be np.int64)
-            df["pos"] = df["pos"].astype(np.int64)
+                # https://stackoverflow.com/q/4928560
+                # https://stackoverflow.com/a/37042747
+                decompressor = zlib.decompressobj(31)
+
+                # decompress data from first concatenated gzip file
+                data = decompressor.decompress(data)
+
+                # decompress data from second concatenated gzip file
+                additional_data = zlib.decompress(decompressor.unused_data, 31)
+                data += additional_data[33:]  # skip over second header
+
+                new_file = io.BytesIO(data)
+
+                df = pd.read_csv(
+                    new_file,
+                    skiprows=1,
+                    na_values="--",
+                    names=["rsid", "chrom", "pos", "genotype"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=None,  # already decompressed
+                )
 
             return (df,)
 
@@ -435,17 +513,52 @@ class Reader:
         """
 
         def parser():
-            df = pd.read_csv(
-                file,
-                comment="#",
-                header=0,
-                sep="\t",
-                na_values=0,
-                names=["rsid", "chrom", "pos", "allele1", "allele2"],
-                index_col=0,
-                dtype={"chrom": object},
-                compression=compression,
-            )
+            try:
+                df = pd.read_csv(
+                    file,
+                    comment="#",
+                    header=0,
+                    sep="\t",
+                    na_values=0,
+                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
+            except pd.errors.DtypeWarning:
+                if isinstance(file, io.BytesIO):
+                    file.seek(0)
+
+                # read files with multiple separator tabs
+                df = pd.read_csv(
+                    file,
+                    comment="#",
+                    header=0,
+                    sep="\t+",
+                    engine="python",
+                    na_values=0,
+                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
+            except pd.errors.ParserError:
+                if isinstance(file, io.BytesIO):
+                    file.seek(0)
+
+                # read files with multiple separators
+                df = pd.read_csv(
+                    file,
+                    comment="#",
+                    header=0,
+                    sep=r"\s+|\t+|\s+\t+|\t+\s+",  # https://stackoverflow.com/a/41320761
+                    engine="python",
+                    na_values=0,
+                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                    index_col=0,
+                    dtype={"chrom": object},
+                    compression=compression,
+                )
 
             # create genotype column from allele columns
             df["genotype"] = df["allele1"] + df["allele2"]
@@ -603,10 +716,20 @@ class Reader:
             gsa_resources = self._resources.get_gsa_resources()
 
             if isinstance(file, str):
-                with open(file, "rb") as f:
-                    first_line, comments, data = self._extract_comments(
-                        f, decode=True, include_data=True
-                    )
+                try:
+                    with open(file, "rb") as f:
+                        first_line, comments, data = self._extract_comments(
+                            f, decode=True, include_data=True
+                        )
+                except UnicodeDecodeError:
+                    # compressed file on filesystem
+                    with open(file, "rb") as f:
+                        (
+                            first_line,
+                            comments,
+                            data,
+                            compression,
+                        ) = self._handle_bytes_data(f.read(), include_data=True)
             else:
                 first_line, comments, data, compression = self._handle_bytes_data(
                     file.read(), include_data=True
@@ -763,8 +886,8 @@ class Reader:
 
         return self.read_helper(source, parser)
 
-    def read_generic_csv(self, file, compression):
-        """ Read and parse generic CSV file.
+    def read_generic(self, file, compression, skip=1):
+        """ Read and parse generic CSV or TSV file.
 
         Notes
         -----
@@ -787,22 +910,45 @@ class Reader:
         dict
             result of `read_helper`
         """
-        
+
         def parser():
-            return (
-                pd.read_csv(
+            def parse(sep):
+                return pd.read_csv(
                     file,
-                    sep=None,
+                    sep=sep,
+                    skiprows=skip,
                     na_values="--",
-                    skiprows=1,
-                    engine="python",
                     names=["rsid", "chrom", "pos", "genotype"],
-                    usecols=[0, 1, 2, 3],
                     index_col=0,
                     dtype={"chrom": object, "pos": np.int64},
                     compression=compression,
-                ),   
-            )
+                )
+
+            try:
+                df = parse(",")
+            except ValueError:
+                try:
+                    if isinstance(file, io.BufferedIOBase):
+                        file.seek(0)
+
+                    df = parse("\t")
+                except ValueError:
+                    if isinstance(file, io.BufferedIOBase):
+                        file.seek(0)
+
+                    df = pd.read_csv(
+                        file,
+                        sep=None,
+                        na_values="--",
+                        skiprows=skip,
+                        engine="python",
+                        names=["rsid", "chrom", "pos", "genotype"],
+                        usecols=[0, 1, 2, 3],
+                        index_col=0,
+                        dtype={"chrom": object, "pos": np.int64},
+                        compression=compression,
+                    )
+            return (df,)
 
         return self.read_helper("generic", parser)
 
@@ -857,6 +1003,8 @@ class Reader:
         else:
             f = buffer
 
+        logged_multi_sample = False
+
         with io.TextIOWrapper(io.BufferedReader(f)) as file:
 
             for line in file:
@@ -875,8 +1023,9 @@ class Reader:
                 line_split = line_strip.split("\t")
 
                 # snps does not yet support multi-sample vcf.
-                if len(line_split) > 10:
+                if not logged_multi_sample and len(line_split) > 10:
                     logger.info("Multiple samples detected in the vcf file")
+                    logged_multi_sample = True
 
                 ref = line_split[3]
                 alt = line_split[4]
@@ -918,6 +1067,9 @@ class Reader:
                 ]
                 rows.append(record_array)
 
+            if len(rows) == 0:
+                phased = False
+
             df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
             df = df.astype(
                 {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
@@ -926,332 +1078,3 @@ class Reader:
             df.set_index("rsid", inplace=True, drop=True)
 
         return (df, phased)
-
-
-class Writer:
-    """ Class for writing SNPs to files. """
-
-    def __init__(self, snps=None, filename="", vcf=False, atomic=True, **kwargs):
-        """ Initialize a `Writer`.
-
-        Parameters
-        ----------
-        snps : SNPs
-            SNPs to save to file or write to buffer
-        filename : str or buffer
-            filename for file to save or buffer to write to
-        vcf : bool
-            flag to save file as VCF
-        atomic : bool
-            atomically write output to a file on local filesystem
-        **kwargs
-            additional parameters to `pandas.DataFrame.to_csv`
-        """
-        self._snps = snps
-        self._filename = filename
-        self._vcf = vcf
-        self._atomic = atomic
-        self._kwargs = kwargs
-
-    def __call__(self):
-        if self._vcf:
-            return self._write_vcf()
-        else:
-            return self._write_csv()
-
-    @classmethod
-    def write_file(cls, snps=None, filename="", vcf=False, atomic=True, **kwargs):
-        """ Save SNPs to file.
-
-        Parameters
-        ----------
-        snps : SNPs
-            SNPs to save to file or write to buffer
-        filename : str or buffer
-            filename for file to save or buffer to write to
-        vcf : bool
-            flag to save file as VCF
-        atomic : bool
-            atomically write output to a file on local filesystem
-        **kwargs
-            additional parameters to `pandas.DataFrame.to_csv`
-
-        Returns
-        -------
-        str
-            path to file in output directory if SNPs were saved, else empty str
-        """
-        w = cls(snps=snps, filename=filename, vcf=vcf, atomic=atomic, **kwargs)
-        return w()
-
-    def _write_csv(self):
-        """ Write SNPs to a CSV file.
-
-        Returns
-        -------
-        str
-            path to file in output directory if SNPs were saved, else empty str
-        """
-        filename = self._filename
-        if not filename:
-            filename = "{}_{}{}".format(
-                clean_str(self._snps._source), self._snps.assembly, ".csv"
-            )
-
-        comment = (
-            "# Source(s): {}\n"
-            "# Assembly: {}\n"
-            "# Phased: {}\n"
-            "# SNPs: {}\n"
-            "# Chromosomes: {}\n".format(
-                self._snps.source,
-                self._snps.assembly,
-                self._snps.phased,
-                self._snps.snp_count,
-                self._snps.chromosomes_summary,
-            )
-        )
-        if "header" in self._kwargs:
-            if isinstance(self._kwargs["header"], bool):
-                if self._kwargs["header"]:
-                    self._kwargs["header"] = ["chromosome", "position", "genotype"]
-        else:
-            self._kwargs["header"] = ["chromosome", "position", "genotype"]
-
-        return save_df_as_csv(
-            self._snps._snps,
-            self._snps._output_dir,
-            filename,
-            comment=comment,
-            atomic=self._atomic,
-            **self._kwargs
-        )
-
-    def _write_vcf(self):
-        """ Write SNPs to a VCF file.
-
-        References
-        ----------
-        1. The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
-           https://samtools.github.io/hts-specs/VCFv4.2.pdf
-
-        Returns
-        -------
-        str
-            path to file in output directory if SNPs were saved, else empty str
-        """
-        filename = self._filename
-        if not filename:
-            filename = "{}_{}{}".format(
-                clean_str(self._snps._source), self._snps.assembly, ".vcf"
-            )
-
-        comment = (
-            "##fileformat=VCFv4.2\n"
-            "##fileDate={}\n"
-            '##source="{}; snps v{}; https://pypi.org/project/snps/"\n'.format(
-                datetime.datetime.utcnow().strftime("%Y%m%d"),
-                self._snps._source,
-                snps.__version__,
-            )
-        )
-
-        reference_sequence_chroms = (
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "18",
-            "19",
-            "20",
-            "21",
-            "22",
-            "X",
-            "Y",
-            "MT",
-        )
-
-        df = self._snps.snps
-
-        tasks = []
-
-        # skip insertions and deletions
-        df = df.drop(
-            df.loc[
-                df["genotype"].notnull()
-                & (
-                    (df["genotype"].str[0] == "I")
-                    | (df["genotype"].str[0] == "D")
-                    | (df["genotype"].str[1] == "I")
-                    | (df["genotype"].str[1] == "D")
-                )
-            ].index
-        )
-
-        chroms_to_drop = []
-        for chrom in df["chrom"].unique():
-            if chrom not in reference_sequence_chroms:
-                chroms_to_drop.append(chrom)
-                continue
-
-            tasks.append(
-                {
-                    "resources": self._snps._resources,
-                    "assembly": self._snps.assembly,
-                    "chrom": chrom,
-                    "snps": pd.DataFrame(df.loc[(df["chrom"] == chrom)]),
-                }
-            )
-
-        # drop chromosomes without reference sequence data (e.g., unassigned PAR)
-        for chrom in chroms_to_drop:
-            df = df.drop(df.loc[df["chrom"] == chrom].index)
-
-        # create the VCF representation for SNPs
-        results = map(self._create_vcf_representation, tasks)
-
-        contigs = []
-        vcf = [pd.DataFrame()]
-        for result in list(results):
-            contigs.append(result["contig"])
-            vcf.append(result["vcf"])
-
-        vcf = pd.concat(vcf)
-
-        comment += "".join(contigs)
-        comment += '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n'
-        comment += "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE\n"
-
-        return save_df_as_csv(
-            vcf,
-            self._snps._output_dir,
-            filename,
-            comment=comment,
-            prepend_info=False,
-            header=False,
-            index=False,
-            na_rep=".",
-            sep="\t",
-        )
-
-    def _create_vcf_representation(self, task):
-        resources = task["resources"]
-        assembly = task["assembly"]
-        chrom = task["chrom"]
-        snps = task["snps"]
-
-        if len(snps.loc[snps["genotype"].notnull()]) == 0:
-            return {"contig": "", "vcf": pd.DataFrame()}
-
-        seqs = resources.get_reference_sequences(assembly, [chrom])
-        seq = seqs[chrom]
-
-        contig = '##contig=<ID={},URL={},length={},assembly={},md5={},species="{}">\n'.format(
-            seq.ID, seq.url, seq.length, seq.build, seq.md5, seq.species
-        )
-
-        snps = snps.reset_index()
-
-        df = pd.DataFrame(
-            columns=[
-                "CHROM",
-                "POS",
-                "ID",
-                "REF",
-                "ALT",
-                "QUAL",
-                "FILTER",
-                "INFO",
-                "FORMAT",
-                "SAMPLE",
-            ]
-        )
-        df = df.astype(
-            {
-                "CHROM": object,
-                "POS": np.int64,
-                "ID": object,
-                "REF": object,
-                "ALT": object,
-                "QUAL": np.int64,
-                "FILTER": object,
-                "INFO": object,
-                "FORMAT": object,
-                "SAMPLE": object,
-            }
-        )
-
-        df["CHROM"] = snps["chrom"]
-        df["POS"] = snps["pos"]
-        df["ID"] = snps["rsid"]
-
-        # https://stackoverflow.com/a/24838429
-        df["REF"] = list(map(chr, seq.sequence[snps.pos - seq.start]))
-
-        df["FORMAT"] = "GT"
-
-        seq.clear()
-
-        df["genotype"] = snps["genotype"]
-
-        temp = df.loc[df["genotype"].notnull()]
-
-        # https://stackoverflow.com/a/19976286
-        df.loc[df["genotype"].notnull(), "ALT"] = np.vectorize(self._compute_alt)(
-            temp["REF"], temp["genotype"]
-        )
-
-        temp = df.loc[df["genotype"].notnull()]
-
-        df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
-            self._compute_genotype
-        )(temp["REF"], temp["ALT"], temp["genotype"])
-
-        df.loc[df["SAMPLE"].isnull(), "SAMPLE"] = "./."
-
-        del df["genotype"]
-
-        return {"contig": contig, "vcf": df}
-
-    def _compute_alt(self, ref, genotype):
-        genotype_alleles = list(set(genotype))
-
-        if ref in genotype_alleles:
-            if len(genotype_alleles) == 1:
-                return "N"
-            else:
-                genotype_alleles.remove(ref)
-                return genotype_alleles.pop(0)
-        else:
-            return ",".join(genotype_alleles)
-
-    def _compute_genotype(self, ref, alt, genotype):
-        alleles = [ref]
-
-        if self._snps.phased:
-            separator = "|"
-        else:
-            separator = "/"
-
-        if pd.notna(alt):
-            alleles.extend(alt.split(","))
-
-        if len(genotype) == 2:
-            return "{}{}{}".format(
-                alleles.index(genotype[0]), separator, alleles.index(genotype[1])
-            )
-        else:
-            return "{}".format(alleles.index(genotype[0]))

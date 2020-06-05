@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import datetime
 import gzip
 import io
+import logging
 from multiprocessing import Pool
 import os
 import re
@@ -48,7 +49,6 @@ from atomicwrites import atomic_write
 import pandas as pd
 
 import snps
-import logging
 
 logger = logging.getLogger(__name__)
 

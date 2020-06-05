@@ -50,6 +50,7 @@ import gzip
 import hashlib
 import itertools
 import json
+import logging
 import os
 import socket
 import tarfile
@@ -63,8 +64,6 @@ import numpy as np
 
 from snps.ensembl import EnsemblRestClient
 from snps.utils import create_dir, Singleton
-
-import logging
 
 logger = logging.getLogger(__name__)
 

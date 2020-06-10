@@ -239,6 +239,14 @@ class Reader:
             return 37
         elif "hg19" in comments.lower():
             return 37
+        elif "hg38" in comments.lower():
+            return 38
+        elif "GRCh38" in comments.lower():
+            return 38
+        elif "build 38" in comments.lower():
+            return 38
+        elif "b38" in comments.lower():
+            return 38
         return 0
 
     def _handle_bytes_data(self, file, include_data=False):

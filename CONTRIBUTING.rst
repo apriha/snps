@@ -55,6 +55,9 @@ To set up ``snps`` for local development:
 
     pipenv run pytest --cov=snps tests
 
+   .. note:: Downloads during tests are disabled by default. To enable downloads, set
+             the environment variable ``DOWNLOADS_ENABLED=true``.
+
    .. note:: If you receive errors when running the tests, you may need to specify the
              temporary directory with an environment variable, e.g.,
              ``TMPDIR="/path/to/tmp/dir"``.

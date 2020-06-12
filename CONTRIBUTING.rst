@@ -55,6 +55,10 @@ To set up ``snps`` for local development:
 
     pipenv run pytest --cov=snps tests
 
+   .. note:: If you receive errors when running the tests, you may need to specify the
+             temporary directory with an environment variable, e.g.,
+             ``TMPDIR="/path/to/tmp/dir"``.
+
 6. Check code formatting::
 
     pipenv run black --check --diff .

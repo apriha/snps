@@ -35,6 +35,7 @@ MOCK_MODULES = [
     "pandas.api.types",
     "matplotlib",
     "matplotlib.collections",
+    "warnings",
 ]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 

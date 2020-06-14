@@ -308,11 +308,11 @@ class BaseSNPsTestCase(TestCase):
         ]
 
         if self.downloads_enabled:
-            return SNPs(path, assign_par_snps=True)
+            return SNPs(path, assign_par_snps=True, deduplicate_XY_chrom=False)
         else:
             mock = Mock(side_effect=effects)
             with patch("snps.ensembl.EnsemblRestClient.perform_rest_action", mock):
-                return SNPs(path, assign_par_snps=True)
+                return SNPs(path, assign_par_snps=True, deduplicate_XY_chrom=False)
 
     def _get_test_assembly_mapping_data(self, source, target, strands, mappings):
         return {

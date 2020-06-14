@@ -1,3 +1,5 @@
+""" Classes for reading and writing SNPs. """
+
 """
 BSD 3-Clause License
 

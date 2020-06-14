@@ -137,13 +137,13 @@ class SNPs:
                     else:
                         self._build_detected = True
 
-                if deduplicate_XY_chrom:
-                    if self.determine_sex() == "Male":
-                        self._deduplicate_XY_chrom()
-
                 if assign_par_snps:
                     self._assign_par_snps()
                     self.sort_snps()
+
+                if deduplicate_XY_chrom:
+                    if self.determine_sex() == "Male":
+                        self._deduplicate_XY_chrom()
             else:
                 logger.warning("no SNPs loaded...")
 

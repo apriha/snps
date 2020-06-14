@@ -6,12 +6,34 @@ snps
 ====
 tools for reading, writing, merging, and remapping SNPs 🧬
 
-Capabilities
-------------
-- Read raw data (genotype) files from a variety of direct-to-consumer (DTC) DNA testing sources
-- Read and write VCF files for Builds 36, 37, and 38 (e.g., convert `23andMe <https://www.23andme.com>`_ to VCF)
-- Merge raw data files from different DNA tests, identifying discrepant SNPs in the process
-- Remap SNPs between assemblies / builds (e.g., convert SNPs from Build 36 to Build 37, etc.)
+Features
+--------
+Input / Output
+``````````````
+- Read raw data (genotype) files from a variety of direct-to-consumer (DTC) DNA testing
+  sources with a `SNPs <https://snps.readthedocs.io/en/latest/snps.html#snps.snps.SNPs>`_
+  object
+- Read and write VCF files (e.g., convert `23andMe <https://www.23andme.com>`_ to VCF)
+- Merge raw data files from different DNA tests, identifying discrepant SNPs in the
+  process with a
+  `SNPsCollection <https://snps.readthedocs.io/en/latest/snps.html#snps.snps_collection.SNPsCollection>`_
+  object
+- Read data in a variety of formats (e.g., files, bytes, compressed with `gzip` or `zip`)
+- Handle several variations of file types, validated via
+  `openSNP parsing analysis <https://github.com/apriha/snps/tree/master/analysis/parse-opensnp-files>`_
+
+Build / Assembly Detection and Remapping
+````````````````````````````````````````
+- Detect the build / assembly of SNPs (supports builds 36, 37, and 38)
+- Remap SNPs between builds / assemblies
+
+Data Cleaning
+`````````````
+- Fix several common issues when loading SNPs
+- Sort SNPs based on chromosome and position
+- Deduplicate RSIDs
+- Deduplicate alleles in the non-PAR regions of the X and Y chromosomes for males
+- Assign PAR SNPs to the X or Y chromosome
 
 Supported Genotype Files
 ------------------------
@@ -28,6 +50,8 @@ genotype files from the following DNA testing sources:
 - `Mapmygenome <https://mapmygenome.in>`_
 - `MyHeritage <https://www.myheritage.com>`_
 - `Sano Genetics <https://sanogenetics.com>`_
+
+Additionally, ``snps`` can read a variety of "generic" CSV and TSV files.
 
 Dependencies
 ------------

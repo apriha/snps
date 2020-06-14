@@ -12,4 +12,6 @@ include versioneer.py
 
 exclude .git* .travis*
 
+prune docs/_build
+
 global-exclude *.py[cod] __pycache__ *.so *.dylib

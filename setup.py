@@ -104,7 +104,6 @@ setup(
         "License :: OSI Approved :: BSD License",
         "Natural Language :: English",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
@@ -118,7 +117,7 @@ setup(
         "Issue Tracker": "https://github.com/apriha/snps/issues",
     },
     keywords="snps dna chromosomes bioinformatics",
-    install_requires=["numpy", "pandas<=0.25.3", "atomicwrites"],
-    python_requires=">=3.5",
+    install_requires=["numpy", "pandas!=1.0.0", "atomicwrites"],
+    python_requires=">=3.6.1",
     platforms=["any"],
 )

@@ -55,7 +55,8 @@ Additionally, ``snps`` can read a variety of "generic" CSV and TSV files.
 
 Dependencies
 ------------
-``snps`` requires `Python <https://www.python.org>`_ 3.5+ and the following Python packages:
+``snps`` requires `Python <https://www.python.org>`_ 3.6.1+ and the following Python
+packages:
 
 - `numpy <http://www.numpy.org>`_
 - `pandas <http://pandas.pydata.org>`_

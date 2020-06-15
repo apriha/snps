@@ -12,14 +12,27 @@ jobs:
     
     steps:
       - checkout
+      # increment vX to manually purge cache
+      - restore_cache:
+          name: Restore dependencies from cache, if possible
+          keys:
+            - v1-venv-{{ checksum "Pipfile.lock" }}
       - run:
-          name: dependency installation
-          command: |
-            pipenv install --dev
+          name: Dependency installation
+          # pipenv is itself include in circleci docker image
+          # prefer the sync command to remove unused cached deps
+          command: pipenv sync --dev
+      - save_cache:
+          name: Save server dependencies
+          paths:
+            - .venv
+          key: v1-venv-{{ checksum "Pipfile.lock" }}
       - run:
-          name: dependency output for debugging
-          command: |        
-            pipenv graph
+          name: Dependency output for debugging
+          command: pipenv graph
+      - run:
+          name: Dependency security check
+          command: pipenv check
       - run:
           name: run tests
           command: |
@@ -28,13 +41,12 @@ jobs:
             bash <(curl -s https://codecov.io/bash)
       - store_test_results:
           # must be a directory with named subdirectories
-          path: server/server-test-reports
+          path: server-test-reports
       - store_artifacts:
-          path: server/server-test-reports
+          path: server-test-reports
       - run:
           name: check linting
-          command: |
-            pipenv run black --check --diff .
+          command: pipenv run black --check --diff .
 
 workflows:
   test:

@@ -114,11 +114,11 @@ class Reader:
                         first_line, comments, data = self._extract_comments(
                             f, decode=True
                         )
-                    compression= "zip"
+                    compression = "zip"
             elif ".gz" in file:
                 with gzip.open(file, "rt") as f:
                     first_line, comments, data = self._extract_comments(f)
-                compression="gzip"
+                compression = "gzip"
             else:
                 with open(file, "rb") as f:
                     first_line, comments, data, compression = self._handle_bytes_data(
@@ -632,11 +632,10 @@ class Reader:
                     line = line.replace('"', "")
                     # take it apart and put itback together so it looks
                     # lkie the older myheritage files
-                    line = '"'+'","'.join(line.strip().split(","))+'"\n'
+                    line = '"' + '","'.join(line.strip().split(",")) + '"\n'
                 file_string_out.write(line)
 
             return (
-
                 pd.read_csv(
                     io.StringIO(file_string_out.getvalue()),
                     comment="#",
@@ -644,7 +643,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object, "pos": np.int64}
+                    dtype={"chrom": object, "pos": np.int64},
                 ),
             )
 

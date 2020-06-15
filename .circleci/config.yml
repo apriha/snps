@@ -30,9 +30,9 @@ jobs:
       - run:
           name: Dependency output for debugging
           command: pipenv graph
-      - run:
-          name: Dependency security check
-          command: pipenv check
+      #- run:
+      #    name: Dependency security check
+      #    command: pipenv check
       - run:
           name: run tests
           command: |

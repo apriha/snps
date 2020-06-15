@@ -7,31 +7,25 @@ jobs:
   unittests:
     docker:
       - image: circleci/python:3.8.3
+        environment:
+          PIPENV_VENV_IN_PROJECT: "1"
     
     steps:
       - checkout
       - run:
-          name: virtualenv creation
-          command: |
-            pip install venv
-            virtualenv venv
-      - run:
           name: dependency installation
           command: |
-            pip install pipenv
             pipenv install --dev
       - run:
           name: dependency output for debugging
           command: |        
-            pip install pipdeptree
-            pipdeptree
+            pipenv graph
       - run:
           name: run tests
           command: |
             mkdir -p server-test-reports/pytest
             pipenv run pytest --cov=snps --cov-report xml:server-test-reports/coverage.xml --junitxml server-test-reports/pytest/tests.xml tests
             bash <(curl -s https://codecov.io/bash)
-            pipenv run black --check --diff .
       - store_test_results:
           # must be a directory with named subdirectories
           path: server/server-test-reports

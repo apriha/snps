@@ -8,7 +8,7 @@ commands:
     description: Download and install dependencies
     steps:
       - run:
-          name: Install
+          name: Download and install
           command: |
             pip install pipenv
             pipenv install --dev

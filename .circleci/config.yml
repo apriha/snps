@@ -1,0 +1,34 @@
+# Python CircleCI 2.1 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2.1
+commands:
+  install:
+    description: Download and install dependencies
+    steps:
+      - run:
+          name: Install
+          command: |
+            pip install pipenv
+            pipenv install --dev
+jobs:
+  unittests:
+    
+    steps:
+      - checkout
+
+      - install
+
+      - run:
+          name: Run tests
+          command: |
+            mkdir -p server-test-reports/pytest
+            pipenv run pytest --cov=snps t--cov-report xml:server-test-reports/coverage.xml --junitxml server-test-reports/pytest/tests.xml tests
+            bash <(curl -s https://codecov.io/bash)
+            pipenv run black --check --diff .
+
+workflows:
+  test:
+    jobs:
+      - "unittests"

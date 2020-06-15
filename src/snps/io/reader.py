@@ -114,9 +114,11 @@ class Reader:
                         first_line, comments, data = self._extract_comments(
                             f, decode=True
                         )
+                    compression= "zip"
             elif ".gz" in file:
                 with gzip.open(file, "rt") as f:
                     first_line, comments, data = self._extract_comments(f)
+                compression="gzip"
             else:
                 with open(file, "rb") as f:
                     first_line, comments, data, compression = self._handle_bytes_data(
@@ -277,6 +279,7 @@ class Reader:
                 )
 
         else:
+            compression = None
             file = io.BytesIO(file)
             first_line, comments, data = self._extract_comments(
                 deepcopy(file), decode=True, include_data=include_data
@@ -603,16 +606,45 @@ class Reader:
         """
 
         def parser():
+
+            if isinstance(file, str):
+                with open(file, "rb") as f:
+                    first_line, comments, data, comrpession = self._handle_bytes_data(
+                        f.read(), include_data=True
+                    )
+            else:
+                first_line, comments, data, compression = self._handle_bytes_data(
+                    file.read(), include_data=True
+                )
+
+            file_string_in = io.StringIO(data)
+            file_string_out = io.StringIO()
+            for line in file_string_in:
+                # user the number of quotes in a line to tell old from new
+                quote_count = 0
+                for char in line:
+                    if char == '"':
+                        quote_count += 1
+
+                if quote_count == 14:
+                    # extra-quoted new varient file
+                    # can all be stripped so pandas can read it normally
+                    line = line.replace('"', "")
+                    # take it apart and put itback together so it looks
+                    # lkie the older myheritage files
+                    line = '"'+'","'.join(line.strip().split(","))+'"\n'
+                file_string_out.write(line)
+
             return (
+
                 pd.read_csv(
-                    file,
+                    io.StringIO(file_string_out.getvalue()),
                     comment="#",
                     header=0,
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object, "pos": np.int64},
-                    compression=compression,
+                    dtype={"chrom": object, "pos": np.int64}
                 ),
             )
 

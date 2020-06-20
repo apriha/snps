@@ -154,7 +154,11 @@ class Reader:
         elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
             d = self.read_generic(file, compression, skip=0)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
-            d = self.read_vcf(file, compression, self._rsids)
+            if "/scratch/" in comments.lower():
+                provider = "Nebula"
+            elif any(x in comments.lower() for x in ["hwfssz1", "BIGDATA_COMPUTING", "bigdata_autoanalysis"])
+                provider = "Dante"
+            d = self.read_vcf(file, compression, self._rsids, provider)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
             d = self.read_genes_for_good(file, compression)
         elif "DNA.Land" in comments:
@@ -991,7 +995,7 @@ class Reader:
 
         return self.read_helper("generic", parser)
 
-    def read_vcf(self, file, compression, rsids=()):
+    def read_vcf(self, file, compression, provider, rsids=()):
         """ Read and parse VCF file.
 
         Notes
@@ -1029,7 +1033,7 @@ class Reader:
 
             return (df, phased)
 
-        return self.read_helper("vcf", parser)
+        return self.read_helper(provider, parser)
 
     def _parse_vcf(self, buffer, rsids):
         rows = []

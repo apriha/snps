@@ -158,7 +158,10 @@ class Reader:
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
             if "/scratch/" in comments.lower():
                 provider = "Nebula"
-            elif any(x in comments.lower() for x in ["hwfssz1", "BIGDATA_COMPUTING", "bigdata_autoanalysis"]):
+            elif any(
+                x in comments.lower()
+                for x in ["hwfssz1", "BIGDATA_COMPUTING", "bigdata_autoanalysis"]
+            ):
                 provider = "Dante"
             else:
                 provider = "vcf"
@@ -825,23 +828,26 @@ class Reader:
         dict
             result of `read_helper`
         """
+
         def parser():
             gsa_resources = self._resources.get_gsa_resources()
+
             def map_rsids(x):
                 return gsa_resources["rsid_map"].get(x)
-            
+
             df = pd.read_csv(
-                    file,
-                    sep="\t",
-                    skiprows=1,
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype={"chrom": object, "pos": np.int64},
-                    compression=compression,
-                )
+                file,
+                sep="\t",
+                skiprows=1,
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype={"chrom": object, "pos": np.int64},
+                compression=compression,
+            )
             df.rename(index=gsa_resources["rsid_map"], inplace=True)
             return (df,)
+
         return self.read_helper("tellmeGen", parser)
 
     def read_codigo46(self, file):
@@ -1060,6 +1066,7 @@ class Reader:
         dict
             result of `read_helper`
         """
+
         def parser():
             if not isinstance(file, io.BytesIO):
                 with open(file, "rb") as f:
@@ -1068,6 +1075,7 @@ class Reader:
                 df, phased = self._parse_vcf(file, rsids)
 
             return (df, phased)
+
         return self.read_helper(provider, parser)
 
     def _parse_vcf(self, buffer, rsids):

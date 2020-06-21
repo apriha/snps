@@ -316,4 +316,3 @@ class TestReader(BaseSNPsTestCase):
 
     def test_read_vcf_Nebula(self):
         self.run_parsing_tests_vcf("tests/input/testvcf_Nebula.vcf", "Nebula")
-

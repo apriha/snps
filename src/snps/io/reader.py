@@ -158,6 +158,8 @@ class Reader:
                 provider = "Nebula"
             elif any(x in comments.lower() for x in ["hwfssz1", "BIGDATA_COMPUTING", "bigdata_autoanalysis"])
                 provider = "Dante"
+            else:
+                provider = "vcf"
             d = self.read_vcf(file, compression, self._rsids, provider)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
             d = self.read_genes_for_good(file, compression)

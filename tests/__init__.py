@@ -613,7 +613,7 @@ class BaseSNPsTestCase(TestCase):
     def run_parsing_tests_vcf(
         self,
         file,
-        source,
+        source="vcf",
         phased=False,
         unannotated=False,
         rsids=(),

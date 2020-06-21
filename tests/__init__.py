@@ -613,7 +613,7 @@ class BaseSNPsTestCase(TestCase):
     def run_parsing_tests_vcf(
         self,
         file,
-        source="vcf",
+        source,
         phased=False,
         unannotated=False,
         rsids=(),
@@ -688,7 +688,6 @@ class BaseSNPsTestCase(TestCase):
     ):
         if snps_df is None:
             snps_df = self.generic_snps()
-
         self.assertEqual(snps.source, source)
         pd.testing.assert_frame_equal(snps.snps, snps_df, check_exact=True)
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)

@@ -149,12 +149,21 @@ class Reader:
             d = self.read_mapmygenome(file, compression)
         elif "lineage" in first_line or "snps" in first_line:
             d = self.read_snps_csv(file, comments, compression)
+        elif "Chromosome" in first_line:
+            d = self.read_tellmegen(file, compression)
         elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
             d = self.read_generic(file, compression)
         elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
             d = self.read_generic(file, compression, skip=0)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
-            d = self.read_vcf(file, compression, self._rsids)
+            dante_comments = ["hwfssz1", "BIGDATA_COMPUTING", "bigdata_autoanalysis"]
+            if "/scratch/" in comments.lower():
+                provider = "Nebula"
+            elif any(x in comments.lower() for x in dante_comments):
+                provider = "Dante"
+            else:
+                provider = "vcf"
+            d = self.read_vcf(file, compression, provider, self._rsids)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
             d = self.read_genes_for_good(file, compression)
         elif "DNA.Land" in comments:
@@ -346,7 +355,6 @@ class Reader:
 
             if len(extra) == 1:
                 phased = extra[0]
-
         return {"snps": df, "source": source, "phased": phased}
 
     def read_23andme(self, file, compression):
@@ -803,6 +811,43 @@ class Reader:
 
         return self.read_helper(source, parser)
 
+    def read_tellmegen(self, file, compression):
+        """ Read and parse tellmeGen files.
+
+        https://www.tellmegen.com/
+
+        Parameters
+        ----------
+        data : str
+            data string
+
+        Returns
+        -------
+        dict
+            result of `read_helper`
+        """
+
+        def parser():
+            gsa_resources = self._resources.get_gsa_resources()
+
+            def map_rsids(x):
+                return gsa_resources["rsid_map"].get(x)
+
+            df = pd.read_csv(
+                file,
+                sep="\t",
+                skiprows=1,
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype={"chrom": object, "pos": np.int64},
+                compression=compression,
+            )
+            df.rename(index=gsa_resources["rsid_map"], inplace=True)
+            return (df,)
+
+        return self.read_helper("tellmeGen", parser)
+
     def read_codigo46(self, file):
         """ Read and parse Codigo46 files.
 
@@ -991,7 +1036,7 @@ class Reader:
 
         return self.read_helper("generic", parser)
 
-    def read_vcf(self, file, compression, rsids=()):
+    def read_vcf(self, file, compression, provider, rsids=()):
         """ Read and parse VCF file.
 
         Notes
@@ -1029,7 +1074,7 @@ class Reader:
 
             return (df, phased)
 
-        return self.read_helper("vcf", parser)
+        return self.read_helper(provider, parser)
 
     def _parse_vcf(self, buffer, rsids):
         rows = []

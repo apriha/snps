@@ -126,6 +126,13 @@ class TestReader(BaseSNPsTestCase):
             self.run_parsing_tests("tests/input/codigo46.txt", "Codigo46")
             self._teardown_gsa_test()
 
+    def test_read_tellmeGen(self):
+        # https://www.tellmegen.com/
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._setup_gsa_test(tmpdir)
+            self.run_parsing_tests("tests/input/tellmeGen.txt", "tellmeGen")
+            self._teardown_gsa_test()
+
     def test_read_DNALand(self):
         # https://dna.land/
         self.run_parsing_tests("tests/input/DNALand.txt", "DNA.Land")
@@ -301,5 +308,11 @@ class TestReader(BaseSNPsTestCase):
 
     def test_read_unannotated_vcf(self):
         self.run_parsing_tests_vcf(
-            "tests/input/unannotated_testvcf.vcf", unannotated=True, build=0
+            "tests/input/unannotated_testvcf.vcf", "vcf", unannotated=True, build=0
         )
+
+    def test_read_vcf_Dante(self):
+        self.run_parsing_tests_vcf("tests/input/testvcf_Dante.vcf", "Dante")
+
+    def test_read_vcf_Nebula(self):
+        self.run_parsing_tests_vcf("tests/input/testvcf_Nebula.vcf", "Nebula")

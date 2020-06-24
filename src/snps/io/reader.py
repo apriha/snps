@@ -156,12 +156,10 @@ class Reader:
         elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
             d = self.read_generic(file, compression, skip=0)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
+            dante_comments = ["hwfssz1", "BIGDATA_COMPUTING", "bigdata_autoanalysis"]
             if "/scratch/" in comments.lower():
                 provider = "Nebula"
-            elif any(
-                x in comments.lower()
-                for x in ["hwfssz1", "BIGDATA_COMPUTING", "bigdata_autoanalysis"]
-            ):
+            elif any(x in comments.lower() for x in dante_comments):
                 provider = "Dante"
             else:
                 provider = "vcf"

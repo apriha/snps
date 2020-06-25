@@ -782,15 +782,9 @@ class Reader:
                     file.read(), include_data=True
                 )
 
-            dtype = (
-                {"Chr": object, "Position": np.int64, "genotype": object}
-                if source == "Sano"
-                else {}
-            )
-
-            df = pd.read_csv(
-                io.StringIO(data), sep="\t", dtype=dtype, na_values=na_values,
-            )
+            dtype = {"Chr": object, "Position": np.int64} if source == "Sano" else {}
+            data_io = io.StringIO(data)
+            df = pd.read_csv(data_io, sep="\t", dtype=dtype, na_values=na_values)
 
             def map_rsids(x):
                 return gsa_resources["rsid_map"].get(x)

@@ -758,7 +758,7 @@ class Reader:
 
         return self.read_helper("GenesForGood", parser)
 
-    def _read_gsa_helper(self, file, source, strand, na_values="--"):
+    def _read_gsa_helper(self, file, source, strand, dtypes, na_values="--"):
         def parser():
             gsa_resources = self._resources.get_gsa_resources()
 
@@ -782,7 +782,8 @@ class Reader:
                     file.read(), include_data=True
                 )
 
-            df = pd.read_csv(io.StringIO(data), sep="\t", na_values=na_values)
+            data_io = io.StringIO(data)
+            df = pd.read_csv(data_io, sep="\t", dtype=dtypes, na_values=na_values)
 
             def map_rsids(x):
                 return gsa_resources["rsid_map"].get(x)
@@ -863,7 +864,7 @@ class Reader:
         dict
             result of `read_helper`
         """
-        return self._read_gsa_helper(file, "Codigo46", "Plus")
+        return self._read_gsa_helper(file, "Codigo46", "Plus", {})
 
     def read_sano(self, file):
         """ Read and parse Sano Genetics files.
@@ -880,7 +881,8 @@ class Reader:
         dict
             result of `read_helper`
         """
-        return self._read_gsa_helper(file, "Sano", "Forward", na_values="-")
+        dtype = {"Chr": object, "Position": np.int64}
+        return self._read_gsa_helper(file, "Sano", "Forward", dtype, na_values="-",)
 
     def read_dnaland(self, file, compression):
         """ Read and parse DNA.land files.

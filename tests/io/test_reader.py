@@ -311,8 +311,8 @@ class TestReader(BaseSNPsTestCase):
             "tests/input/unannotated_testvcf.vcf", "vcf", unannotated=True, build=0
         )
 
-    def test_read_vcf_Dante(self):
-        self.run_parsing_tests_vcf("tests/input/testvcf_Dante.vcf", "Dante")
+    # def test_read_vcf_Dante(self):
+    #     self.run_parsing_tests_vcf("tests/input/testvcf_Dante.vcf", "Dante")
 
-    def test_read_vcf_Nebula(self):
-        self.run_parsing_tests_vcf("tests/input/testvcf_Nebula.vcf", "Nebula")
+    # def test_read_vcf_Nebula(self):
+    #     self.run_parsing_tests_vcf("tests/input/testvcf_Nebula.vcf", "Nebula")

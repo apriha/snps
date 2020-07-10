@@ -1132,8 +1132,8 @@ class Reader:
                 genotype = ""
                 zygote = line_split[9]
                 zygote = zygote.split(":")[0]
-                for z in zygote.replace("|","/").split("/"):
-                    if z == '.':
+                for z in zygote.replace("|", "/").split("/"):
+                    if z == ".":
                         # missing genotype
                         genotype = np.nan
                         break

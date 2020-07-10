@@ -1133,13 +1133,17 @@ class Reader:
                 zygote = line_split[9]
                 zygote = zygote.split(":")[0]
                 for z in zygote.replace("|","/").split("/"):
+                    if z == '.':
+                        # missing genotype
+                        genotype = np.nan
+                        break
                     z = int(z)
                     if z > len(ref_alt):
                         # invalid genotype number
                         genotype = np.nan
                         break
                     elif ref_alt[z] == ".":
-                        # missing genotype
+                        # missing genotype in ref or alt
                         genotype = np.nan
                         break
                     else:

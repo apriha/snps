@@ -1119,29 +1119,31 @@ class Reader:
                 if len(alt.split(",")) > 1 and alt.split(",")[1] == "<NON_REF>":
                     alt = alt.split(",")[0]
 
-                zygote = line_split[9]
-                zygote = zygote.split(":")[0]
-
                 ref_alt = [ref] + alt.split(",")
 
                 # skip insertions and deletions
                 if sum(map(len, ref_alt)) > len(ref_alt):
                     continue
 
-                zygote1, zygote2 = zygote.replace("|", " ").replace("/", " ").split(" ")
-                if zygote1 == "." or zygote2 == ".":
-                    # assign null genotypes if either allele is None
-                    genotype = np.nan
-                elif (zygote1 == "0" or zygote2 == "0") and ref == ".":
-                    # sample allele specifies REF allele, which is None
-                    genotype = np.nan
-                elif (zygote1 == "1" or zygote2 == "1") and alt == ".":
-                    # sample allele specifies ALT allele, which is None
-                    genotype = np.nan
-                else:
-                    # Could capture full genotype, if REF is None, but genotype is 1/1 or
-                    # if ALT is None, but genotype is 0/0
-                    genotype = ref_alt[int(zygote1)] + ref_alt[int(zygote2)]
+                # GT (genotype) is usually the first sample-specific field
+                # | = diploid phased
+                # / = diploid unphased
+                # or haploid e.g. male sex chromosome
+                genotype = ""
+                zygote = line_split[9]
+                zygote = zygote.split(":")[0]
+                for z in zygote.replace("|","/").split("/"):
+                    z = int(z)
+                    if z > len(ref_alt):
+                        # invalid genotype number
+                        genotype = np.nan
+                        break
+                    elif ref_alt[z] == ".":
+                        # missing genotype
+                        genotype = np.nan
+                        break
+                    else:
+                        genotype = genotype + ref_alt[z]
 
                 if "/" in zygote and pd.notna(genotype):
                     phased = False

@@ -113,8 +113,13 @@ class Writer:
         """
         filename = self._filename
         if not filename:
+            ext = ".txt"
+
+            if "sep" in self._kwargs and self._kwargs["sep"] == ",":
+                ext = ".csv"
+
             filename = "{}_{}{}".format(
-                clean_str(self._snps._source), self._snps.assembly, ".csv"
+                clean_str(self._snps._source), self._snps.assembly, ext
             )
 
         comment = (

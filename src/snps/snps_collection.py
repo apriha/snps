@@ -208,7 +208,9 @@ class SNPsCollection(SNPs):
             if vcf:
                 ext = ".vcf"
             else:
-                ext = ".csv"
+                ext = ".txt"
+                if "sep" in kwargs and kwargs["sep"] == ",":
+                    ext = ".csv"
 
             filename = "{}{}{}".format(prefix, self.assembly, ext)
         return super().save_snps(filename=filename, vcf=vcf, atomic=atomic, **kwargs)

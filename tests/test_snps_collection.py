@@ -54,17 +54,29 @@ class TestSNPsCollection(BaseSNPsTestCase):
             genotype=["AA", np.nan, "ID", np.nan],
         )
 
-    def test_source_lineage_file(self):
+    def test_source_snps(self):
         sc = SNPsCollection("tests/input/GRCh37.csv")
         self.assertEqual(sc.source, "generic")
         sc.load_snps("tests/input/23andme.txt")
         self.assertEqual(sc.source, "generic, 23andMe")
-        file = sc.save_snps()
-        s = SNPs(file)
+        self.assertEqual(os.path.relpath(sc.save_snps()), "output/GRCh37.txt")
+        s = SNPs("output/GRCh37.txt")
         self.assertEqual(s.source, "generic, 23andMe")
         pd.testing.assert_frame_equal(sc.snps, s.snps, check_exact=True)
 
-    def test_source_lineage_file_gzip(self):
+    def test_source_snps_name_csv(self):
+        sc = SNPsCollection("tests/input/GRCh37.csv", name="test")
+        self.assertEqual(sc.source, "generic")
+        sc.load_snps("tests/input/23andme.txt")
+        self.assertEqual(sc.source, "generic, 23andMe")
+        self.assertEqual(
+            os.path.relpath(sc.save_snps(sep=",")), "output/test_GRCh37.csv"
+        )
+        s = SNPs("output/test_GRCh37.csv")
+        self.assertEqual(s.source, "generic, 23andMe")
+        pd.testing.assert_frame_equal(sc.snps, s.snps, check_exact=True)
+
+    def test_source_snps_gzip(self):
         sc = SNPsCollection("tests/input/GRCh37.csv")
         self.assertEqual(sc.source, "generic")
         sc.load_snps("tests/input/23andme.txt")

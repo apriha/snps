@@ -396,6 +396,9 @@ class SNPs:
         str
             path to file in output directory if SNPs were saved, else empty str
         """
+        if "sep" not in kwargs:
+            kwargs["sep"] = "\t"
+
         return Writer.write_file(
             snps=self, filename=filename, vcf=vcf, atomic=atomic, **kwargs
         )

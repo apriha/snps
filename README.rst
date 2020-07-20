@@ -168,7 +168,7 @@ identifying discrepancies along the way. Let's save the merged dataset consistin
 SNPs to a CSV file:
 
 >>> saved_snps = sc.save_snps()
-Saving output/User662_GRCh37.csv
+Saving output/User662_GRCh37.txt
 
 Moreover, let's get the reference sequences for this assembly and save the SNPs as a VCF file:
 

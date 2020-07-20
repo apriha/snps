@@ -57,7 +57,7 @@ class SNPs:
         self,
         file="",
         only_detect_source=False,
-        assign_par_snps=True,
+        assign_par_snps=False,
         output_dir="output",
         resources_dir="resources",
         deduplicate=True,

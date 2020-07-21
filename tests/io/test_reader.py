@@ -321,6 +321,18 @@ class TestReader(BaseSNPsTestCase):
     def test_read_vcf_hg19(self):
         self.run_build_detection_test(self.run_parsing_tests_vcf, "hg19", 37)
 
+    def test_read_vcf_hg38(self):
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "hg38", 38)
+
+    def test_read_vcf_GRCh38(self):
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "GRCh38", 38)
+
+    def test_read_vcf_build38(self):
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "Build 38", 38)
+
+    def test_read_vcf_b38(self):
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "b38", 38)
+
     def test_read_vcf_multi_sample(self):
         self.run_parsing_tests_vcf("tests/input/testvcf_multi_sample.vcf")
 

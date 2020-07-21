@@ -103,13 +103,23 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests("tests/input/23andme.txt", "23andMe")
 
     def test_read_23andme_build36(self):
-        self.run_parsing_tests(
-            "tests/input/23andme_build36.txt", "23andMe", build=36, build_detected=True
+        self.run_build_detection_test(
+            self.run_parsing_tests,
+            "build 36",
+            36,
+            file="tests/input/23andme.txt",
+            source="23andMe",
+            comment_str="# {}\n",
         )
 
     def test_read_23andme_build37(self):
-        self.run_parsing_tests(
-            "tests/input/23andme_build37.txt", "23andMe", build=37, build_detected=True
+        self.run_build_detection_test(
+            self.run_parsing_tests,
+            "build 37",
+            37,
+            file="tests/input/23andme.txt",
+            source="23andMe",
+            comment_str="# {}\n",
         )
 
     def test_read_ancestry(self):

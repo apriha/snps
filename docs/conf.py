@@ -20,23 +20,14 @@
 import os
 import sys
 
-from unittest.mock import MagicMock
-
 # http://docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return MagicMock()
-
-
-MOCK_MODULES = [
+autodoc_mock_imports = [
     "numpy",
     "pandas",
     "pandas.api.types",
     "matplotlib",
     "matplotlib.collections",
 ]
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 sys.path.insert(0, os.path.abspath("../"))
 
@@ -198,3 +189,14 @@ texinfo_documents = [
         "Miscellaneous",
     )
 ]
+
+# document __init__ methods
+# https://stackoverflow.com/a/5599712
+def skip(app, what, name, obj, would_skip, options):
+    if name == "__init__":
+        return False
+    return would_skip
+
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip)

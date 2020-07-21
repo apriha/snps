@@ -1,21 +1,21 @@
 Output Files
 ============
-The various output files produced by ``snps`` are detailed below. Output files are saved in
-the output directory, which is defined at the instantiation of the :class:`~snps.SNPs`
-object. Generation of output files can usually be enabled or disabled via a ``save_output``
-argument to the associated method.
+The various output files produced by ``snps`` are detailed below. Output files are saved in the
+output directory, which is defined at the instantiation of a :class:`~snps.snps.SNPs` or
+:class:`~snps.snps_collection.SNPsCollection` object.
 
 Load SNPs
 ---------
-Multiple raw data files can be loaded when an :class:`~snps.SNPsCollection` is instantiated.
+Multiple raw data files can be loaded when a :class:`~snps.snps_collection.SNPsCollection` is
+instantiated.
 
 When loading multiple raw data files, if there are any discrepancies between the existing data
 and the new data, those are noted. Specifically, discrepancies in SNP positions and genotypes
-are output as CSV files. Output of these files is enabled via the ``save_output=True`` argument to
-:meth:`~snps.SNPsCollection.load_snps`.
+are output as CSV files. Output of these files is enabled via the ``save_output=True`` argument
+to :meth:`~snps.snps_collection.SNPsCollection.load_snps`.
 
 discrepant_positions_<num>.csv
-`````````````````````````````````````
+``````````````````````````````
 Where ``num`` indicates the file count for discrepant positions files.
 
 ==============  ===========
@@ -34,7 +34,7 @@ A large number of discrepant positions could indicate that the files contain SNP
 builds / assemblies.
 
 discrepant_genotypes_<num>.csv
-`````````````````````````````````````
+``````````````````````````````
 Where ``num`` indicates the file count for discrepant genotypes files.
 
 ===============  ===========
@@ -57,8 +57,9 @@ Discrepant SNPs
 Summaries can be saved of the discrepant SNPs found while loading files.
 
 discrepant_positions.csv
-```````````````````````````````
-SNPs with discrepant positions can be saved with :meth:`~snps.SNPsCollection.save_discrepant_positions`.
+````````````````````````
+SNPs with discrepant positions can be saved with
+:meth:`~snps.snps_collection.SNPsCollection.save_discrepant_positions`.
 
 ==============  ===========
 Column          Description
@@ -73,8 +74,9 @@ genotype_added  Genotype of added SNP
 ==============  ===========
 
 discrepant_genotypes.csv
-```````````````````````````````
-SNPs with discrepant genotypes can be saved with :meth:`~snps.SNPsCollection.save_discrepant_genotypes`.
+````````````````````````
+SNPs with discrepant genotypes can be saved with
+:meth:`~snps.snps_collection.SNPsCollection.save_discrepant_genotypes`.
 
 ===============  ===========
 Column           Description
@@ -89,8 +91,9 @@ genotype_added   Genotype of added SNP (discrepant with genotype)
 ===============  ===========
 
 discrepant_snps.csv
-``````````````````````````
-SNPs with discrepant positions and / or genotypes can be saved with :meth:`~snps.SNPsCollection.save_discrepant_snps`.
+```````````````````
+SNPs with discrepant positions and / or genotypes can be saved with
+:meth:`~snps.snps_collection.SNPsCollection.save_discrepant_snps`.
 
 ===============  ===========
 Column           Description
@@ -106,14 +109,12 @@ genotype_added   Genotype of added SNP (possibly discrepant with genotype)
 
 Save SNPs
 ---------
-The SNPs for a :class:`~snps.SNPs` or :class:`~snps.SNPsCollection` object can be saved with
-:meth:`~snps.SNPs.save_snps` or :meth:`~snps.SNPsCollection.save_snps`, respectively. One CSV or
-VCF file (``vcf=True``) is output when SNPs are saved.
+SNPs can be saved with :meth:`SNPs.save_snps <snps.snps.SNPs.save_snps>` or
+:meth:`SNPsCollection.save_snps <snps.snps_collection.SNPsCollection.save_snps>`. By default, one
+tab-separated ``.txt`` or ``.vcf`` file (``vcf=True``) is output when SNPs are saved. If comma
+is specified as the separator (``sep=","``), the default extension is ``.csv``.
 
-<source>_<assembly>.csv
-`````````````````````````````
-Where ``source`` is the detected source of SNPs data and ``assembly`` is the assembly of the
-SNPs being saved.
+The content of non-VCF files (after comment lines, which start with ``#``) is as follows:
 
 ==========  ===========
 Column      Description
@@ -123,3 +124,23 @@ chromosome  Chromosome of SNP
 position    Position of SNP
 genotype    Genotype of SNP
 ==========  ===========
+
+When ``filename`` is not specified, default filenames are used as described below.
+
+:meth:`SNPs.save_snps <snps.snps.SNPs.save_snps>`
+`````````````````````````````````````````````````
+
+<source>_<assembly>.txt / <source>_<assembly>.csv
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Where ``source`` is the detected source of SNPs data and ``assembly`` is the assembly of the
+SNPs being saved.
+
+
+:meth:`SNPsCollection.save_snps <snps.snps_collection.SNPsCollection.save_snps>`
+````````````````````````````````````````````````````````````````````````````````
+
+<name>_<assembly>.txt / <name>_<assembly>.csv
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Where ``name`` is the name (if any) for the :class:`~snps.snps_collection.SNPsCollection` and
+``assembly`` is the assembly of the SNPs being saved. If name is not specified, ``<name>_`` is
+not included in the filename.

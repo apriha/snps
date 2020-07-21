@@ -57,7 +57,7 @@ class SNPs:
         self,
         file="",
         only_detect_source=False,
-        assign_par_snps=True,
+        assign_par_snps=False,
         output_dir="output",
         resources_dir="resources",
         deduplicate=True,
@@ -137,13 +137,13 @@ class SNPs:
                     else:
                         self._build_detected = True
 
-                if deduplicate_XY_chrom:
-                    if self.determine_sex() == "Male":
-                        self._deduplicate_XY_chrom()
-
                 if assign_par_snps:
                     self._assign_par_snps()
                     self.sort_snps()
+
+                if deduplicate_XY_chrom:
+                    if self.determine_sex() == "Male":
+                        self._deduplicate_XY_chrom()
             else:
                 logger.warning("no SNPs loaded...")
 
@@ -396,6 +396,9 @@ class SNPs:
         str
             path to file in output directory if SNPs were saved, else empty str
         """
+        if "sep" not in kwargs:
+            kwargs["sep"] = "\t"
+
         return Writer.write_file(
             snps=self, filename=filename, vcf=vcf, atomic=atomic, **kwargs
         )

@@ -35,6 +35,7 @@ import os
 import tempfile
 import warnings
 
+from atomicwrites import atomic_write
 import pandas as pd
 
 from snps.resources import Resources
@@ -69,6 +70,33 @@ class TestReader(BaseSNPsTestCase):
         r = Resources()
         r._resources_dir = "resources"
         r._gsa_resources = {}
+
+    def run_build_detection_test(
+        self,
+        run_parsing_tests_func,
+        build_str,
+        build_int,
+        file="tests/input/testvcf.vcf",
+        source="vcf",
+        comment_str="##{}\n",
+        insertion_line=1,
+    ):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            s = ""
+            with open(file, "r") as f:
+                for i, line in enumerate(f.readlines()):
+                    s += line
+                    # insert comment from which to detect build
+                    if i == insertion_line:
+                        s += comment_str.format(build_str)
+
+            file_build_comment = os.path.join(tmpdir, os.path.basename(file))
+            with atomic_write(file_build_comment, mode="w") as f:
+                f.write(s)
+
+            run_parsing_tests_func(
+                file_build_comment, source, build=build_int, build_detected=True
+            )
 
     def test_read_23andme(self):
         # https://www.23andme.com
@@ -288,14 +316,10 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")
 
     def test_read_vcf_b37(self):
-        self.run_parsing_tests_vcf(
-            "tests/input/testvcf_b37.vcf", build=37, build_detected=True
-        )
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "b37", 37)
 
     def test_read_vcf_hg19(self):
-        self.run_parsing_tests_vcf(
-            "tests/input/testvcf_hg19.vcf", build=37, build_detected=True
-        )
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "hg19", 37)
 
     def test_read_vcf_multi_sample(self):
         self.run_parsing_tests_vcf("tests/input/testvcf_multi_sample.vcf")

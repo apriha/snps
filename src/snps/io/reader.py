@@ -832,9 +832,6 @@ class Reader:
         def parser():
             gsa_resources = self._resources.get_gsa_resources()
 
-            def map_rsids(x):
-                return gsa_resources["rsid_map"].get(x)
-
             df = pd.read_csv(
                 file,
                 sep="\t",

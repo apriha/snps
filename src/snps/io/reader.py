@@ -243,21 +243,22 @@ class Reader:
         return first_line, comments, data
 
     def _detect_build_from_comments(self, comments):
-        if "build 37" in comments.lower():
+        comments = comments.lower()
+        if "build 37" in comments:
             return 37
-        elif "build 36" in comments.lower():
+        elif "build 36" in comments:
             return 36
-        elif "b37" in comments.lower():
+        elif "b37" in comments:
             return 37
-        elif "hg19" in comments.lower():
+        elif "hg19" in comments:
             return 37
-        elif "hg38" in comments.lower():
+        elif "hg38" in comments:
             return 38
-        elif "grch38" in comments.lower():
+        elif "grch38" in comments:
             return 38
-        elif "build 38" in comments.lower():
+        elif "build 38" in comments:
             return 38
-        elif "b38" in comments.lower():
+        elif "b38" in comments:
             return 38
         return 0
 

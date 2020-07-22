@@ -377,6 +377,10 @@ class SNPsCollection(SNPs):
             # same and not swapped)
             discrepant_genotypes = common_snps.loc[
                 (
+                    common_snps["genotype"].str.len()
+                    != common_snps["genotype_added"].str.len()
+                )
+                | (
                     (common_snps["genotype"].str.len() == 1)
                     & (common_snps["genotype_added"].str.len() == 1)
                     & ~(

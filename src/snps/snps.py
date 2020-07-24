@@ -62,6 +62,7 @@ class SNPs:
         resources_dir="resources",
         deduplicate=True,
         deduplicate_XY_chrom=True,
+        deduplicate_MT_chrom=True,
         parallelize=False,
         processes=os.cpu_count(),
         rsids=(),
@@ -84,6 +85,8 @@ class SNPs:
             deduplicate RSIDs and make SNPs available as `duplicate_snps`
         deduplicate_XY_chrom : bool
             deduplicate alleles in the non-PAR regions of X and Y for males; see `discrepant_XY_snps`
+        deduplicate_MT_chrom : bool
+            deduplicate alleles on MT; see `heterozygous_MT_snps`
         parallelize : bool
             utilize multiprocessing to speedup calculations
         processes : int
@@ -96,6 +99,7 @@ class SNPs:
         self._snps = get_empty_snps_dataframe()
         self._duplicate_snps = pd.DataFrame()
         self._discrepant_XY_snps = pd.DataFrame()
+        self._heterozygous_MT_snps = pd.DataFrame()
         self._source = ""
         self._phased = False
         self._build = 0
@@ -144,6 +148,9 @@ class SNPs:
                 if deduplicate_XY_chrom:
                     if self.determine_sex() == "Male":
                         self._deduplicate_XY_chrom()
+
+                if deduplicate_MT_chrom:
+                    self._deduplicate_MT_chrom()
             else:
                 logger.warning("no SNPs loaded...")
 
@@ -195,6 +202,18 @@ class SNPs:
         pandas.DataFrame
         """
         return self._discrepant_XY_snps
+
+    @property
+    def heterozygous_MT_snps(self):
+        """ Get any heterozygous MT SNPs.
+
+        Heterozygous SNPs on the MT chromosome found during deduplication.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        return self._heterozygous_MT_snps
 
     @property
     def build(self):
@@ -319,6 +338,32 @@ class SNPs:
                 (self._snps.genotype.notnull())
                 & (self._snps.genotype.str.len() == 2)
                 & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
+            ]
+
+    def homozygous_snps(self, chrom=""):
+        """ Get homozygous SNPs.
+
+        Parameters
+        ----------
+        chrom : str, optional
+            chromosome (e.g., "1", "X", "MT")
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        if chrom:
+            return self._snps.loc[
+                (self._snps.chrom == chrom)
+                & (self._snps.genotype.notnull())
+                & (self._snps.genotype.str.len() == 2)
+                & (self._snps.genotype.str[0] == self._snps.genotype.str[1])
+            ]
+        else:
+            return self._snps.loc[
+                (self._snps.genotype.notnull())
+                & (self._snps.genotype.str.len() == 2)
+                & (self._snps.genotype.str[0] == self._snps.genotype.str[1])
             ]
 
     def not_null_snps(self, chrom=""):
@@ -753,7 +798,13 @@ class SNPs:
         # deduplicate
         self._snps = self._snps.loc[~duplicate_rsids]
 
-    def _deduplicate_chrom(self, chrom):
+    def _deduplicate_alleles(self, rsids):
+        # remove duplicate allele
+        self._snps.loc[rsids, "genotype"] = self._snps.loc[rsids, "genotype"].apply(
+            lambda x: x[0]
+        )
+
+    def _deduplicate_sex_chrom(self, chrom):
         """ Deduplicate a chromosome in the non-PAR region. """
 
         discrepant_XY_snps = self._get_non_par_snps(chrom)
@@ -769,15 +820,26 @@ class SNPs:
         # get remaining non-PAR SNPs with two alleles
         non_par_snps = self._get_non_par_snps(chrom, heterozygous=False)
 
-        # remove duplicate allele
-        self._snps.loc[non_par_snps, "genotype"] = self._snps.loc[
-            non_par_snps, "genotype"
-        ].apply(lambda x: x[0])
+        self._deduplicate_alleles(non_par_snps)
 
     def _deduplicate_XY_chrom(self):
         """ Fix chromosome issue where some data providers duplicate male X and Y chromosomes"""
-        self._deduplicate_chrom("X")
-        self._deduplicate_chrom("Y")
+        self._deduplicate_sex_chrom("X")
+        self._deduplicate_sex_chrom("Y")
+
+    def _deduplicate_MT_chrom(self):
+        """ Deduplicate MT chromosome. """
+        heterozygous_MT_snps = self._snps.loc[self.heterozygous_snps("MT").index].index
+
+        # save heterozygous MT SNPs
+        self._heterozygous_MT_snps = self._heterozygous_MT_snps.append(
+            self._snps.loc[heterozygous_MT_snps]
+        )
+
+        # drop heterozygous MT SNPs since it's ambiguous for which allele to deduplicate
+        self._snps.drop(heterozygous_MT_snps, inplace=True)
+
+        self._deduplicate_alleles(self.homozygous_snps("MT").index)
 
     @staticmethod
     def get_par_regions(build):

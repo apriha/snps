@@ -1,0 +1,5 @@
+#Ancestry
+rsid	chromosome	position	allele1	allele2
+rs1	26	101	A	A
+rs2	26	102	0	0
+rs3	26	103	G	C

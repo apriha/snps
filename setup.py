@@ -117,7 +117,7 @@ setup(
         "Issue Tracker": "https://github.com/apriha/snps/issues",
     },
     keywords="snps dna chromosomes bioinformatics",
-    install_requires=["numpy", "pandas!=1.0.0", "atomicwrites"],
+    install_requires=["numpy", "pandas!=1.0.0,!=1.1.0", "atomicwrites"],
     python_requires=">=3.6.1",
     platforms=["any"],
 )

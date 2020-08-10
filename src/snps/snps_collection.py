@@ -313,6 +313,10 @@ class SNPsCollection(SNPs):
         if snps._snps.empty:
             return discrepant_positions, discrepant_genotypes
 
+        self._heterozygous_MT_snps = self._heterozygous_MT_snps.append(
+            snps._heterozygous_MT_snps
+        )
+
         build = snps._build
         source = [s.strip() for s in snps._source.split(",")]
 
@@ -377,6 +381,10 @@ class SNPsCollection(SNPs):
             # same and not swapped)
             discrepant_genotypes = common_snps.loc[
                 (
+                    common_snps["genotype"].str.len()
+                    != common_snps["genotype_added"].str.len()
+                )
+                | (
                     (common_snps["genotype"].str.len() == 1)
                     & (common_snps["genotype_added"].str.len() == 1)
                     & ~(

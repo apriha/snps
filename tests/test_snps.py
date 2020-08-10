@@ -35,6 +35,7 @@ import io
 import os
 from unittest.mock import Mock, patch
 
+import numpy as np
 import pandas as pd
 
 from snps import SNPs
@@ -113,6 +114,35 @@ class TestSnps(BaseSNPsTestCase):
         )
         pd.testing.assert_frame_equal(snps.snps, result, check_exact=True)
 
+    def test_deduplicate_MT_chrom(self):
+        snps = SNPs("tests/input/ancestry_mt.txt")
+
+        result = self.create_snp_df(
+            rsid=["rs1", "rs2"],
+            chrom=["MT", "MT"],
+            pos=[101, 102],
+            genotype=["A", np.nan],
+        )
+        pd.testing.assert_frame_equal(snps.snps, result, check_exact=True)
+
+        heterozygous_MT_snps = self.create_snp_df(
+            rsid=["rs3"], chrom=["MT"], pos=[103], genotype=["GC"]
+        )
+        pd.testing.assert_frame_equal(
+            snps.heterozygous_MT_snps, heterozygous_MT_snps, check_exact=True
+        )
+
+    def test_deduplicate_MT_chrom_false(self):
+        snps = SNPs("tests/input/ancestry_mt.txt", deduplicate_MT_chrom=False)
+
+        result = self.create_snp_df(
+            rsid=["rs1", "rs2", "rs3"],
+            chrom=["MT", "MT", "MT"],
+            pos=[101, 102, 103],
+            genotype=["AA", np.nan, "GC"],
+        )
+        pd.testing.assert_frame_equal(snps.snps, result, check_exact=True)
+
     def test_duplicate_rsids(self):
         snps = SNPs("tests/input/duplicate_rsids.csv")
         result = self.create_snp_df(
@@ -165,6 +195,32 @@ class TestSnps(BaseSNPsTestCase):
                 chrom=["1", "1", "1"],
                 pos=[106, 107, 108],
                 genotype=["GC", "TC", "AT"],
+            ),
+            check_exact=True,
+        )
+
+    def test_homozygous_snps(self):
+        s = SNPs("tests/input/generic.csv")
+        pd.testing.assert_frame_equal(
+            s.homozygous_snps(),
+            self.create_snp_df(
+                rsid=["rs1", "rs2", "rs3", "rs4"],
+                chrom=["1", "1", "1", "1"],
+                pos=[101, 102, 103, 104],
+                genotype=["AA", "CC", "GG", "TT"],
+            ),
+            check_exact=True,
+        )
+
+    def test_homozygous_snps_chrom(self):
+        s = SNPs("tests/input/generic.csv")
+        pd.testing.assert_frame_equal(
+            s.homozygous_snps("1"),
+            self.create_snp_df(
+                rsid=["rs1", "rs2", "rs3", "rs4"],
+                chrom=["1", "1", "1", "1"],
+                pos=[101, 102, 103, 104],
+                genotype=["AA", "CC", "GG", "TT"],
             ),
             check_exact=True,
         )

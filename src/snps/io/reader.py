@@ -253,8 +253,10 @@ class Reader:
             return 37
         elif "hg38" in comments.lower():
             return 38
-        elif "GRCh38" in comments.lower():
+        elif "grch38" in comments.lower():
             return 38
+        elif "grch37" in comments.lower():
+            return 37
         elif "build 38" in comments.lower():
             return 38
         elif "b38" in comments.lower():

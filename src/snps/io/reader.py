@@ -261,7 +261,12 @@ class Reader:
             return 38
         elif "b38" in comments.lower():
             return 38
-        return 0
+        elif "249250621" in comments.lower():
+            return 37  # length of chromosome 1
+        elif "248956422" in comments.lower():
+            return 38  # length of chromosome 1
+        else:
+            return 0
 
     def _handle_bytes_data(self, file, include_data=False):
         compression = "infer"

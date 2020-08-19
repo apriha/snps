@@ -44,7 +44,11 @@ class TestWriter(BaseSNPsTestCase):
     def test_save_snps(self):
         snps = SNPs("tests/input/generic.csv")
         self.assertEqual(os.path.relpath(snps.save_snps()), "output/generic_GRCh37.csv")
-        self.run_parsing_tests("output/generic_GRCh37.csv", "generic")
+        self.run_parsing_tests(
+            "output/generic_GRCh37.csv",
+            "generic",
+           build_detected=True  # build will be detected from comments because save_snps() writes the build into comments
+        )
 
     def test_save_snps_tsv(self):
         snps = SNPs("tests/input/generic.csv")
@@ -52,7 +56,11 @@ class TestWriter(BaseSNPsTestCase):
             os.path.relpath(snps.save_snps("generic.tsv", sep="\t")),
             "output/generic.tsv",
         )
-        self.run_parsing_tests("output/generic.tsv", "generic")
+        self.run_parsing_tests(
+            "output/generic.tsv", 
+            "generic",
+           build_detected=True  # build will be detected from comments because save_snps() writes the build into comments
+        )
 
     def test_save_snps_vcf(self):
         s = SNPs("tests/input/testvcf.vcf")
@@ -104,9 +112,16 @@ class TestWriter(BaseSNPsTestCase):
         # save phased data to CSV
         self.assertEqual(os.path.relpath(s.save_snps()), "output/vcf_GRCh37.csv")
         # read saved CSV
-        self.run_parsing_tests_vcf("output/vcf_GRCh37.csv", phased=True)
+        self.run_parsing_tests_vcf("output/vcf_GRCh37.csv", 
+            phased=True,
+           build_detected=True  # build will be detected from comments because save_snps() writes the build into comments
+        )
 
     def test_save_snps_specify_file(self):
         s = SNPs("tests/input/generic.csv")
         self.assertEqual(os.path.relpath(s.save_snps("snps.csv")), "output/snps.csv")
-        self.run_parsing_tests("output/snps.csv", "generic")
+        self.run_parsing_tests(
+            "output/snps.csv", 
+            "generic",
+           build_detected=True  # build will be detected from comments because save_snps() writes the build into comments
+        )

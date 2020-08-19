@@ -47,7 +47,7 @@ class TestWriter(BaseSNPsTestCase):
         self.run_parsing_tests(
             "output/generic_GRCh37.csv",
             "generic",
-           build_detected=True  # build will be detected from comments because save_snps() writes the build into comments
+            build_detected=True,  # build will be detected from comments because save_snps() writes the build into comments
         )
 
     def test_save_snps_tsv(self):
@@ -57,9 +57,9 @@ class TestWriter(BaseSNPsTestCase):
             "output/generic.tsv",
         )
         self.run_parsing_tests(
-            "output/generic.tsv", 
+            "output/generic.tsv",
             "generic",
-           build_detected=True  # build will be detected from comments because save_snps() writes the build into comments
+            build_detected=True,  # build will be detected from comments because save_snps() writes the build into comments
         )
 
     def test_save_snps_vcf(self):
@@ -112,16 +112,17 @@ class TestWriter(BaseSNPsTestCase):
         # save phased data to CSV
         self.assertEqual(os.path.relpath(s.save_snps()), "output/vcf_GRCh37.csv")
         # read saved CSV
-        self.run_parsing_tests_vcf("output/vcf_GRCh37.csv", 
+        self.run_parsing_tests_vcf(
+            "output/vcf_GRCh37.csv",
             phased=True,
-           build_detected=True  # build will be detected from comments because save_snps() writes the build into comments
+            build_detected=True,  # build will be detected from comments because save_snps() writes the build into comments
         )
 
     def test_save_snps_specify_file(self):
         s = SNPs("tests/input/generic.csv")
         self.assertEqual(os.path.relpath(s.save_snps("snps.csv")), "output/snps.csv")
         self.run_parsing_tests(
-            "output/snps.csv", 
+            "output/snps.csv",
             "generic",
-           build_detected=True  # build will be detected from comments because save_snps() writes the build into comments
+            build_detected=True,  # build will be detected from comments because save_snps() writes the build into comments
         )

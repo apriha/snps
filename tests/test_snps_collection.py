@@ -31,16 +31,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 
-import gzip
 import os
-import shutil
 import tempfile
 
-from atomicwrites import atomic_write
 import numpy as np
 import pandas as pd
 
-from snps import SNPs, SNPsCollection
+from snps import SNPs
 
 from tests import BaseSNPsTestCase
 
@@ -55,95 +52,53 @@ class TestSNPsCollection(BaseSNPsTestCase):
         )
 
     def test_source_snps(self):
-        sc = SNPsCollection("tests/input/GRCh37.csv")
+        sc = SNPs("tests/input/GRCh37.csv")
         self.assertEqual(sc.source, "generic")
-        sc.load_snps("tests/input/23andme.txt")
-        self.assertEqual(sc.source, "generic, 23andMe")
-        self.assertEqual(os.path.relpath(sc.save_snps()), "output/GRCh37.txt")
-        s = SNPs("output/GRCh37.txt")
-        self.assertEqual(s.source, "generic, 23andMe")
-        pd.testing.assert_frame_equal(sc.snps, s.snps, check_exact=True)
-
-    def test_source_snps_name_csv(self):
-        sc = SNPsCollection("tests/input/GRCh37.csv", name="test")
-        self.assertEqual(sc.source, "generic")
-        sc.load_snps("tests/input/23andme.txt")
+        sc.merge((SNPs("tests/input/23andme.txt"),))
         self.assertEqual(sc.source, "generic, 23andMe")
         self.assertEqual(
-            os.path.relpath(sc.save_snps(sep=",")), "output/test_GRCh37.csv"
+            os.path.relpath(sc.save_snps()), "output/generic__23andMe_GRCh37.txt"
         )
-        s = SNPs("output/test_GRCh37.csv")
-        self.assertEqual(s.source, "generic, 23andMe")
-        pd.testing.assert_frame_equal(sc.snps, s.snps, check_exact=True)
-
-    def test_source_snps_gzip(self):
-        sc = SNPsCollection("tests/input/GRCh37.csv")
-        self.assertEqual(sc.source, "generic")
-        sc.load_snps("tests/input/23andme.txt")
-        self.assertEqual(sc.source, "generic, 23andMe")
-        file = sc.save_snps()
-        with open(file, "rb") as f_in:
-            with atomic_write(file + ".gz", mode="wb", overwrite=True) as f_out:
-                with gzip.open(f_out, "wb") as f_gzip:
-                    shutil.copyfileobj(f_in, f_gzip)
-        s = SNPs(file + ".gz")
+        s = SNPs("output/generic__23andMe_GRCh37.txt")
         self.assertEqual(s.source, "generic, 23andMe")
         pd.testing.assert_frame_equal(sc.snps, s.snps, check_exact=True)
 
     def test_load_snps_list(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/GRCh37.csv", "tests/input/GRCh37.csv"])
+        sc = SNPs()
+        sc.merge([SNPs("tests/input/GRCh37.csv"), SNPs("tests/input/GRCh37.csv")])
         pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37(), check_exact=True)
         self.assertEqual(sc.source, "generic, generic")
 
-    def test_load_snps_None(self):
-        sc = SNPsCollection()
-        with self.assertRaises(TypeError):
-            sc.load_snps(None)
-
     def test_discrepant_positions(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
+        sc = SNPs("tests/input/NCBI36.csv")
+        sc.merge([SNPs("tests/input/GRCh37.csv")])
         self.assertEqual(len(sc.discrepant_positions), 4)
 
     def test_discrepant_genotypes(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
+        sc = SNPs()
+        sc.merge([SNPs("tests/input/NCBI36.csv"), SNPs("tests/input/GRCh37.csv")])
         self.assertEqual(len(sc.discrepant_genotypes), 1)
 
     def test_discrepant_snps(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
+        sc = SNPs()
+        sc.merge([SNPs("tests/input/NCBI36.csv"), SNPs("tests/input/GRCh37.csv")])
         self.assertEqual(len(sc.discrepant_snps), 4)
 
     def test_load_snps_non_existent_file(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/GRCh37.csv", "tests/input/non_existent_file.csv"])
+        sc = SNPs()
+        sc.merge(
+            [SNPs("tests/input/GRCh37.csv"), SNPs("tests/input/non_existent_file.csv")]
+        )
         pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37(), check_exact=True)
 
     def test_load_snps_invalid_file(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/GRCh37.csv", "tests/input/empty.txt"])
+        sc = SNPs()
+        sc.merge([SNPs("tests/input/GRCh37.csv"), SNPs("tests/input/empty.txt")])
         pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37(), check_exact=True)
 
     def test_load_snps_assembly_mismatch(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        self.assertFalse(os.path.exists("output/ind_discrepant_positions_1.csv"))
-        self.assertFalse(os.path.exists("output/ind_discrepant_genotypes_1.csv"))
-        self.assertEqual(len(sc.discrepant_positions), 4)
-        self.assertEqual(len(sc.discrepant_genotypes), 1)
-        pd.testing.assert_frame_equal(
-            sc.snps, self.snps_NCBI36_discrepant_snps(), check_exact=True
-        )
-
-    def test_load_snps_assembly_mismatch_save_output(self):
-        sc = SNPsCollection()
-        sc.load_snps(
-            ["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"], save_output=True
-        )
-        self.assertTrue(os.path.exists("output/discrepant_positions_1.csv"))
-        self.assertTrue(os.path.exists("output/discrepant_genotypes_1.csv"))
+        sc = SNPs()
+        sc.merge([SNPs("tests/input/NCBI36.csv"), SNPs("tests/input/GRCh37.csv")])
         self.assertEqual(len(sc.discrepant_positions), 4)
         self.assertEqual(len(sc.discrepant_genotypes), 1)
         pd.testing.assert_frame_equal(
@@ -151,21 +106,19 @@ class TestSNPsCollection(BaseSNPsTestCase):
         )
 
     def test_load_snps_assembly_mismatch_exceed_discrepant_positions_threshold(self):
-        sc = SNPsCollection()
-        sc.load_snps(
-            ["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"],
-            discrepant_snp_positions_threshold=0,
+        sc = SNPs()
+        sc.merge(
+            [SNPs("tests/input/NCBI36.csv"), SNPs("tests/input/GRCh37.csv")],
+            discrepant_positions_threshold=0,
         )
-        self.assertFalse(os.path.exists("output/discrepant_positions_1.csv"))
-        self.assertFalse(os.path.exists("output/discrepant_genotypes_1.csv"))
         self.assertEqual(len(sc.discrepant_positions), 4)
         self.assertEqual(len(sc.discrepant_genotypes), 0)
         pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36(), check_exact=True)
 
     def test_load_snps_assembly_mismatch_exceed_discrepant_genotypes_threshold(self):
-        sc = SNPsCollection()
-        sc.load_snps(
-            ["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"],
+        sc = SNPs()
+        sc.merge(
+            [SNPs("tests/input/NCBI36.csv"), SNPs("tests/input/GRCh37.csv")],
             discrepant_genotypes_threshold=0,
         )
         self.assertFalse(os.path.exists("output/discrepant_positions_1.csv"))
@@ -216,7 +169,8 @@ class TestSNPsCollection(BaseSNPsTestCase):
                 dest2, na_rep="--", header=["chromosome", "position", "genotype"]
             )
 
-            sc = SNPsCollection([dest1, dest2])
+            sc = SNPs()
+            sc.merge([SNPs(dest1), SNPs(dest2)])
 
             expected = df[
                 [
@@ -247,105 +201,3 @@ class TestSNPsCollection(BaseSNPsTestCase):
 
             pd.testing.assert_series_equal(sc.snps["pos"], expected["pos"])
             pd.testing.assert_series_equal(sc.snps["genotype"], expected["genotype"])
-
-    def test_save_discrepant_positions(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        self.assertEqual(len(sc.discrepant_positions), 4)
-        discrepant_positions_file = sc.save_discrepant_positions()
-        self.assertEqual(
-            os.path.relpath(discrepant_positions_file),
-            "output/discrepant_positions.csv",
-        )
-        self.assertTrue(os.path.exists(discrepant_positions_file))
-
-    def test_save_discrepant_positions_specify_file(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        self.assertEqual(len(sc.discrepant_positions), 4)
-        discrepant_positions_file = sc.save_discrepant_positions(
-            "discrepant_positions.csv"
-        )
-        self.assertEqual(
-            os.path.relpath(discrepant_positions_file),
-            "output/discrepant_positions.csv",
-        )
-        self.assertTrue(os.path.exists(discrepant_positions_file))
-
-    def test_save_discrepant_positions_no_discrepant_snps(self):
-        sc = SNPsCollection()
-        self.assertEqual(len(sc.discrepant_positions), 0)
-        self.assertFalse(sc.save_discrepant_positions())
-
-    def test_save_discrepant_positions_exception(self):
-        sc = SNPsCollection()
-        sc._discrepant_positions = "invalid"
-        self.assertFalse(sc.save_discrepant_positions())
-
-    def test_save_discrepant_genotypes(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        self.assertEqual(len(sc.discrepant_genotypes), 1)
-        discrepant_genotypes_file = sc.save_discrepant_genotypes()
-        self.assertEqual(
-            os.path.relpath(discrepant_genotypes_file),
-            "output/discrepant_genotypes.csv",
-        )
-        self.assertTrue(os.path.exists(discrepant_genotypes_file))
-
-    def test_save_discrepant_genotypes_specify_file(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        self.assertEqual(len(sc.discrepant_genotypes), 1)
-        discrepant_genotypes_file = sc.save_discrepant_genotypes(
-            "discrepant_genotypes.csv"
-        )
-        self.assertEqual(
-            os.path.relpath(discrepant_genotypes_file),
-            "output/discrepant_genotypes.csv",
-        )
-        self.assertTrue(os.path.exists(discrepant_genotypes_file))
-
-    def test_save_discrepant_genotypes_no_discrepant_snps(self):
-        sc = SNPsCollection()
-        self.assertEqual(len(sc.discrepant_genotypes), 0)
-        self.assertFalse(sc.save_discrepant_genotypes())
-
-    def test_save_discrepant_genotypes_exception(self):
-        sc = SNPsCollection()
-        sc._discrepant_genotypes = "invalid"
-        self.assertFalse(sc.save_discrepant_genotypes())
-
-    def test_save_discrepant_snps(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        self.assertEqual(len(sc.discrepant_snps), 4)
-        discrepant_snps_file = sc.save_discrepant_snps()
-        self.assertEqual(
-            os.path.relpath(discrepant_snps_file), "output/discrepant_snps.csv"
-        )
-        self.assertTrue(os.path.exists(discrepant_snps_file))
-
-    def test_save_discrepant_snps_specify_file(self):
-        sc = SNPsCollection()
-        sc.load_snps(["tests/input/NCBI36.csv", "tests/input/GRCh37.csv"])
-        self.assertEqual(len(sc.discrepant_snps), 4)
-        discrepant_snps_file = sc.save_discrepant_snps("discrepant_snps.csv")
-        self.assertEqual(
-            os.path.relpath(discrepant_snps_file), "output/discrepant_snps.csv"
-        )
-        self.assertTrue(os.path.exists(discrepant_snps_file))
-
-    def test_save_discrepant_snps_no_discrepant_snps(self):
-        sc = SNPsCollection()
-        self.assertEqual(len(sc.discrepant_snps), 0)
-        self.assertFalse(sc.save_discrepant_snps())
-
-    def test_save_discrepant_snps_exception(self):
-        sc = SNPsCollection()
-        sc._discrepant_snps = "invalid"
-        self.assertFalse(sc.save_discrepant_snps())
-
-    def test___repr__snps_collection(self):
-        sc = SNPsCollection()
-        self.assertEqual("SNPsCollection(name='')", sc.__repr__())

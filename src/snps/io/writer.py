@@ -119,7 +119,7 @@ class Writer:
                 ext = ".csv"
 
             filename = "{}_{}{}".format(
-                clean_str(self._snps._source), self._snps.assembly, ext
+                clean_str(self._snps.source), self._snps.assembly, ext
             )
 
         comment = (
@@ -167,7 +167,7 @@ class Writer:
         filename = self._filename
         if not filename:
             filename = "{}_{}{}".format(
-                clean_str(self._snps._source), self._snps.assembly, ".vcf"
+                clean_str(self._snps.source), self._snps.assembly, ".vcf"
             )
 
         comment = (

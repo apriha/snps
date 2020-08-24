@@ -99,8 +99,10 @@ class SNPs:
         self._snps = get_empty_snps_dataframe()
         self._duplicate_snps = pd.DataFrame()
         self._discrepant_XY_snps = pd.DataFrame()
+        self._discrepant_positions = pd.DataFrame()
+        self._discrepant_genotypes = pd.DataFrame()
         self._heterozygous_MT_snps = pd.DataFrame()
-        self._source = ""
+        self._source = []
         self._phased = False
         self._build = 0
         self._build_detected = False
@@ -122,7 +124,7 @@ class SNPs:
             d["snps"].rename(index=multi_rsids, inplace=True)
 
             self._snps = d["snps"]
-            self._source = d["source"]
+            self._source = [d["source"]]
             self._phased = d["phased"]
             self._build = d["build"]
             self._build_detected = True if d["build"] else False
@@ -159,13 +161,14 @@ class SNPs:
 
     @property
     def source(self):
-        """ Summary of the SNP data source for ``SNPs``.
+        """ Summary of the SNP data source(s) for ``SNPs``.
 
         Returns
         -------
         str
+            Data source(s) for this `SNPs` object, separated by ", ".
         """
-        return self._source
+        return ", ".join(self._source)
 
     @property
     def snps(self):
@@ -202,6 +205,88 @@ class SNPs:
         pandas.DataFrame
         """
         return self._discrepant_XY_snps
+
+    @property
+    def discrepant_positions(self):
+        """ SNPs with discrepant positions discovered while merging SNPs.
+
+        Notes
+        -----
+        Definitions of columns in this dataframe are as follows:
+
+        ==============  ===========
+        Column          Description
+        ==============  ===========
+        rsid            SNP ID
+        chrom           Chromosome of existing SNP
+        pos             Position of existing SNP
+        genotype        Genotype of existing SNP
+        chrom_added     Chromosome of added SNP
+        pos_added       Position of added SNP (discrepant with pos)
+        genotype_added  Genotype of added SNP
+        ==============  ===========
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        return self._discrepant_positions
+
+    @property
+    def discrepant_genotypes(self):
+        """ SNPs with discrepant genotypes discovered while merging SNPs.
+
+        Notes
+        -----
+        Definitions of columns in this dataframe are as follows:
+
+        ===============  ===========
+        Column           Description
+        ===============  ===========
+        rsid             SNP ID
+        chrom            Chromosome of existing SNP
+        pos              Position of existing SNP
+        genotype         Genotype of existing SNP
+        chrom_added      Chromosome of added SNP
+        pos_added        Position of added SNP
+        genotype_added   Genotype of added SNP (discrepant with genotype)
+        ===============  ===========
+
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        return self._discrepant_genotypes
+
+    @property
+    def discrepant_snps(self):
+        """ SNPs with discrepant positions and / or genotypes discovered while merging SNPs.
+
+        Notes
+        -----
+        Definitions of columns in this dataframe are as follows:
+
+        ===============  ===========
+        Column           Description
+        ===============  ===========
+        rsid             SNP ID
+        chrom            Chromosome of existing SNP
+        pos              Position of existing SNP
+        genotype         Genotype of existing SNP
+        chrom_added      Chromosome of added SNP
+        pos_added        Position of added SNP (possibly discrepant with pos)
+        genotype_added   Genotype of added SNP (possibly discrepant with genotype)
+        ===============  ===========
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        df = self._discrepant_positions.append(self._discrepant_genotypes)
+        if len(df) > 1:
+            df = df.drop_duplicates()
+        return df
 
     @property
     def heterozygous_MT_snps(self):
@@ -1146,3 +1231,182 @@ class SNPs:
             int(text) if text.isdigit() else text.lower()
             for text in re.split(natural_sort_re, s)
         ]
+
+    def merge(
+        self,
+        snps_objects=(),
+        discrepant_positions_threshold=100,
+        discrepant_genotypes_threshold=500,
+    ):
+        """ Merge other `SNPs` objects into this `SNPs` object.
+
+        Parameters
+        ----------
+        snps_objects : iterable of `SNPs`
+            other `SNPs` objects to merge into this `SNPs` object
+        discrepant_positions_threshold : int
+            threshold for discrepant SNP positions between existing data and data to be loaded;
+            a large value could indicate mismatched genome assemblies
+        discrepant_genotypes_threshold : int
+            threshold for discrepant genotype data between existing data and data to be loaded;
+            a large value could indicated mismatched individuals
+        """
+        for snps_object in snps_objects:
+            logger.info("Merging {}".format(snps_object.__repr__()))
+            discrepant_positions, discrepant_genotypes = self._merge(
+                snps_object,
+                discrepant_positions_threshold,
+                discrepant_genotypes_threshold,
+            )
+
+            self._discrepant_positions = self._discrepant_positions.append(
+                discrepant_positions, sort=True
+            )
+            self._discrepant_genotypes = self._discrepant_genotypes.append(
+                discrepant_genotypes, sort=True
+            )
+
+    def _merge(
+        self,
+        snps_object,
+        discrepant_positions_threshold,
+        discrepant_genotypes_threshold,
+    ):
+        """ Merge other `SNPs` object into this `SNPs` object.
+
+        Parameters
+        ----------
+        snps_object : SNPs
+            SNPs to merge
+        discrepant_positions_threshold : int
+            see above
+        discrepant_genotypes_threshold : int
+            see above
+
+        Returns
+        -------
+        discrepant_positions : pandas.DataFrame
+        discrepant_genotypes : pandas.DataFrame
+        """
+        discrepant_positions = pd.DataFrame()
+        discrepant_genotypes = pd.DataFrame()
+
+        if snps_object._snps.empty:
+            return discrepant_positions, discrepant_genotypes
+
+        self._heterozygous_MT_snps = self._heterozygous_MT_snps.append(
+            snps_object._heterozygous_MT_snps
+        )
+
+        build = snps_object._build
+        source = snps_object._source
+
+        if not snps_object._build_detected:
+            logger.warning(
+                "build not detected, assuming build {}".format(snps_object._build)
+            )
+
+        if not self._build:
+            self._build = build
+        elif self._build != build:
+            logger.warning(
+                "build / assembly mismatch between current build of SNPs and SNPs being loaded"
+            )
+
+        snps = snps_object.snps
+
+        if self._snps.empty:
+            self._source.extend(source)
+            self._snps = snps
+        else:
+            common_snps = self._snps.join(snps, how="inner", rsuffix="_added")
+
+            discrepant_positions = common_snps.loc[
+                (common_snps["chrom"] != common_snps["chrom_added"])
+                | (common_snps["pos"] != common_snps["pos_added"])
+            ]
+
+            if 0 < len(discrepant_positions) < discrepant_positions_threshold:
+                logger.warning(
+                    "{} SNP positions were discrepant; keeping original positions".format(
+                        str(len(discrepant_positions))
+                    )
+                )
+            elif len(discrepant_positions) >= discrepant_positions_threshold:
+                logger.warning(
+                    "too many SNPs differ in position; ensure same genome build is being used"
+                )
+                return discrepant_positions, discrepant_genotypes
+
+            # remove null genotypes
+            common_snps = common_snps.loc[
+                ~common_snps["genotype"].isnull()
+                & ~common_snps["genotype_added"].isnull()
+            ]
+
+            # discrepant genotypes are where alleles are not equivalent (i.e., alleles are not the
+            # same and not swapped)
+            discrepant_genotypes = common_snps.loc[
+                (
+                    common_snps["genotype"].str.len()
+                    != common_snps["genotype_added"].str.len()
+                )
+                | (
+                    (common_snps["genotype"].str.len() == 1)
+                    & (common_snps["genotype_added"].str.len() == 1)
+                    & ~(
+                        common_snps["genotype"].str[0]
+                        == common_snps["genotype_added"].str[0]
+                    )
+                )
+                | (
+                    (common_snps["genotype"].str.len() == 2)
+                    & (common_snps["genotype_added"].str.len() == 2)
+                    & ~(
+                        (
+                            common_snps["genotype"].str[0]
+                            == common_snps["genotype_added"].str[0]
+                        )
+                        & (
+                            common_snps["genotype"].str[1]
+                            == common_snps["genotype_added"].str[1]
+                        )
+                    )
+                    & ~(
+                        (
+                            common_snps["genotype"].str[0]
+                            == common_snps["genotype_added"].str[1]
+                        )
+                        & (
+                            common_snps["genotype"].str[1]
+                            == common_snps["genotype_added"].str[0]
+                        )
+                    )
+                )
+            ]
+
+            if 0 < len(discrepant_genotypes) < discrepant_genotypes_threshold:
+                logger.warning(
+                    "{} SNP genotypes were discrepant; marking those as null".format(
+                        str(len(discrepant_genotypes))
+                    )
+                )
+
+            elif len(discrepant_genotypes) >= discrepant_genotypes_threshold:
+                logger.warning(
+                    "too many SNPs differ in their genotype; ensure file is for same "
+                    "individual"
+                )
+                return discrepant_positions, discrepant_genotypes
+
+            # add new SNPs
+            self._source.extend(source)
+            self._snps = self._snps.combine_first(snps)
+            self._snps.loc[discrepant_genotypes.index, "genotype"] = np.nan
+
+            # combine_first converts position to float64, so convert it back to int64
+            self._snps["pos"] = self._snps["pos"].astype(np.int64)
+
+        self.sort_snps()
+
+        return discrepant_positions, discrepant_genotypes

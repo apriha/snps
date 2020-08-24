@@ -1319,11 +1319,11 @@ class SNPs:
             self._source.extend(source)
             self._snps = snps
         else:
-            common_snps = self._snps.join(snps, how="inner", rsuffix="_added")
+            # identify common SNPs (i.e., any rsids being added that already exist in self._snps)
+            df = self._snps.join(snps, how="inner", rsuffix="_added")
 
-            discrepant_positions = common_snps.loc[
-                (common_snps["chrom"] != common_snps["chrom_added"])
-                | (common_snps["pos"] != common_snps["pos_added"])
+            discrepant_positions = df.loc[
+                (df.chrom != df.chrom_added) | (df.pos != df.pos_added)
             ]
 
             if 0 < len(discrepant_positions) < discrepant_positions_threshold:
@@ -1339,48 +1339,27 @@ class SNPs:
                 return discrepant_positions, discrepant_genotypes
 
             # remove null genotypes
-            common_snps = common_snps.loc[
-                ~common_snps["genotype"].isnull()
-                & ~common_snps["genotype_added"].isnull()
-            ]
+            df = df.loc[~df.genotype.isnull() & ~df.genotype_added.isnull()]
 
             # discrepant genotypes are where alleles are not equivalent (i.e., alleles are not the
             # same and not swapped)
-            discrepant_genotypes = common_snps.loc[
-                (
-                    common_snps["genotype"].str.len()
-                    != common_snps["genotype_added"].str.len()
+            discrepant_genotypes = df.loc[
+                (df.genotype.str.len() != df.genotype_added.str.len())
+                | (
+                    (df.genotype.str.len() == 1)
+                    & (df.genotype_added.str.len() == 1)
+                    & (df.genotype != df.genotype_added)
                 )
                 | (
-                    (common_snps["genotype"].str.len() == 1)
-                    & (common_snps["genotype_added"].str.len() == 1)
+                    (df.genotype.str.len() == 2)
+                    & (df.genotype_added.str.len() == 2)
                     & ~(
-                        common_snps["genotype"].str[0]
-                        == common_snps["genotype_added"].str[0]
-                    )
-                )
-                | (
-                    (common_snps["genotype"].str.len() == 2)
-                    & (common_snps["genotype_added"].str.len() == 2)
-                    & ~(
-                        (
-                            common_snps["genotype"].str[0]
-                            == common_snps["genotype_added"].str[0]
-                        )
-                        & (
-                            common_snps["genotype"].str[1]
-                            == common_snps["genotype_added"].str[1]
-                        )
+                        (df.genotype.str[0] == df.genotype_added.str[0])
+                        & (df.genotype.str[1] == df.genotype_added.str[1])
                     )
                     & ~(
-                        (
-                            common_snps["genotype"].str[0]
-                            == common_snps["genotype_added"].str[1]
-                        )
-                        & (
-                            common_snps["genotype"].str[1]
-                            == common_snps["genotype_added"].str[0]
-                        )
+                        (df.genotype.str[0] == df.genotype_added.str[1])
+                        & (df.genotype.str[1] == df.genotype_added.str[0])
                     )
                 )
             ]

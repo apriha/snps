@@ -725,7 +725,8 @@ class Reader:
                 compression=compression,
             )
 
-            df["genotype"] = df["Allele1...Top"] + df["Allele2...Top"]
+            # uses Illumina definition of "Plus" from https://emea.support.illumina.com/bulletins/2017/06/how-to-interpret-dna-strand-and-allele-information-for-infinium-.html
+            df["genotype"] = df["Allele1...Plus"] + df["Allele2...Plus"]
             df.rename(columns={"Chr": "chrom", "Position": "pos"}, inplace=True)
             df.index.name = "rsid"
             df = df[["chrom", "pos", "genotype"]]

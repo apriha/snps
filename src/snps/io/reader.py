@@ -813,13 +813,14 @@ class Reader:
                 if row["Chr"]:
                     row["chrom"] = row["Chr"]
                 elif snp_name in gsa_resources["chrpos_map"]:
-                    row["chrom"] = gsa_resources["chrpos_map"].get(snp_name).split(":")[0]
+                    row["chrom"] = (
+                        gsa_resources["chrpos_map"].get(snp_name).split(":")[0]
+                    )
 
                 if row["Position"]:
                     row["pos"] = row["Position"]
                 elif snp_name in gsa_resources["chrpos_map"]:
                     row["pos"] = gsa_resources["chrpos_map"].get(snp_name).split(":")[1]
-
 
                 if pd.isna(row[f"Allele1 - {strand}"]) or pd.isna(
                     row[f"Allele2 - {strand}"]

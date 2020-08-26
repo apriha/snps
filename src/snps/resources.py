@@ -264,8 +264,8 @@ class Resources(metaclass=Singleton):
         return self._gsa_resources
 
     def get_dbsnp_151_37_reverse(self):
-        """Get dict of RSIDs and allelel population frequencies (when known) that are potentially 
-        on the reference reverse strand in dbSNP 151 and lower
+        """Get dict of RSIDs and allele population frequencies (when known) that are potentially 
+        on the reference reverse(-) strand in dbSNP 151 and lower
 
         Returns
         -------

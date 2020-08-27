@@ -1,12 +1,12 @@
 [Header]
 Content		CODIGO46.bpm
 [Data]
-Sample Name	SNP Name	Chr	Position	Allele1 - Plus	Allele2 - Plus
-123	1:101	1	101	A	A
-123	1:102	1	102	C	C
-123	1:103	1	103	G	G
-123	1:104	1	104	T	T
-123	1:105	1	105	-	-
-123	rs6	1	106	G	C
-123	rs7	1	107	T	C
-123	rs8	1	108	A	T
+Sample Name	SNP Name	Allele1 - Plus	Allele2 - Plus
+123	1:101	A	A
+123	1:102	C	C
+123	1:103	G	G
+123	1:104	T	T
+123	1:105	-	-
+123	rs6	G	C
+123	rs7	T	C
+123	rs8	A	T

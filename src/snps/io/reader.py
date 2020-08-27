@@ -770,6 +770,11 @@ class Reader:
     def _read_gsa_helper(self, file, source, strand, dtypes, na_values="--"):
         def parser():
             gsa_resources = self._resources.get_gsa_resources()
+            dbsnp_reverse = (
+                self._resources.get_dbsnp_151_37_reverse()
+                if strand == "Forward"
+                else {}
+            )
 
             if isinstance(file, str):
                 try:
@@ -794,27 +799,65 @@ class Reader:
             data_io = io.StringIO(data)
             df = pd.read_csv(data_io, sep="\t", dtype=dtypes, na_values=na_values)
 
-            def map_rsids(x):
-                return gsa_resources["rsid_map"].get(x)
+            rev_comp = {}
+            rev_comp["A"] = "T"
+            rev_comp["T"] = "A"
+            rev_comp["G"] = "C"
+            rev_comp["C"] = "G"
 
-            def map_chr(x):
-                chrpos = gsa_resources["chrpos_map"].get(x)
-                return chrpos.split(":")[0] if chrpos else None
+            def map_row(row):
+                snp_name = row["SNP Name"]
 
-            def map_pos(x):
-                chrpos = gsa_resources["chrpos_map"].get(x)
-                return chrpos.split(":")[1] if chrpos else None
+                row["rsid"] = gsa_resources["rsid_map"].get(snp_name, snp_name)
 
-            df["rsid"] = df["SNP Name"].apply(map_rsids)
-            df["chrom"] = df["SNP Name"].apply(map_chr)
-            df["pos"] = df["SNP Name"].apply(map_pos)
-            df["genotype"] = (
-                df["Allele1 - {}".format(strand)] + df["Allele2 - {}".format(strand)]
-            )
+                if row["Chr"]:
+                    row["chrom"] = row["Chr"]
+                elif snp_name in gsa_resources["chrpos_map"]:
+                    row["chrom"] = (
+                        gsa_resources["chrpos_map"].get(snp_name).split(":")[0]
+                    )
+
+                if row["Position"]:
+                    row["pos"] = row["Position"]
+                elif snp_name in gsa_resources["chrpos_map"]:
+                    row["pos"] = gsa_resources["chrpos_map"].get(snp_name).split(":")[1]
+
+                if pd.isna(row[f"Allele1 - {strand}"]) or pd.isna(
+                    row[f"Allele2 - {strand}"]
+                ):
+                    # known alleles mean unknnown genotype
+                    row["genotype"] = np.nan  # pd.NA for pandas > 1.0.0
+                elif strand == "Forward" and snp_name in dbsnp_reverse:
+                    # if strand is forward, need to take reverse complement of *some* rsids
+                    # this is because it is Illumina forward, which is dbSNP strand, which
+                    # is reverse reference for some RSIDs before dbSNP 151.
+                    row["genotype"] = rev_comp.get(
+                        row[f"Allele1 - {strand}"], "-"
+                    ) + rev_comp.get(row[f"Allele2 - {strand}"], "-")
+                else:
+                    # build the genotype by joining the alleles
+                    row["genotype"] = (
+                        row[f"Allele1 - {strand}"] + row[f"Allele2 - {strand}"]
+                    )
+
+                return row
+
+            # ensure appropriate data types
+            df["chrom"] = ""
+            df["pos"] = 0
+            df["genotype"] = ""
+
+            # convert each row into desired structure]
+            df = df.apply(map_row, axis=1)
+            df = df.astype({"chrom": object, "pos": np.int64, "genotype": object})
+
+            # trim to just desired columns
+            df = df[["rsid", "chrom", "pos", "genotype"]]
+
+            # discard rows without values
             df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
 
-            df = df.astype({"chrom": object, "pos": np.int64})
-            df = df[["rsid", "chrom", "pos", "genotype"]]
+            # reindex for the new identifiers
             df.set_index(["rsid"], inplace=True)
 
             return (df,)
@@ -873,7 +916,13 @@ class Reader:
         dict
             result of `read_helper`
         """
-        return self._read_gsa_helper(file, "Codigo46", "Plus", {})
+        dtype = {
+            "Chr": object,
+            "Position": np.int64,
+            "Allele1 - Plus": object,
+            "Allele2 - Plus": object,
+        }
+        return self._read_gsa_helper(file, "Codigo46", "Plus", dtype, na_values="-",)
 
     def read_sano(self, file):
         """ Read and parse Sano Genetics files.
@@ -890,7 +939,12 @@ class Reader:
         dict
             result of `read_helper`
         """
-        dtype = {"Chr": object, "Position": np.int64}
+        dtype = {
+            "Chr": object,
+            "Position": np.int64,
+            "Allele1 - Forward": object,
+            "Allele2 - Forward": object,
+        }
         return self._read_gsa_helper(file, "Sano", "Forward", dtype, na_values="-",)
 
     def read_dnaland(self, file, compression):

@@ -156,14 +156,6 @@ class Reader:
         elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
             d = self.read_generic(file, compression, skip=0)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
-            # Commented out because we need to have a better think through how to discriminate between them.
-            # dante_comments = ["hwfssz1", "BIGDATA_COMPUTING", "bigdata_autoanalysis"]
-            # if "/scratch/" in comments.lower():
-            #     provider = "Nebula"
-            # elif any(x in comments.lower() for x in dante_comments):
-            #     provider = "Dante"
-            # else:
-            #     provider = "vcf"
             d = self.read_vcf(file, compression, "vcf", self._rsids)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
             d = self.read_genes_for_good(file, compression)

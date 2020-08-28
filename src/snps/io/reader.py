@@ -631,17 +631,12 @@ class Reader:
             file_string_out = io.StringIO()
             for line in file_string_in:
                 # user the number of quotes in a line to tell old from new
-                quote_count = 0
-                for char in line:
-                    if char == '"':
-                        quote_count += 1
-
-                if quote_count == 14:
-                    # extra-quoted new varient file
+                if line.count('"') == 14:
+                    # extra-quoted new variant file
                     # can all be stripped so pandas can read it normally
                     line = line.replace('"', "")
-                    # take it apart and put itback together so it looks
-                    # lkie the older myheritage files
+                    # take it apart and put it back together so it looks
+                    # like the older MyHeritage files
                     line = '"' + '","'.join(line.strip().split(",")) + '"\n'
                 file_string_out.write(line)
 

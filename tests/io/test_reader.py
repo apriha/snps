@@ -315,6 +315,10 @@ class TestReader(BaseSNPsTestCase):
         # https://www.myheritage.com
         self.run_parsing_tests("tests/input/myheritage.csv", "MyHeritage")
 
+    def test_read_myheritage_extra_quotes(self):
+        # https://www.myheritage.com
+        self.run_parsing_tests("tests/input/myheritage_extra_quotes.csv", "MyHeritage")
+
     def test_read_sano(self):
         # https://sanogenetics.com
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -1291,12 +1291,17 @@ class SNPs:
         discrepant_positions = pd.DataFrame()
         discrepant_genotypes = pd.DataFrame()
 
+        # append dataframes created when a `SNPs` object is instantiated
+        self._duplicate_snps = self.duplicate_snps.append(snps_object.duplicate_snps)
+        self._discrepant_XY_snps = self.discrepant_XY_snps.append(
+            snps_object.discrepant_XY_snps
+        )
+        self._heterozygous_MT_snps = self.heterozygous_MT_snps.append(
+            snps_object.heterozygous_MT_snps
+        )
+
         if snps_object._snps.empty:
             return discrepant_positions, discrepant_genotypes
-
-        self._heterozygous_MT_snps = self._heterozygous_MT_snps.append(
-            snps_object._heterozygous_MT_snps
-        )
 
         build = snps_object._build
         source = snps_object._source

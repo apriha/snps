@@ -588,3 +588,19 @@ class TestSNPsMerge(BaseSNPsTestCase):
 
             pd.testing.assert_series_equal(sc.snps["pos"], expected["pos"])
             pd.testing.assert_series_equal(sc.snps["genotype"], expected["genotype"])
+
+    def test_appending_dfs(self):
+        snps = SNPs()
+        snps._duplicate_snps = self.create_snp_df(
+            rsid=["rs1"], chrom=["1"], pos=[1], genotype=["AA"]
+        )
+        snps._discrepant_XY_snps = self.create_snp_df(
+            rsid=["rs1"], chrom=["1"], pos=[1], genotype=["AA"]
+        )
+        snps.merge([snps])
+        df = self.create_snp_df(
+            rsid=["rs1", "rs1"], chrom=["1", "1"], pos=[1, 1], genotype=["AA", "AA"]
+        )
+        pd.testing.assert_frame_equal(snps.duplicate_snps, df, check_exact=True)
+        pd.testing.assert_frame_equal(snps.discrepant_XY_snps, df, check_exact=True)
+        pd.testing.assert_frame_equal(snps.heterozygous_MT_snps, pd.DataFrame(), check_exact=True)

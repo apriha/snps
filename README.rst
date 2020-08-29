@@ -50,6 +50,7 @@ genotype files from the following DNA testing sources:
 - `Mapmygenome <https://mapmygenome.in>`_
 - `MyHeritage <https://www.myheritage.com>`_
 - `Sano Genetics <https://sanogenetics.com>`_
+- `tellmeGen <https://www.tellmegen.com>`_
 
 Additionally, ``snps`` can read a variety of "generic" CSV and TSV files.
 

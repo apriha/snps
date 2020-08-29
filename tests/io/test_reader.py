@@ -35,6 +35,7 @@ import os
 import tempfile
 import warnings
 
+from atomicwrites import atomic_write
 import pandas as pd
 
 from snps.resources import Resources
@@ -70,18 +71,55 @@ class TestReader(BaseSNPsTestCase):
         r._resources_dir = "resources"
         r._gsa_resources = {}
 
+    def run_build_detection_test(
+        self,
+        run_parsing_tests_func,
+        build_str,
+        build_int,
+        file="tests/input/testvcf.vcf",
+        source="vcf",
+        comment_str="##{}\n",
+        insertion_line=1,
+    ):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            s = ""
+            with open(file, "r") as f:
+                for i, line in enumerate(f.readlines()):
+                    s += line
+                    # insert comment from which to detect build
+                    if i == insertion_line:
+                        s += comment_str.format(build_str)
+
+            file_build_comment = os.path.join(tmpdir, os.path.basename(file))
+            with atomic_write(file_build_comment, mode="w") as f:
+                f.write(s)
+
+            run_parsing_tests_func(
+                file_build_comment, source, build=build_int, build_detected=True
+            )
+
     def test_read_23andme(self):
         # https://www.23andme.com
         self.run_parsing_tests("tests/input/23andme.txt", "23andMe")
 
     def test_read_23andme_build36(self):
-        self.run_parsing_tests(
-            "tests/input/23andme_build36.txt", "23andMe", build=36, build_detected=True
+        self.run_build_detection_test(
+            self.run_parsing_tests,
+            "build 36",
+            36,
+            file="tests/input/23andme.txt",
+            source="23andMe",
+            comment_str="# {}\n",
         )
 
     def test_read_23andme_build37(self):
-        self.run_parsing_tests(
-            "tests/input/23andme_build37.txt", "23andMe", build=37, build_detected=True
+        self.run_build_detection_test(
+            self.run_parsing_tests,
+            "build 37",
+            37,
+            file="tests/input/23andme.txt",
+            source="23andMe",
+            comment_str="# {}\n",
         )
 
     def test_read_ancestry(self):
@@ -124,6 +162,13 @@ class TestReader(BaseSNPsTestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             self._setup_gsa_test(tmpdir)
             self.run_parsing_tests("tests/input/codigo46.txt", "Codigo46")
+            self._teardown_gsa_test()
+
+    def test_read_tellmeGen(self):
+        # https://www.tellmegen.com/
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._setup_gsa_test(tmpdir)
+            self.run_parsing_tests("tests/input/tellmeGen.txt", "tellmeGen")
             self._teardown_gsa_test()
 
     def test_read_DNALand(self):
@@ -270,6 +315,10 @@ class TestReader(BaseSNPsTestCase):
         # https://www.myheritage.com
         self.run_parsing_tests("tests/input/myheritage.csv", "MyHeritage")
 
+    def test_read_myheritage_extra_quotes(self):
+        # https://www.myheritage.com
+        self.run_parsing_tests("tests/input/myheritage_extra_quotes.csv", "MyHeritage")
+
     def test_read_sano(self):
         # https://sanogenetics.com
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -281,14 +330,22 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")
 
     def test_read_vcf_b37(self):
-        self.run_parsing_tests_vcf(
-            "tests/input/testvcf_b37.vcf", build=37, build_detected=True
-        )
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "b37", 37)
 
     def test_read_vcf_hg19(self):
-        self.run_parsing_tests_vcf(
-            "tests/input/testvcf_hg19.vcf", build=37, build_detected=True
-        )
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "hg19", 37)
+
+    def test_read_vcf_hg38(self):
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "hg38", 38)
+
+    def test_read_vcf_GRCh38(self):
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "GRCh38", 38)
+
+    def test_read_vcf_build38(self):
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "Build 38", 38)
+
+    def test_read_vcf_b38(self):
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "b38", 38)
 
     def test_read_vcf_multi_sample(self):
         self.run_parsing_tests_vcf("tests/input/testvcf_multi_sample.vcf")
@@ -301,5 +358,5 @@ class TestReader(BaseSNPsTestCase):
 
     def test_read_unannotated_vcf(self):
         self.run_parsing_tests_vcf(
-            "tests/input/unannotated_testvcf.vcf", unannotated=True, build=0
+            "tests/input/unannotated_testvcf.vcf", "vcf", unannotated=True, build=0
         )

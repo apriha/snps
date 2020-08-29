@@ -1,0 +1,54 @@
+# Python CircleCI 2.1 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2.1
+jobs:
+  unittests:
+    docker:
+      - image: circleci/python:3.8.3
+        environment:
+          PIPENV_VENV_IN_PROJECT: "1"
+    
+    steps:
+      - checkout
+      # increment vX to manually purge cache
+      - restore_cache:
+          name: Restore dependencies from cache, if possible
+          keys:
+            - v1-venv-{{ checksum "Pipfile.lock" }}
+      - run:
+          name: Dependency installation
+          # pipenv is itself include in circleci docker image
+          # prefer the sync command to remove unused cached deps
+          command: pipenv sync --dev
+      - save_cache:
+          name: Save server dependencies
+          paths:
+            - .venv
+          key: v1-venv-{{ checksum "Pipfile.lock" }}
+      - run:
+          name: Dependency output for debugging
+          command: pipenv graph
+      #- run:
+      #    name: Dependency security check
+      #    command: pipenv check
+      - run:
+          name: run tests
+          command: |
+            mkdir -p server-test-reports/pytest
+            pipenv run pytest --cov=snps --cov-report xml:server-test-reports/coverage.xml --junitxml server-test-reports/pytest/tests.xml tests
+            bash <(curl -s https://codecov.io/bash)
+      - store_test_results:
+          # must be a directory with named subdirectories
+          path: server-test-reports
+      - store_artifacts:
+          path: server-test-reports
+      - run:
+          name: check linting
+          command: pipenv run black --check --diff .
+
+workflows:
+  test:
+    jobs:
+      - "unittests"

@@ -212,8 +212,8 @@ Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org
 `Open Humans <https://www.openhumans.org>`_, and `Sano Genetics <https://sanogenetics.com>`_.
 
 .. https://github.com/rtfd/readthedocs.org/blob/master/docs/badges.rst
-.. |build| image:: https://travis-ci.org/apriha/snps.svg?branch=master
-   :target: https://travis-ci.org/apriha/snps
+.. |build| image:: https://travis-ci.com/apriha/snps.svg?branch=master
+   :target: https://travis-ci.com/apriha/snps
 .. |codecov| image:: https://codecov.io/gh/apriha/snps/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/apriha/snps
 .. |docs| image:: https://readthedocs.org/projects/snps/badge/?version=latest

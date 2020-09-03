@@ -34,6 +34,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import os
 import tempfile
 
+import numpy as np
+import pandas as pd
+
 from snps import SNPs
 from snps.resources import Resources, ReferenceSequence
 from snps.utils import gzip_file
@@ -49,7 +52,7 @@ class TestWriter(BaseSNPsTestCase):
     def test_save_snps_csv(self):
         snps = SNPs("tests/input/generic.csv")
         self.assertEqual(
-            os.path.relpath(snps.save_snps(sep=",")), "output/generic_GRCh37.csv",
+            os.path.relpath(snps.save_snps(sep=",")), "output/generic_GRCh37.csv"
         )
         self.run_parsing_tests("output/generic_GRCh37.csv", "generic")
 
@@ -80,6 +83,42 @@ class TestWriter(BaseSNPsTestCase):
             )
 
         self.run_parsing_tests_vcf("output/vcf_GRCh37.vcf")
+
+    def test_save_snps_vcf_discrepant_pos(self):
+        s = SNPs("tests/input/testvcf.vcf")
+
+        r = Resources()
+        r._reference_sequences["GRCh37"] = {}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest = os.path.join(tmpdir, "generic.fa.gz")
+            gzip_file("tests/input/generic.fa", dest)
+
+            seq = ReferenceSequence(ID="1", path=dest)
+
+            r._reference_sequences["GRCh37"]["1"] = seq
+
+            # create discrepant SNPs by setting positions outside reference sequence
+            s._snps.loc["rs1", "pos"] = 0
+            s._snps.loc["rs17", "pos"] = 118
+
+            self.assertEqual(
+                os.path.relpath(s.save_snps(vcf=True)), "output/vcf_GRCh37.vcf"
+            )
+
+        pd.testing.assert_frame_equal(
+            s.discrepant_positions_vcf,
+            self.create_snp_df(
+                rsid=["rs1", "rs17"],
+                chrom=["1", "1"],
+                pos=[0, 118],
+                genotype=["AA", np.nan],
+            ),
+            check_exact=True,
+        )
+
+        expected = self.generic_snps_vcf().drop(["rs1", "rs17"])
+        self.run_parsing_tests_vcf("output/vcf_GRCh37.vcf", snps_df=expected)
 
     def test_save_snps_vcf_phased(self):
         # read phased data

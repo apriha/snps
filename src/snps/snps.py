@@ -100,6 +100,7 @@ class SNPs:
         self._duplicate_snps = pd.DataFrame()
         self._discrepant_XY_snps = pd.DataFrame()
         self._discrepant_positions = pd.DataFrame()
+        self._discrepant_positions_vcf = pd.DataFrame()
         self._discrepant_genotypes = pd.DataFrame()
         self._heterozygous_MT_snps = pd.DataFrame()
         self._source = []
@@ -231,6 +232,16 @@ class SNPs:
         pandas.DataFrame
         """
         return self._discrepant_positions
+
+    @property
+    def discrepant_positions_vcf(self):
+        """ SNPs with discrepant positions discovered while saving VCF.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        return self._discrepant_positions_vcf
 
     @property
     def discrepant_genotypes(self):
@@ -525,13 +536,29 @@ class SNPs:
         -------
         str
             path to file in output directory if SNPs were saved, else empty str
+
+        References
+        ----------
+        1. Fluent Python by Luciano Ramalho (O'Reilly). Copyright 2015 Luciano Ramalho,
+           978-1-491-94600-8.
         """
         if "sep" not in kwargs:
             kwargs["sep"] = "\t"
 
-        return Writer.write_file(
+        path, *extra = Writer.write_file(
             snps=self, filename=filename, vcf=vcf, atomic=atomic, **kwargs
         )
+
+        if len(extra) == 1 and not extra[0].empty:
+            self._discrepant_positions_vcf = extra[0]
+            self._discrepant_positions_vcf.set_index("rsid", inplace=True)
+            logger.warning(
+                "{} SNP positions were found to be discrepant when saving VCF".format(
+                    len(self.discrepant_positions_vcf)
+                )
+            )
+
+        return path
 
     def _read_raw_data(self, file, only_detect_source, rsids):
         return Reader.read_file(file, only_detect_source, self._resources, rsids)

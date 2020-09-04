@@ -14,10 +14,7 @@ Input / Output
   sources with a `SNPs <https://snps.readthedocs.io/en/latest/snps.html#snps.snps.SNPs>`_
   object
 - Read and write VCF files (e.g., convert `23andMe <https://www.23andme.com>`_ to VCF)
-- Merge raw data files from different DNA tests, identifying discrepant SNPs in the
-  process with a
-  `SNPsCollection <https://snps.readthedocs.io/en/latest/snps.html#snps.snps_collection.SNPsCollection>`_
-  object
+- Merge raw data files from different DNA tests, identifying discrepant SNPs in the process
 - Read data in a variety of formats (e.g., files, bytes, compressed with `gzip` or `zip`)
 - Handle several variations of file types, validated via
   `openSNP parsing analysis <https://github.com/apriha/snps/tree/master/analysis/parse-opensnp-files>`_
@@ -33,6 +30,7 @@ Data Cleaning
 - Sort SNPs based on chromosome and position
 - Deduplicate RSIDs
 - Deduplicate alleles in the non-PAR regions of the X and Y chromosomes for males
+- Deduplicate alleles on MT
 - Assign PAR SNPs to the X or Y chromosome
 
 Supported Genotype Files
@@ -95,10 +93,15 @@ Load Raw Data
 Load a `23andMe <https://www.23andme.com>`_ raw data file:
 
 >>> from snps import SNPs
->>> s = SNPs('resources/662.23andme.340.txt.gz')
+>>> s = SNPs("resources/662.23andme.340.txt.gz")
+>>> s.source
+'23andMe'
+>>> s.snp_count
+991786
 
 The ``SNPs`` class accepts a path to a file or a bytes object. A ``Reader`` class attempts to
-infer the data source and load the SNPs. The loaded SNPs are available via a ``pandas.DataFrame``:
+infer the data source and load the SNPs. The loaded SNPs are normalized and available via a
+``pandas.DataFrame``:
 
 >>> df = s.snps
 >>> df.columns.values
@@ -117,9 +120,43 @@ True
 >>> s.assembly
 'GRCh37'
 
+Merge Raw Data Files
+````````````````````
+The dataset consists of raw data files from two different DNA testing sources - let's combine
+these files.
+
+>>> s.merge([SNPs("resources/662.ftdna-illumina.341.csv.gz")])
+Merging SNPs('resources/662.ftdna-illumina.341.csv.gz')
+SNPs('resources/662.ftdna-illumina.341.csv.gz') has Build 36; remapping to Build 37
+Downloading resources/NCBI36_GRCh37.tar.gz
+27 SNP positions were discrepant; keeping original positions
+151 SNP genotypes were discrepant; marking those as null
+>>> s.source
+'23andMe, FTDNA'
+>>> s.build
+37
+>>> s.build_detected
+True
+
+If the SNPs being merged have a build that differs from the destination build, the SNPs to merge
+will be remapped automatically. After this example merge, the build is still detected, since the
+build was detected for all ``SNPs`` objects that were merged.
+
+As the data gets added, it's compared to the existing data, and SNP position and genotype
+discrepancies are identified. (The discrepancy thresholds can be tuned via parameters.) These
+discrepant SNPs are available for inspection after the merge via properties of the ``SNPs`` object.
+
+Additionally, any non-called / null genotypes will be updated during the merge, if the file
+being merged has a called genotype for the SNP.
+
+>>> len(s.discrepant_snps)  # SNPs with discrepant positions and genotypes, dropping dups
+169
+>>> s.snp_count
+1006960
+
 Remap SNPs
 ``````````
-Let's remap the SNPs to change the assembly / build:
+Now, let's remap the merged SNPs to change the assembly / build:
 
 >>> s.snps.loc["rs3094315"].pos
 752566
@@ -135,71 +172,50 @@ Downloading resources/GRCh37_GRCh38.tar.gz
 SNPs can be remapped between Build 36 (``NCBI36``), Build 37 (``GRCh37``), and Build 38
 (``GRCh38``).
 
-Merge Raw Data Files
-````````````````````
-The dataset consists of raw data files from two different DNA testing sources. Let's combine
-these files using a ``SNPsCollection``.
-
->>> from snps import SNPsCollection
->>> sc = SNPsCollection("resources/662.ftdna-illumina.341.csv.gz", name="User662")
-Loading resources/662.ftdna-illumina.341.csv.gz
->>> sc.build
-36
->>> chromosomes_remapped, chromosomes_not_remapped = sc.remap_snps(37)
-Downloading resources/NCBI36_GRCh37.tar.gz
->>> sc.snp_count
-708092
-
-As the data gets added, it's compared to the existing data, and SNP position and genotype
-discrepancies are identified. (The discrepancy thresholds can be tuned via parameters.)
-
->>> sc.load_snps(["resources/662.23andme.340.txt.gz"], discrepant_genotypes_threshold=300)
-Loading resources/662.23andme.340.txt.gz
-27 SNP positions were discrepant; keeping original positions
-151 SNP genotypes were discrepant; marking those as null
->>> len(sc.discrepant_snps)  # SNPs with discrepant positions and genotypes, dropping dups
-169
->>> sc.snp_count
-1006960
-
 Save SNPs
 `````````
-Ok, so far we've remapped the SNPs to the same build and merged the SNPs from two files,
-identifying discrepancies along the way. Let's save the merged dataset consisting of over 1M+
-SNPs to a CSV file:
+Ok, so far we've merged the SNPs from two files (ensuring the same build in the process and
+identifying discrepancies along the way). Then, we remapped the SNPs to Build 38. Now, let's save
+the merged and remapped dataset consisting of 1M+ SNPs to a tab-separated values (TSV) file:
 
->>> saved_snps = sc.save_snps()
-Saving output/User662_GRCh37.txt
+>>> saved_snps = s.save_snps("out.txt")
+Saving output/out.txt
+>>> print(saved_snps)
+output/out.txt
 
 Moreover, let's get the reference sequences for this assembly and save the SNPs as a VCF file:
 
->>> saved_snps = sc.save_snps(vcf=True)
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.1.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.2.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.3.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.4.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.5.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.6.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.7.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.8.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.9.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.10.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.11.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.12.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.13.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.14.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.15.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.16.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.17.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.18.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.19.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.20.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.21.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.22.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.X.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.Y.fa.gz
-Downloading resources/fasta/GRCh37/Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz
-Saving output/User662_GRCh37.vcf
+>>> saved_snps = s.save_snps("out.vcf", vcf=True)
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.1.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.2.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.3.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.4.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.5.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.6.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.7.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.8.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.9.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.10.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.11.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.12.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.13.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.14.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.15.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.16.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.17.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.18.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.19.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.20.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.21.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.22.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.X.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.Y.fa.gz
+Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.MT.fa.gz
+Saving output/out.vcf
+1 SNP positions were found to be discrepant when saving VCF
+
+When saving a VCF, if any SNPs have positions outside of the reference sequence, they are marked
+as discrepant and are available via a property of the ``SNPs`` object.
 
 All `output files <https://snps.readthedocs.io/en/latest/output_files.html>`_ are saved to the
 output directory.

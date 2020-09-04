@@ -674,7 +674,7 @@ class SNPs:
 
         def lookup_build_with_snp_pos(pos, s):
             try:
-                return s.loc[s == pos].index[0]
+                return int(s.loc[s == pos].index[0])
             except:
                 return 0
 
@@ -1278,97 +1278,81 @@ class SNPs:
             threshold for discrepant genotype data between existing data and data to be loaded;
             a large value could indicated mismatched individuals
         """
-        for snps_object in snps_objects:
-            logger.info("Merging {}".format(snps_object.__repr__()))
-            discrepant_positions, discrepant_genotypes = self._merge(
-                snps_object,
-                discrepant_positions_threshold,
-                discrepant_genotypes_threshold,
+
+        def init(snps_object):
+            # initialize this SNPs object with properties of the SNPs object being merged
+            self._snps = snps_object.snps
+            self._duplicate_snps = snps_object.duplicate_snps
+            self._discrepant_XY_snps = snps_object.discrepant_XY_snps
+            self._discrepant_positions = snps_object.discrepant_positions
+            self._discrepant_positions_vcf = snps_object.discrepant_positions_vcf
+            self._discrepant_genotypes = snps_object.discrepant_genotypes
+            self._heterozygous_MT_snps = snps_object.heterozygous_MT_snps
+            self._source = snps_object._source
+            self._phased = snps_object.phased
+            self._build = snps_object.build
+            self._build_detected = snps_object.build_detected
+
+        def ensure_same_build(snps_object):
+            # ensure builds match when merging
+            if not snps_object.build_detected:
+                logger.warning(
+                    "Build not detected for {}, assuming Build {}".format(
+                        snps_object.__repr__(), snps_object.build
+                    )
+                )
+
+            if self.build != snps_object.build:
+                logger.info(
+                    "{} has Build {}; remapping to Build {}".format(
+                        snps_object.__repr__(), snps_object.build, self.build
+                    )
+                )
+                snps_object.remap_snps(self.build)
+
+        def merge_properties(snps_object):
+            if not snps_object.build_detected:
+                # can no longer assume build has been detected for all SNPs after merge
+                self._build_detected = False
+
+            if not snps_object.phased:
+                # can no longer assume all SNPs are phased after merge
+                self._phased = False
+
+            self._source.extend(snps_object._source)
+
+        def merge_dfs(snps_object):
+            # append dataframes created when a `SNPs` object is instantiated
+            self._duplicate_snps = self.duplicate_snps.append(
+                snps_object.duplicate_snps
+            )
+            self._discrepant_XY_snps = self.discrepant_XY_snps.append(
+                snps_object.discrepant_XY_snps
+            )
+            self._discrepant_positions_vcf = self.discrepant_positions_vcf.append(
+                snps_object.discrepant_positions_vcf
+            )
+            self._heterozygous_MT_snps = self.heterozygous_MT_snps.append(
+                snps_object.heterozygous_MT_snps
             )
 
-            self._discrepant_positions = self._discrepant_positions.append(
-                discrepant_positions, sort=True
-            )
-            self._discrepant_genotypes = self._discrepant_genotypes.append(
-                discrepant_genotypes, sort=True
-            )
+        def merge_snps(
+            snps_object, discrepant_positions_threshold, discrepant_genotypes_threshold
+        ):
+            # merge SNPs, identifying those with discrepant positions and genotypes; update NAs
 
-    def _merge(
-        self,
-        snps_object,
-        discrepant_positions_threshold,
-        discrepant_genotypes_threshold,
-    ):
-        """ Merge other `SNPs` object into this `SNPs` object.
-
-        Parameters
-        ----------
-        snps_object : SNPs
-            SNPs to merge
-        discrepant_positions_threshold : int
-            see above
-        discrepant_genotypes_threshold : int
-            see above
-
-        Returns
-        -------
-        discrepant_positions : pandas.DataFrame
-        discrepant_genotypes : pandas.DataFrame
-        """
-        discrepant_positions = pd.DataFrame()
-        discrepant_genotypes = pd.DataFrame()
-
-        # append dataframes created when a `SNPs` object is instantiated
-        self._duplicate_snps = self.duplicate_snps.append(snps_object.duplicate_snps)
-        self._discrepant_XY_snps = self.discrepant_XY_snps.append(
-            snps_object.discrepant_XY_snps
-        )
-        self._heterozygous_MT_snps = self.heterozygous_MT_snps.append(
-            snps_object.heterozygous_MT_snps
-        )
-
-        if snps_object._snps.empty:
-            return discrepant_positions, discrepant_genotypes
-
-        build = snps_object._build
-        source = snps_object._source
-
-        if not snps_object._build_detected:
-            logger.warning(
-                "build not detected, assuming build {}".format(snps_object._build)
-            )
-
-        if not self._build:
-            self._build = build
-        elif self._build != build:
-            logger.warning(
-                "build / assembly mismatch between current build of SNPs and SNPs being loaded"
-            )
-
-        snps = snps_object.snps
-
-        if self._snps.empty:
-            self._source.extend(source)
-            self._snps = snps
-        else:
-            # identify common SNPs (i.e., any rsids being added that already exist in self._snps)
-            df = self._snps.join(snps, how="inner", rsuffix="_added")
+            # identify common SNPs (i.e., any rsids being added that already exist in self.snps)
+            df = self.snps.join(snps_object.snps, how="inner", rsuffix="_added")
 
             discrepant_positions = df.loc[
                 (df.chrom != df.chrom_added) | (df.pos != df.pos_added)
             ]
 
-            if 0 < len(discrepant_positions) < discrepant_positions_threshold:
+            if len(discrepant_positions) >= discrepant_positions_threshold:
                 logger.warning(
-                    "{} SNP positions were discrepant; keeping original positions".format(
-                        str(len(discrepant_positions))
-                    )
+                    "Too many SNPs differ in position; ensure SNPs have same build"
                 )
-            elif len(discrepant_positions) >= discrepant_positions_threshold:
-                logger.warning(
-                    "too many SNPs differ in position; ensure same genome build is being used"
-                )
-                return discrepant_positions, discrepant_genotypes
+                return False
 
             # remove null genotypes
             df = df.loc[~df.genotype.isnull() & ~df.genotype_added.isnull()]
@@ -1396,6 +1380,25 @@ class SNPs:
                 )
             ]
 
+            if len(discrepant_genotypes) >= discrepant_genotypes_threshold:
+                logger.warning(
+                    "Too many SNPs differ in their genotype; ensure file is for same "
+                    "individual"
+                )
+                return False
+
+            # add new SNPs
+            self._snps = self.snps.combine_first(snps_object.snps)
+            # combine_first converts position to float64, so convert it back to int64
+            self._snps["pos"] = self.snps["pos"].astype(np.int64)
+
+            if 0 < len(discrepant_positions) < discrepant_positions_threshold:
+                logger.warning(
+                    "{} SNP positions were discrepant; keeping original positions".format(
+                        str(len(discrepant_positions))
+                    )
+                )
+
             if 0 < len(discrepant_genotypes) < discrepant_genotypes_threshold:
                 logger.warning(
                     "{} SNP genotypes were discrepant; marking those as null".format(
@@ -1403,21 +1406,36 @@ class SNPs:
                     )
                 )
 
-            elif len(discrepant_genotypes) >= discrepant_genotypes_threshold:
-                logger.warning(
-                    "too many SNPs differ in their genotype; ensure file is for same "
-                    "individual"
-                )
-                return discrepant_positions, discrepant_genotypes
-
-            # add new SNPs
-            self._source.extend(source)
-            self._snps = self._snps.combine_first(snps)
+            # set discrepant genotypes to null
             self._snps.loc[discrepant_genotypes.index, "genotype"] = np.nan
 
-            # combine_first converts position to float64, so convert it back to int64
-            self._snps["pos"] = self._snps["pos"].astype(np.int64)
+            # append discrepant positions dataframe
+            self._discrepant_positions = self._discrepant_positions.append(
+                discrepant_positions, sort=True
+            )
+            # append discrepant genotypes dataframe
+            self._discrepant_genotypes = self._discrepant_genotypes.append(
+                discrepant_genotypes, sort=True
+            )
 
-        self.sort_snps()
+            return True
 
-        return discrepant_positions, discrepant_genotypes
+        for snps_object in snps_objects:
+            logger.info("Merging {}".format(snps_object.__repr__()))
+
+            if not snps_object.is_valid():
+                logger.warning("No SNPs to merge...")
+                continue
+
+            if not self.is_valid():
+                init(snps_object)
+            else:
+                ensure_same_build(snps_object)
+                if merge_snps(
+                    snps_object,
+                    discrepant_positions_threshold,
+                    discrepant_genotypes_threshold,
+                ):
+                    merge_properties(snps_object)
+                    merge_dfs(snps_object)
+                    self.sort_snps()

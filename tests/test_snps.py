@@ -429,7 +429,7 @@ class TestSnps(BaseSNPsTestCase):
             self.assertTrue(snps.snps.empty)
 
 
-class TestSNPsMerge(BaseSNPsTestCase):
+class TestSNPsMerge(TestSnps):
     def snps_NCBI36_discrepant_snps(self):
         return self.create_snp_df(
             rsid=["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
@@ -450,69 +450,72 @@ class TestSNPsMerge(BaseSNPsTestCase):
         self.assertEqual(s.source, "generic, 23andMe")
         pd.testing.assert_frame_equal(sc.snps, s.snps, check_exact=True)
 
-    def test_load_snps_list(self):
+    def test_merge_list(self):
         sc = SNPs()
         sc.merge([SNPs("tests/input/GRCh37.csv"), SNPs("tests/input/GRCh37.csv")])
         pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37(), check_exact=True)
         self.assertEqual(sc.source, "generic, generic")
 
-    def test_discrepant_positions(self):
-        sc = SNPs("tests/input/NCBI36.csv")
-        sc.merge([SNPs("tests/input/GRCh37.csv")])
-        self.assertEqual(len(sc.discrepant_positions), 4)
+    def test_merge_remapping(self):
+        def f():
+            sc = SNPs("tests/input/NCBI36.csv")
+            sc.merge([SNPs("tests/input/GRCh37.csv")])
+            self.assertEqual(len(sc.discrepant_positions), 0)
+            self.assertEqual(len(sc.discrepant_genotypes), 0)
+            pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36(), check_exact=True)
 
-    def test_discrepant_genotypes(self):
-        sc = SNPs()
-        sc.merge([SNPs("tests/input/NCBI36.csv"), SNPs("tests/input/GRCh37.csv")])
-        self.assertEqual(len(sc.discrepant_genotypes), 1)
+        self._run_remap_test(f, self.GRCh37_NCBI36())
 
-    def test_discrepant_snps(self):
-        sc = SNPs()
-        sc.merge([SNPs("tests/input/NCBI36.csv"), SNPs("tests/input/GRCh37.csv")])
-        self.assertEqual(len(sc.discrepant_snps), 4)
+    def test_merge_phased(self):
+        s1 = SNPs("tests/input/generic.csv")
+        s2 = SNPs("tests/input/generic.csv")
+        s1._phased = True
+        s2._phased = True
 
-    def test_load_snps_non_existent_file(self):
+        s1.merge([s2])
+        self.assertTrue(s1.phased)
+        pd.testing.assert_frame_equal(s1.snps, self.generic_snps(), check_exact=True)
+
+    def test_merge_unphased(self):
+        s1 = SNPs("tests/input/generic.csv")
+        s2 = SNPs("tests/input/generic.csv")
+        s1._phased = True
+
+        s1.merge([s2])
+        self.assertFalse(s1.phased)
+        pd.testing.assert_frame_equal(s1.snps, self.generic_snps(), check_exact=True)
+
+    def test_merge_non_existent_file(self):
         sc = SNPs()
         sc.merge(
             [SNPs("tests/input/GRCh37.csv"), SNPs("tests/input/non_existent_file.csv")]
         )
         pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37(), check_exact=True)
 
-    def test_load_snps_invalid_file(self):
+    def test_merge_invalid_file(self):
         sc = SNPs()
         sc.merge([SNPs("tests/input/GRCh37.csv"), SNPs("tests/input/empty.txt")])
         pd.testing.assert_frame_equal(sc.snps, self.snps_GRCh37(), check_exact=True)
 
-    def test_load_snps_assembly_mismatch(self):
-        sc = SNPs()
-        sc.merge([SNPs("tests/input/NCBI36.csv"), SNPs("tests/input/GRCh37.csv")])
-        self.assertEqual(len(sc.discrepant_positions), 4)
-        self.assertEqual(len(sc.discrepant_genotypes), 1)
-        pd.testing.assert_frame_equal(
-            sc.snps, self.snps_NCBI36_discrepant_snps(), check_exact=True
-        )
+    def test_merge_exceed_discrepant_positions_threshold(self):
+        s1 = SNPs("tests/input/generic.csv")
+        s2 = SNPs("tests/input/generic.csv")
+        s2._snps.loc["rs1", "pos"] = 100
 
-    def test_load_snps_assembly_mismatch_exceed_discrepant_positions_threshold(self):
-        sc = SNPs()
-        sc.merge(
-            [SNPs("tests/input/NCBI36.csv"), SNPs("tests/input/GRCh37.csv")],
-            discrepant_positions_threshold=0,
-        )
-        self.assertEqual(len(sc.discrepant_positions), 4)
-        self.assertEqual(len(sc.discrepant_genotypes), 0)
-        pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36(), check_exact=True)
+        s1.merge([s2], discrepant_positions_threshold=0)
+        self.assertEqual(len(s1.discrepant_positions), 0)
+        self.assertEqual(len(s1.discrepant_genotypes), 0)
+        pd.testing.assert_frame_equal(s1.snps, self.generic_snps(), check_exact=True)
 
-    def test_load_snps_assembly_mismatch_exceed_discrepant_genotypes_threshold(self):
-        sc = SNPs()
-        sc.merge(
-            [SNPs("tests/input/NCBI36.csv"), SNPs("tests/input/GRCh37.csv")],
-            discrepant_genotypes_threshold=0,
-        )
-        self.assertFalse(os.path.exists("output/discrepant_positions_1.csv"))
-        self.assertFalse(os.path.exists("output/discrepant_genotypes_1.csv"))
-        self.assertEqual(len(sc.discrepant_positions), 4)
-        self.assertEqual(len(sc.discrepant_genotypes), 1)
-        pd.testing.assert_frame_equal(sc.snps, self.snps_NCBI36(), check_exact=True)
+    def test_merge_exceed_discrepant_genotypes_threshold(self):
+        s1 = SNPs("tests/input/generic.csv")
+        s2 = SNPs("tests/input/generic.csv")
+        s2._snps.loc["rs1", "genotype"] = "CC"
+
+        s1.merge([s2], discrepant_genotypes_threshold=0)
+        self.assertEqual(len(s1.discrepant_positions), 0)
+        self.assertEqual(len(s1.discrepant_genotypes), 0)
+        pd.testing.assert_frame_equal(s1.snps, self.generic_snps(), check_exact=True)
 
     def test_merging_files_discrepant_snps(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -591,6 +594,9 @@ class TestSNPsMerge(BaseSNPsTestCase):
 
     def test_appending_dfs(self):
         snps = SNPs()
+        snps._snps = self.create_snp_df(
+            rsid=["rs1"], chrom=["1"], pos=[1], genotype=["AA"]
+        )
         snps._duplicate_snps = self.create_snp_df(
             rsid=["rs1"], chrom=["1"], pos=[1], genotype=["AA"]
         )
@@ -603,4 +609,9 @@ class TestSNPsMerge(BaseSNPsTestCase):
         )
         pd.testing.assert_frame_equal(snps.duplicate_snps, df, check_exact=True)
         pd.testing.assert_frame_equal(snps.discrepant_XY_snps, df, check_exact=True)
-        pd.testing.assert_frame_equal(snps.heterozygous_MT_snps, pd.DataFrame(), check_exact=True)
+        pd.testing.assert_frame_equal(
+            snps.discrepant_positions_vcf, pd.DataFrame(), check_exact=True
+        )
+        pd.testing.assert_frame_equal(
+            snps.heterozygous_MT_snps, pd.DataFrame(), check_exact=True
+        )

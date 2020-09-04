@@ -179,7 +179,7 @@ class Writer:
             "##fileDate={}\n"
             '##source="{}; snps v{}; https://pypi.org/project/snps/"\n'.format(
                 datetime.datetime.utcnow().strftime("%Y%m%d"),
-                self._snps._source,
+                self._snps.source,
                 snps.__version__,
             )
         )

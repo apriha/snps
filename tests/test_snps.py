@@ -430,14 +430,6 @@ class TestSnps(BaseSNPsTestCase):
 
 
 class TestSNPsMerge(TestSnps):
-    def snps_NCBI36_discrepant_snps(self):
-        return self.create_snp_df(
-            rsid=["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
-            chrom=["1", "1", "1", "3"],
-            pos=[742429, 143649677, 143649678, 50908372],
-            genotype=["AA", np.nan, "ID", np.nan],
-        )
-
     def test_source_snps(self):
         sc = SNPs("tests/input/GRCh37.csv")
         self.assertEqual(sc.source, "generic")

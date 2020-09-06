@@ -1283,76 +1283,72 @@ class SNPs:
             before merging
         """
 
-        def init(snps_object):
+        def init(s):
             # initialize this SNPs object with properties of the SNPs object being merged
-            self._snps = snps_object.snps
-            self._duplicate_snps = snps_object.duplicate_snps
-            self._discrepant_XY_snps = snps_object.discrepant_XY_snps
-            self._discrepant_positions = snps_object.discrepant_positions
-            self._discrepant_positions_vcf = snps_object.discrepant_positions_vcf
-            self._discrepant_genotypes = snps_object.discrepant_genotypes
-            self._heterozygous_MT_snps = snps_object.heterozygous_MT_snps
-            self._source = snps_object._source
-            self._phased = snps_object.phased
-            self._build = snps_object.build
-            self._build_detected = snps_object.build_detected
+            self._snps = s.snps
+            self._duplicate_snps = s.duplicate_snps
+            self._discrepant_XY_snps = s.discrepant_XY_snps
+            self._discrepant_positions = s.discrepant_positions
+            self._discrepant_positions_vcf = s.discrepant_positions_vcf
+            self._discrepant_genotypes = s.discrepant_genotypes
+            self._heterozygous_MT_snps = s.heterozygous_MT_snps
+            self._source = s._source
+            self._phased = s.phased
+            self._build = s.build
+            self._build_detected = s.build_detected
 
-        def ensure_same_build(snps_object):
+        def ensure_same_build(s):
             # ensure builds match when merging
-            if not snps_object.build_detected:
+            if not s.build_detected:
                 logger.warning(
                     "Build not detected for {}, assuming Build {}".format(
-                        snps_object.__repr__(), snps_object.build
+                        s.__repr__(), s.build
                     )
                 )
 
-            if self.build != snps_object.build:
+            if self.build != s.build:
                 logger.info(
                     "{} has Build {}; remapping to Build {}".format(
-                        snps_object.__repr__(), snps_object.build, self.build
+                        s.__repr__(), s.build, self.build
                     )
                 )
-                snps_object.remap_snps(self.build)
+                s.remap_snps(self.build)
 
-        def merge_properties(snps_object):
-            if not snps_object.build_detected:
+        def merge_properties(s):
+            if not s.build_detected:
                 # can no longer assume build has been detected for all SNPs after merge
                 self._build_detected = False
 
-            if not snps_object.phased:
+            if not s.phased:
                 # can no longer assume all SNPs are phased after merge
                 self._phased = False
 
-            self._source.extend(snps_object._source)
+            self._source.extend(s._source)
 
-        def merge_dfs(snps_object):
+        def merge_dfs(s):
             # append dataframes created when a `SNPs` object is instantiated
-            self._duplicate_snps = self.duplicate_snps.append(
-                snps_object.duplicate_snps
-            )
+            self._duplicate_snps = self.duplicate_snps.append(s.duplicate_snps)
             self._discrepant_XY_snps = self.discrepant_XY_snps.append(
-                snps_object.discrepant_XY_snps
+                s.discrepant_XY_snps
             )
             self._discrepant_positions_vcf = self.discrepant_positions_vcf.append(
-                snps_object.discrepant_positions_vcf
+                s.discrepant_positions_vcf
             )
             self._heterozygous_MT_snps = self.heterozygous_MT_snps.append(
-                snps_object.heterozygous_MT_snps
+                s.heterozygous_MT_snps
             )
 
-        def merge_snps(
-            snps_object, discrepant_positions_threshold, discrepant_genotypes_threshold
-        ):
+        def merge_snps(s, positions_threshold, genotypes_threshold):
             # merge SNPs, identifying those with discrepant positions and genotypes; update NAs
 
             # identify common SNPs (i.e., any rsids being added that already exist in self.snps)
-            df = self.snps.join(snps_object.snps, how="inner", rsuffix="_added")
+            df = self.snps.join(s.snps, how="inner", rsuffix="_added")
 
             discrepant_positions = df.loc[
                 (df.chrom != df.chrom_added) | (df.pos != df.pos_added)
             ]
 
-            if len(discrepant_positions) >= discrepant_positions_threshold:
+            if len(discrepant_positions) >= positions_threshold:
                 logger.warning(
                     "Too many SNPs differ in position; ensure SNPs have same build"
                 )
@@ -1384,7 +1380,7 @@ class SNPs:
                 )
             ]
 
-            if len(discrepant_genotypes) >= discrepant_genotypes_threshold:
+            if len(discrepant_genotypes) >= genotypes_threshold:
                 logger.warning(
                     "Too many SNPs differ in their genotype; ensure file is for same "
                     "individual"
@@ -1392,18 +1388,18 @@ class SNPs:
                 return False
 
             # add new SNPs
-            self._snps = self.snps.combine_first(snps_object.snps)
+            self._snps = self.snps.combine_first(s.snps)
             # combine_first converts position to float64, so convert it back to int64
             self._snps["pos"] = self.snps["pos"].astype(np.int64)
 
-            if 0 < len(discrepant_positions) < discrepant_positions_threshold:
+            if 0 < len(discrepant_positions) < positions_threshold:
                 logger.warning(
                     "{} SNP positions were discrepant; keeping original positions".format(
                         str(len(discrepant_positions))
                     )
                 )
 
-            if 0 < len(discrepant_genotypes) < discrepant_genotypes_threshold:
+            if 0 < len(discrepant_genotypes) < genotypes_threshold:
                 logger.warning(
                     "{} SNP genotypes were discrepant; marking those as null".format(
                         str(len(discrepant_genotypes))

@@ -1264,6 +1264,7 @@ class SNPs:
         snps_objects=(),
         discrepant_positions_threshold=100,
         discrepant_genotypes_threshold=500,
+        remap=True,
     ):
         """ Merge other `SNPs` objects into this `SNPs` object.
 
@@ -1277,6 +1278,9 @@ class SNPs:
         discrepant_genotypes_threshold : int
             threshold for discrepant genotype data between existing data and data to be loaded;
             a large value could indicated mismatched individuals
+        remap : bool
+            if necessary, remap other `SNPs` objects to have the same build as this `SNPs` object
+            before merging
         """
 
         def init(snps_object):
@@ -1430,7 +1434,16 @@ class SNPs:
             if not self.is_valid():
                 init(snps_object)
             else:
-                ensure_same_build(snps_object)
+                if remap:
+                    ensure_same_build(snps_object)
+
+                if self.build != snps_object.build:
+                    logger.warning(
+                        "{} has Build {}; this SNPs object has Build {}".format(
+                            snps_object.__repr__(), snps_object.build, self.build
+                        )
+                    )
+
                 if merge_snps(
                     snps_object,
                     discrepant_positions_threshold,

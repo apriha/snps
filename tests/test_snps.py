@@ -458,6 +458,17 @@ class TestSNPsMerge(TestSnps):
 
         self._run_remap_test(f, self.GRCh37_NCBI36())
 
+    def test_merge_remap_false(self):
+        s = SNPs("tests/input/NCBI36.csv")
+        s.merge([SNPs("tests/input/GRCh37.csv")], remap=False)
+        self.assertEqual(len(s.discrepant_positions), 4)
+        self.assertEqual(len(s.discrepant_genotypes), 1)
+        expected = self.snps_NCBI36()
+        expected.loc[
+            "rs11928389", "genotype"
+        ] = np.nan  # discrepant genotype is set to null / NA
+        pd.testing.assert_frame_equal(s.snps, expected, check_exact=True)
+
     def test_merge_phased(self):
         s1 = SNPs("tests/input/generic.csv")
         s2 = SNPs("tests/input/generic.csv")

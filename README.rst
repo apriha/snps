@@ -125,7 +125,7 @@ Merge Raw Data Files
 The dataset consists of raw data files from two different DNA testing sources - let's combine
 these files.
 
->>> s.merge([SNPs("resources/662.ftdna-illumina.341.csv.gz")])
+>>> merge_results = s.merge([SNPs("resources/662.ftdna-illumina.341.csv.gz")])
 Merging SNPs('resources/662.ftdna-illumina.341.csv.gz')
 SNPs('resources/662.ftdna-illumina.341.csv.gz') has Build 36; remapping to Build 37
 Downloading resources/NCBI36_GRCh37.tar.gz
@@ -153,6 +153,16 @@ being merged has a called genotype for the SNP.
 169
 >>> s.snp_count
 1006960
+
+Finally, ``merge`` returns a list of ``dict``, where each ``dict`` has information corresponding
+to the results of each merge (e.g., SNPs in common).
+
+>>> sorted(list(merge_results[0].keys()))
+['common_snps', 'discrepant_genotype_snps', 'discrepant_position_snps', 'merged']
+>>> merge_results[0]["merged"]
+True
+>>> len(merge_results[0]["common_snps"])
+692918
 
 Remap SNPs
 ``````````

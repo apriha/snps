@@ -1281,6 +1281,25 @@ class SNPs:
         remap : bool
             if necessary, remap other `SNPs` objects to have the same build as this `SNPs` object
             before merging
+
+        Returns
+        -------
+        list of dict
+            for each `SNPs` object to merge, a dict with the following items:
+
+            merged (bool)
+                whether `SNPs` object was merged
+            common_snps (pandas.Index)
+                SNPs in common
+            discrepant_position_snps (pandas.Index)
+                SNPs with discrepant positions
+            discrepant_genotype_snps (pandas.Index)
+                SNPs with discrepant genotypes
+
+        References
+        ----------
+        1. Fluent Python by Luciano Ramalho (O'Reilly). Copyright 2015 Luciano Ramalho,
+           978-1-491-94600-8.
         """
 
         def init(s):
@@ -1344,6 +1363,8 @@ class SNPs:
             # identify common SNPs (i.e., any rsids being added that already exist in self.snps)
             df = self.snps.join(s.snps, how="inner", rsuffix="_added")
 
+            common_snps = df.index
+
             discrepant_positions = df.loc[
                 (df.chrom != df.chrom_added) | (df.pos != df.pos_added)
             ]
@@ -1352,7 +1373,7 @@ class SNPs:
                 logger.warning(
                     "Too many SNPs differ in position; ensure SNPs have same build"
                 )
-                return False
+                return (False,)
 
             # remove null genotypes
             df = df.loc[~df.genotype.isnull() & ~df.genotype_added.isnull()]
@@ -1385,7 +1406,7 @@ class SNPs:
                     "Too many SNPs differ in their genotype; ensure file is for same "
                     "individual"
                 )
-                return False
+                return (False,)
 
             # add new SNPs
             self._snps = self.snps.combine_first(s.snps)
@@ -1418,17 +1439,34 @@ class SNPs:
                 discrepant_genotypes, sort=True
             )
 
-            return True
+            return (
+                True,
+                {
+                    "common_snps": common_snps,
+                    "discrepant_position_snps": discrepant_positions.index,
+                    "discrepant_genotype_snps": discrepant_genotypes.index,
+                },
+            )
 
+        results = []
         for snps_object in snps_objects:
+            d = {
+                "merged": False,
+                "common_snps": pd.Index([], name="rsid"),
+                "discrepant_position_snps": pd.Index([], name="rsid"),
+                "discrepant_genotype_snps": pd.Index([], name="rsid"),
+            }
+
             logger.info("Merging {}".format(snps_object.__repr__()))
 
             if not snps_object.is_valid():
                 logger.warning("No SNPs to merge...")
+                results.append(d)
                 continue
 
             if not self.is_valid():
                 init(snps_object)
+                d.update({"merged": True})
             else:
                 if remap:
                     ensure_same_build(snps_object)
@@ -1440,11 +1478,20 @@ class SNPs:
                         )
                     )
 
-                if merge_snps(
+                merged, *extra = merge_snps(
                     snps_object,
                     discrepant_positions_threshold,
                     discrepant_genotypes_threshold,
-                ):
+                )
+
+                if merged:
                     merge_properties(snps_object)
                     merge_dfs(snps_object)
                     self.sort_snps()
+
+                    d.update({"merged": True})
+                    d.update(extra[0])
+
+            results.append(d)
+
+        return results

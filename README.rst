@@ -123,7 +123,8 @@ True
 Merge Raw Data Files
 ````````````````````
 The dataset consists of raw data files from two different DNA testing sources - let's combine
-these files.
+these files. Specifically, we'll update the ``SNPs`` object with SNPs from a
+`Family Tree DNA <https://www.familytreedna.com>`_ file.
 
 >>> merge_results = s.merge([SNPs("resources/662.ftdna-illumina.341.csv.gz")])
 Merging SNPs('resources/662.ftdna-illumina.341.csv.gz')

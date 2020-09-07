@@ -134,6 +134,8 @@ Downloading resources/NCBI36_GRCh37.tar.gz
 151 SNP genotypes were discrepant; marking those as null
 >>> s.source
 '23andMe, FTDNA'
+>>> s.snp_count
+1006960
 >>> s.build
 37
 >>> s.build_detected
@@ -152,8 +154,6 @@ being merged has a called genotype for the SNP.
 
 >>> len(s.discrepant_snps)  # SNPs with discrepant positions and genotypes, dropping dups
 169
->>> s.snp_count
-1006960
 
 Finally, ``merge`` returns a list of ``dict``, where each ``dict`` has information corresponding
 to the results of each merge (e.g., SNPs in common).

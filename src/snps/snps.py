@@ -1270,7 +1270,7 @@ class SNPs:
 
         Parameters
         ----------
-        snps_objects : iterable of `SNPs`
+        snps_objects : list or tuple of `SNPs`
             other `SNPs` objects to merge into this `SNPs` object
         discrepant_positions_threshold : int
             threshold for discrepant SNP positions between existing data and data to be loaded;

@@ -280,23 +280,25 @@ class Resources(metaclass=Singleton):
                     if line.startswith("#"):
                         continue
                     line = line.split(" ")
-                    frqs = {}
+                    frqs = None
                     if len(line) == 1:
                         rsid = line[0]
                     elif len(line) == 5:
                         rsid = line[0]
                         try:
+                            frqs = {}
                             for frq, base in zip(line[1:5], ("A", "T", "C", "G")):
                                 frqs[base] = frq
                         except ValueError as e:
                             # unable to read the line
-                            frqs = {}
+                            frqs = None
                     else:
                         # unexpected length of line, skip it
                         continue
 
                     dbsnp_reverse[rsid] = frqs
             self._dbsnp_151_37_reverse = dbsnp_reverse
+            logger.debug("Loaded dbsnp 151 37 reverse")
         return self._dbsnp_151_37_reverse
 
     def get_opensnp_datadump_filenames(self):

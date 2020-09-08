@@ -805,57 +805,57 @@ class Reader:
             rev_comp["G"] = "C"
             rev_comp["C"] = "G"
 
+            # avoid many dictionary lookups later
+            rsid_map = gsa_resources["rsid_map"]
+            chrpos_map = gsa_resources["chrpos_map"]
+
             def map_row(row):
                 snp_name = row["SNP Name"]
 
-                row["rsid"] = gsa_resources["rsid_map"].get(snp_name, snp_name)
+                rsid = rsid_map.get(snp_name, snp_name)
 
-                if row.get("Chr"):
-                    row["chrom"] = row["Chr"]
-                elif snp_name in gsa_resources["chrpos_map"]:
-                    row["chrom"] = (
-                        gsa_resources["chrpos_map"].get(snp_name).split(":")[0]
-                    )
+                if "Chr" in row and row["Chr"]:
+                    chrom = row["Chr"]
+                elif snp_name in chrpos_map:
+                    chrom = chrpos_map.get(snp_name).split(":")[0]
+                else:
+                    chrom = np.nan  # pd.NA for pandas > 1.0.0
 
-                if row.get("Position"):
-                    row["pos"] = row["Position"]
-                elif snp_name in gsa_resources["chrpos_map"]:
-                    row["pos"] = gsa_resources["chrpos_map"].get(snp_name).split(":")[1]
+                if "Position" in row and row["Position"]:
+                    pos = row["Position"]
+                elif snp_name in chrpos_map:
+                    pos = chrpos_map.get(snp_name).split(":")[1]
+                else:
+                    pos = np.nan  # pd.NA for pandas > 1.0.0
 
                 if pd.isna(row[f"Allele1 - {strand}"]) or pd.isna(
                     row[f"Allele2 - {strand}"]
                 ):
-                    # known alleles mean unknnown genotype
-                    row["genotype"] = np.nan  # pd.NA for pandas > 1.0.0
+                    # unknown alleles mean unknown genotype
+                    genotype = np.nan  # pd.NA for pandas > 1.0.0
                 elif strand == "Forward" and snp_name in dbsnp_reverse:
                     # if strand is forward, need to take reverse complement of *some* rsids
                     # this is because it is Illumina forward, which is dbSNP strand, which
                     # is reverse reference for some RSIDs before dbSNP 151.
-                    row["genotype"] = rev_comp.get(
+                    genotype = rev_comp.get(
                         row[f"Allele1 - {strand}"], "-"
                     ) + rev_comp.get(row[f"Allele2 - {strand}"], "-")
                 else:
                     # build the genotype by joining the alleles
-                    row["genotype"] = (
-                        row[f"Allele1 - {strand}"] + row[f"Allele2 - {strand}"]
-                    )
+                    genotype = row[f"Allele1 - {strand}"] + row[f"Allele2 - {strand}"]
 
-                return row
+                return rsid, chrom, pos, genotype
 
-            # ensure appropriate data types
-            df["chrom"] = ""
-            df["pos"] = 0
-            df["genotype"] = ""
-
-            # convert each row into desired structure]
-            df = df.apply(map_row, axis=1)
-            df = df.astype({"chrom": object, "pos": np.int64, "genotype": object})
-
-            # trim to just desired columns
-            df = df[["rsid", "chrom", "pos", "genotype"]]
+            # map the function to each row, make a new dataframe from it
+            df = df.apply(map_row, axis=1, result_type="expand")
+            # name columns
+            df.columns = ("rsid", "chrom", "pos", "genotype")
 
             # discard rows without values
             df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
+
+            # convert each row into desired structure
+            df = df.astype({"chrom": object, "pos": np.int64, "genotype": object})
 
             # reindex for the new identifiers
             df.set_index(["rsid"], inplace=True)

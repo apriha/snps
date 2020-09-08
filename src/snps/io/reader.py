@@ -79,7 +79,7 @@ class Reader:
         self._file = file
         self._only_detect_source = only_detect_source
         self._resources = resources
-        self._rsids = rsids
+        self._rsids = frozenset(rsids)
 
     def __call__(self):
         """ Read and parse a raw data / genotype file.

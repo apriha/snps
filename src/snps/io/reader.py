@@ -814,12 +814,14 @@ class Reader:
 
                 rsid = rsid_map.get(snp_name, snp_name)
 
-                if row["Chr"]:
+                if "Chr" in row and row["Chr"]:
                     chrom = row["Chr"]
                 elif snp_name in chrpos_map:
                     chrom = chrpos_map.get(snp_name).split(":")[0]
+                else:
+                    chrom = np.nan  # pd.NA for pandas > 1.0.0
 
-                if row["Position"]:
+                if "Position" in row and row["Position"]:
                     pos = row["Position"]
                 elif snp_name in chrpos_map:
                     pos = chrpos_map.get(snp_name).split(":")[1]

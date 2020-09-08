@@ -831,7 +831,7 @@ class Reader:
                 if pd.isna(row[f"Allele1 - {strand}"]) or pd.isna(
                     row[f"Allele2 - {strand}"]
                 ):
-                    # unknown alleles mean unknnown genotype
+                    # unknown alleles mean unknown genotype
                     genotype = np.nan  # pd.NA for pandas > 1.0.0
                 elif strand == "Forward" and snp_name in dbsnp_reverse:
                     # if strand is forward, need to take reverse complement of *some* rsids

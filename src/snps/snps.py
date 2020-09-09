@@ -1457,17 +1457,19 @@ class SNPs:
                 "discrepant_genotype_snps": pd.Index([], name="rsid"),
             }
 
-            logger.info("Merging {}".format(snps_object.__repr__()))
-
             if not snps_object.is_valid():
                 logger.warning("No SNPs to merge...")
                 results.append(d)
                 continue
 
             if not self.is_valid():
+                logger.info("Loading {}".format(snps_object.__repr__()))
+
                 init(snps_object)
                 d.update({"merged": True})
             else:
+                logger.info("Merging {}".format(snps_object.__repr__()))
+
                 if remap:
                     ensure_same_build(snps_object)
 

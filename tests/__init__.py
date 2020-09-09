@@ -154,6 +154,7 @@ class BaseSNPsTestCase(TestCase):
             {"rsid": rsid, "chrom": chrom, "pos": pos, "genotype": genotype},
             columns=["rsid", "chrom", "pos", "genotype"],
         )
+        df["genotype"] = df["genotype"].astype(object)
         df = df.set_index("rsid")
         return df
 
@@ -619,6 +620,7 @@ class BaseSNPsTestCase(TestCase):
         rsids=(),
         build=37,
         build_detected=False,
+        snps_df=None,
     ):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
@@ -631,6 +633,7 @@ class BaseSNPsTestCase(TestCase):
             rsids,
             build,
             build_detected,
+            snps_df,
         )
         self.make_parsing_assertions_vcf(
             self.parse_bytes(file, rsids),
@@ -640,6 +643,7 @@ class BaseSNPsTestCase(TestCase):
             rsids,
             build,
             build_detected,
+            snps_df,
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -654,6 +658,7 @@ class BaseSNPsTestCase(TestCase):
                 rsids,
                 build,
                 build_detected,
+                snps_df,
             )
             self.make_parsing_assertions_vcf(
                 self.parse_bytes(dest, rsids),
@@ -663,6 +668,7 @@ class BaseSNPsTestCase(TestCase):
                 rsids,
                 build,
                 build_detected,
+                snps_df,
             )
             # remove .gz extension
             shutil.move(dest, dest[:-3])
@@ -674,6 +680,7 @@ class BaseSNPsTestCase(TestCase):
                 rsids,
                 build,
                 build_detected,
+                snps_df,
             )
 
     def parse_file(self, file, rsids=()):
@@ -697,8 +704,11 @@ class BaseSNPsTestCase(TestCase):
         )
 
     def make_parsing_assertions_vcf(
-        self, snps, source, phased, unannotated, rsids, build, build_detected
+        self, snps, source, phased, unannotated, rsids, build, build_detected, snps_df
     ):
+        if snps_df is None:
+            snps_df = self.generic_snps_vcf()
+
         self.assertEqual(snps.source, source)
 
         if unannotated:
@@ -707,9 +717,9 @@ class BaseSNPsTestCase(TestCase):
         else:
             self.assertFalse(snps.unannotated_vcf)
             pd.testing.assert_frame_equal(
-                snps.snps, self.generic_snps_vcf().loc[rsids], check_exact=True
+                snps.snps, snps_df.loc[rsids], check_exact=True
             ) if rsids else pd.testing.assert_frame_equal(
-                snps.snps, self.generic_snps_vcf(), check_exact=True
+                snps.snps, snps_df, check_exact=True
             )
 
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)

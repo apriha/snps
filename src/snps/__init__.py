@@ -38,7 +38,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 from snps.snps import SNPs
-from snps.snps_collection import SNPsCollection
 
 # set version string with Versioneer
 from snps._version import get_versions

@@ -9,14 +9,6 @@ SNPs
     :undoc-members:
     :show-inheritance:
 
-SNPsCollection
---------------
-
-.. automodule:: snps.snps_collection
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 snps.ensembl
 ------------
 

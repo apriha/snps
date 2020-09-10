@@ -116,7 +116,7 @@ setup(
         "Changelog": "https://github.com/apriha/snps/releases",
         "Issue Tracker": "https://github.com/apriha/snps/issues",
     },
-    keywords="snps dna chromosomes bioinformatics",
+    keywords="snps dna chromosomes bioinformatics vcf",
     install_requires=["numpy", "pandas!=1.0.0,!=1.1.0", "atomicwrites"],
     python_requires=">=3.6.1",
     platforms=["any"],

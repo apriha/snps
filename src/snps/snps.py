@@ -125,7 +125,9 @@ class SNPs:
             d["snps"].rename(index=multi_rsids, inplace=True)
 
             self._snps = d["snps"]
-            self._source = [d["source"]]
+            self._source = (
+                d["source"].split(", ") if ", " in d["source"] else [d["source"]]
+            )
             self._phased = d["phased"]
 
             if not self._snps.empty:

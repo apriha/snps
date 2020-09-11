@@ -361,6 +361,8 @@ class TestSnps(BaseSNPsTestCase):
         snps = SNPs("output/generic_GRCh38.txt")
         self.assertEqual(snps.build, 38)
         self.assertTrue(snps.build_detected)
+        self.assertEqual(snps.source, "generic")
+        self.assertListEqual(snps._source, ["generic"])
         pd.testing.assert_frame_equal(snps.snps, self.snps_GRCh38(), check_exact=True)
 
     def test_sex_Female_X_chrom(self):
@@ -416,6 +418,7 @@ class TestSnps(BaseSNPsTestCase):
     def test_source(self):
         s = SNPs("tests/input/generic.csv")
         self.assertEqual(s.source, "generic")
+        self.assertEqual(s._source, ["generic"])
 
     def test_source_no_snps(self):
         for snps in self.empty_snps():
@@ -481,11 +484,13 @@ class TestSNPsMerge(TestSnps):
         self.assertEqual(s.source, "generic")
         results = s.merge((SNPs("tests/input/23andme.txt"),))
         self.assertEqual(s.source, "generic, 23andMe")
+        self.assertListEqual(s._source, ["generic", "23andMe"])
         self.assertEqual(
             os.path.relpath(s.save_snps()), "output/generic__23andMe_GRCh37.txt"
         )
         s = SNPs("output/generic__23andMe_GRCh37.txt")
         self.assertEqual(s.source, "generic, 23andMe")
+        self.assertListEqual(s._source, ["generic", "23andMe"])
         pd.testing.assert_frame_equal(s.snps, s.snps, check_exact=True)
         self.assert_results(results, [{"merged": True}])
 
@@ -496,6 +501,7 @@ class TestSNPsMerge(TestSnps):
         )
         pd.testing.assert_frame_equal(s.snps, self.snps_GRCh37(), check_exact=True)
         self.assertEqual(s.source, "generic, generic")
+        self.assertListEqual(s._source, ["generic", "generic"])
         self.assert_results(
             results,
             [

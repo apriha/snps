@@ -359,6 +359,8 @@ class TestSnps(BaseSNPsTestCase):
         s = SNPs("tests/input/GRCh38.csv")
         self.assertEqual(os.path.relpath(s.save_snps()), "output/generic_GRCh38.txt")
         snps = SNPs("output/generic_GRCh38.txt")
+        self.assertEqual(snps.build, 38)
+        self.assertTrue(snps.build_detected)
         pd.testing.assert_frame_equal(snps.snps, self.snps_GRCh38(), check_exact=True)
 
     def test_sex_Female_X_chrom(self):

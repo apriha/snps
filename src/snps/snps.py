@@ -127,8 +127,6 @@ class SNPs:
             self._snps = d["snps"]
             self._source = [d["source"]]
             self._phased = d["phased"]
-            self._build = d["build"]
-            self._build_detected = True if d["build"] else False
 
             if not self._snps.empty:
                 self.sort_snps()
@@ -136,8 +134,13 @@ class SNPs:
                 if deduplicate:
                     self._deduplicate_rsids()
 
+                # prefer to use SNP positions to detect build
+                self._build = self.detect_build()
+                self._build_detected = True if self._build else False
+
                 if not self._build_detected:
-                    self._build = self.detect_build()
+                    # use build detected from `read` method or comments, if any
+                    self._build = d["build"]
 
                     if not self._build:
                         self._build = 37  # assume Build 37 / GRCh37 if not detected

@@ -166,7 +166,9 @@ class Reader:
         elif "SANO" in comments:
             d = self.read_sano(file)
 
-        d.update({"build": self._detect_build_from_comments(comments)})
+        # detect build from comments if build was not already detected from `read` method
+        if not d["build"]:
+            d.update({"build": self._detect_build_from_comments(comments)})
 
         return d
 
@@ -235,6 +237,12 @@ class Reader:
         return first_line, comments, data
 
     def _detect_build_from_comments(self, comments):
+        if "https://pypi.org/project/snps/" in comments:  # remove `snps` version
+            comments = "{}{}".format(
+                comments[: comments.find("snps v")],
+                comments[comments.find("https://pypi.org/project/snps/") :],
+            )
+
         comments = comments.lower()
         if "build 37" in comments:
             return 37
@@ -334,6 +342,8 @@ class Reader:
                 detected source of SNPs
             phased (bool)
                 flag indicating if SNPs are phased
+            build (int)
+                detected build of SNPs
 
         References
         ----------
@@ -341,6 +351,7 @@ class Reader:
            978-1-491-94600-8.
         """
         phased = False
+        build = 0
 
         if self._only_detect_source:
             df = get_empty_snps_dataframe()
@@ -349,7 +360,11 @@ class Reader:
 
             if len(extra) == 1:
                 phased = extra[0]
-        return {"snps": df, "source": source, "phased": phased}
+            elif len(extra) == 2:
+                phased = extra[0]
+                build = extra[1]
+
+        return {"snps": df, "source": source, "phased": phased, "build": build}
 
     def read_23andme(self, file, compression):
         """ Read and parse 23andMe file.
@@ -868,7 +883,7 @@ class Reader:
             result of `read_helper`
         """
         dtype = {"Chr": object, "Position": np.int64}
-        return self._read_gsa_helper(file, "Sano", "Forward", dtype, na_values="-",)
+        return self._read_gsa_helper(file, "Sano", "Forward", dtype, na_values="-")
 
     def read_dnaland(self, file, compression):
         """ Read and parse DNA.land files.
@@ -921,18 +936,23 @@ class Reader:
         """
         source = ""
         phased = False
+        build = 0
 
-        for comment in comments.split("\n"):
-            if "Source(s):" in comment:
-                source = comment.split("Source(s):")[1].strip()
-                break
-
-        for comment in comments.split("\n"):
-            if "Phased:" in comment:
-                phased_str = comment.split("Phased:")[1].strip()
-                if phased_str == "True":
+        comment_lines = comments.split("\n")
+        for comment1 in comment_lines:
+            if "Source(s):" in comment1:
+                source = comment1.split("Source(s):")[1].strip()
+            elif "Phased:" in comment1:
+                if comment1.split("Phased:")[1].strip() == "True":
                     phased = True
-                break
+            elif "Build:" in comment1:
+                temp = int(comment1.split("Build:")[1].strip())
+                for comment2 in comment_lines:
+                    if "Build Detected:" in comment2:
+                        # only assign build if it was detected
+                        if comment2.split("Build Detected:")[1].strip() == "True":
+                            build = temp
+                        break
 
         def parser():
             def parse_csv(sep):
@@ -954,7 +974,7 @@ class Reader:
                 if isinstance(file, io.BufferedIOBase):
                     file.seek(0)
 
-                return (parse_csv("\t"), phased)
+                return (parse_csv("\t"), phased, build)
 
         return self.read_helper(source, parser)
 

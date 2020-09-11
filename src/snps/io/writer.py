@@ -126,12 +126,14 @@ class Writer:
 
         comment = (
             "# Source(s): {}\n"
-            "# Assembly: {}\n"
+            "# Build: {}\n"
+            "# Build Detected: {}\n"
             "# Phased: {}\n"
             "# SNPs: {}\n"
             "# Chromosomes: {}\n".format(
                 self._snps.source,
-                self._snps.assembly,
+                self._snps.build,
+                self._snps.build_detected,
                 self._snps.phased,
                 self._snps.snp_count,
                 self._snps.chromosomes_summary,

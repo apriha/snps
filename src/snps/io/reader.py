@@ -168,7 +168,7 @@ class Reader:
 
         # detect build from comments if build was not already detected from `read` method
         if not d["build"]:
-            d.update({"build": self._detect_build_from_comments(comments)})
+            d.update({"build": self._detect_build_from_comments(comments, d["source"])})
 
         return d
 
@@ -236,30 +236,35 @@ class Reader:
             f.seek(0)
         return first_line, comments, data
 
-    def _detect_build_from_comments(self, comments):
-        if "https://pypi.org/project/snps/" in comments:  # remove `snps` version
-            comments = "{}{}".format(
-                comments[: comments.find("snps v")],
-                comments[comments.find("https://pypi.org/project/snps/") :],
-            )
-
+    def _detect_build_from_comments(self, comments, source):
         comments = comments.lower()
         if "build 37" in comments:
             return 37
         elif "build 36" in comments:
             return 36
-        elif "b37" in comments:
-            return 37
-        elif "hg19" in comments:
-            return 37
-        elif "hg38" in comments:
-            return 38
-        elif "grch38" in comments:
-            return 38
-        elif "build 38" in comments:
-            return 38
-        elif "b38" in comments:
-            return 38
+
+        # allow more variations for VCF
+        if source == "vcf":
+            if "https://pypi.org/project/snps/" in comments:  # remove `snps` version
+                comments = "{}{}".format(
+                    comments[: comments.find("snps v")],
+                    comments[comments.find("https://pypi.org/project/snps/") :],
+                )
+
+            if "hg19" in comments:
+                return 37
+            elif "ncbi36" in comments:
+                return 36
+            elif "grch38" in comments:
+                return 38
+            elif "build 38" in comments:
+                return 38
+            elif "b37" in comments:
+                return 37
+            elif "hg38" in comments:
+                return 38
+            elif "b38" in comments:
+                return 38
         return 0
 
     def _handle_bytes_data(self, file, include_data=False):

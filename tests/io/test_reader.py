@@ -329,6 +329,9 @@ class TestReader(BaseSNPsTestCase):
     def test_read_vcf(self):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")
 
+    def test_read_vcf_NCBI36(self):
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "NCBI36", 36)
+
     def test_read_vcf_b37(self):
         self.run_build_detection_test(self.run_parsing_tests_vcf, "b37", 37)
 

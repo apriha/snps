@@ -135,7 +135,7 @@ class Writer:
                 self._snps.build,
                 self._snps.build_detected,
                 self._snps.phased,
-                self._snps.snp_count,
+                self._snps.count,
                 self._snps.chromosomes_summary,
             )
         )

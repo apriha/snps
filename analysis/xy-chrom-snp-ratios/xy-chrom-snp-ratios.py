@@ -42,7 +42,7 @@ def get_xy_chrom_snp_ratios(task):
         return None
 
     try:
-        if s.snp_count != 0:
+        if s.count != 0:
             # get X chromosome statistics
             x_snps = len(s.snps.loc[(s.snps["chrom"] == "X")])
             heterozygous_x_snps = len(
@@ -69,7 +69,7 @@ def get_xy_chrom_snp_ratios(task):
                 heterozygous_x_snps,
                 y_snps,
                 y_snps_not_null,
-                s.snp_count,
+                s.count,
             ]
         else:
             logger.info("{}#{}".format(file, "no SNPs processed"))
@@ -290,7 +290,7 @@ if __name__ == "__main__":
             "heterozygous_x_snps",
             "y_snps",
             "y_snps_not_null",
-            "snp_count",
+            "count",
         ],
     )
 

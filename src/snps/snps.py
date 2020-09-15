@@ -348,7 +348,7 @@ class SNPs:
         return self.get_assembly()
 
     @property
-    def snp_count(self):
+    def count(self):
         """ Count of SNPs.
 
         Returns
@@ -401,7 +401,7 @@ class SNPs:
         -------
         bool
         """
-        if self.snp_count == 0 and self.source == "vcf":
+        if self.count == 0 and self.source == "vcf":
             return True
 
         return False
@@ -504,7 +504,7 @@ class SNPs:
                 "assembly": self.assembly,
                 "build": self.build,
                 "build_detected": self.build_detected,
-                "snp_count": self.snp_count,
+                "count": self.count,
                 "chromosomes": self.chromosomes_summary,
                 "sex": self.sex,
             }
@@ -1519,3 +1519,9 @@ class SNPs:
         """ Deprecated. This method has been renamed to `save`. """
         warnings.warn("This method has been renamed to `save`.", DeprecationWarning)
         return self.save(filename, vcf, atomic, **kwargs)
+
+    @property
+    def snp_count(self):
+        """ Deprecated. This property has been renamed to `count`. """
+        warnings.warn("This property has been renamed to `count`.", DeprecationWarning)
+        return self.count

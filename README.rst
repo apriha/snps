@@ -96,7 +96,7 @@ Load a `23andMe <https://www.23andme.com>`_ raw data file:
 >>> s = SNPs("resources/662.23andme.340.txt.gz")
 >>> s.source
 '23andMe'
->>> s.snp_count
+>>> s.count
 991786
 
 The ``SNPs`` class accepts a path to a file or a bytes object. A ``Reader`` class attempts to
@@ -134,7 +134,7 @@ Downloading resources/NCBI36_GRCh37.tar.gz
 151 SNP genotypes were discrepant; marking those as null
 >>> s.source
 '23andMe, FTDNA'
->>> s.snp_count
+>>> s.count
 1006960
 >>> s.build
 37

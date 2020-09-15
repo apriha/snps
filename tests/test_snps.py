@@ -179,7 +179,7 @@ class TestSnps(BaseSNPsTestCase):
                 "assembly": "GRCh38",
                 "build": 38,
                 "build_detected": True,
-                "snp_count": 4,
+                "count": 4,
                 "chromosomes": "1, 3",
                 "sex": "",
             },
@@ -245,7 +245,7 @@ class TestSnps(BaseSNPsTestCase):
     def test_only_detect_source(self):
         s = SNPs("tests/input/generic.csv", only_detect_source=True)
         self.assertEqual(s.source, "generic")
-        self.assertEqual(s.snp_count, 0)
+        self.assertEqual(s.count, 0)
 
     def _run_remap_test(self, f, mappings):
         if self.downloads_enabled:
@@ -306,13 +306,13 @@ class TestSnps(BaseSNPsTestCase):
     def test_remap_37_to_38_with_PAR_SNP(self):
         def f():
             s = self.load_assign_PAR_SNPs("tests/input/GRCh37_PAR.csv")
-            self.assertEqual(s.snp_count, 4)
+            self.assertEqual(s.count, 4)
             chromosomes_remapped, chromosomes_not_remapped = s.remap(38)
             self.assertEqual(s.build, 38)
             self.assertEqual(s.assembly, "GRCh38")
             self.assertEqual(len(chromosomes_remapped), 2)
             self.assertEqual(len(chromosomes_not_remapped), 1)
-            self.assertEqual(s.snp_count, 3)
+            self.assertEqual(s.count, 3)
             pd.testing.assert_frame_equal(
                 s.snps, self.snps_GRCh38_PAR(), check_exact=True
             )
@@ -383,9 +383,9 @@ class TestSnps(BaseSNPsTestCase):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
         )
-        self.assertEqual(s.snp_count, 15528)
+        self.assertEqual(s.count, 15528)
         s._deduplicate_XY_chrom()
-        self.assertEqual(s.snp_count, 15528)
+        self.assertEqual(s.count, 15528)
         self.assertEqual(len(s.discrepant_XY_snps), 0)
         self.assertEqual(s.sex, "Male")
 
@@ -393,10 +393,10 @@ class TestSnps(BaseSNPsTestCase):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
         )
-        self.assertEqual(s.snp_count, 15528)
+        self.assertEqual(s.count, 15528)
         s._snps.loc["rs8001", "genotype"] = "AC"
         s._deduplicate_XY_chrom()
-        self.assertEqual(s.snp_count, 15527)
+        self.assertEqual(s.count, 15527)
         result = self.create_snp_df(
             rsid=["rs8001"], chrom=["X"], pos=[80000001], genotype=["AC"]
         )
@@ -426,13 +426,13 @@ class TestSnps(BaseSNPsTestCase):
         for snps in self.empty_snps():
             self.assertFalse(snps.source)
 
-    def test_snp_count(self):
+    def test_count(self):
         s = SNPs("tests/input/NCBI36.csv")
-        self.assertEqual(s.snp_count, 4)
+        self.assertEqual(s.count, 4)
 
-    def test_snp_count_no_snps(self):
+    def test_count_no_snps(self):
         for snps in self.empty_snps():
-            self.assertFalse(snps.snp_count)
+            self.assertEqual(snps.count, 0)
             self.assertTrue(snps.snps.empty)
 
 
@@ -816,4 +816,15 @@ class TestDeprecatedMethods(TestSnps):
             self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
             self.assertEqual(
                 "This method has been renamed to `save`.", str(w[-1].message)
+            )
+
+    def test_snp_count(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            s = SNPs("tests/input/NCBI36.csv")
+            self.assertEqual(s.snp_count, 4)
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            self.assertEqual(
+                "This property has been renamed to `count`.", str(w[-1].message)
             )

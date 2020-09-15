@@ -1041,7 +1041,7 @@ class SNPs:
 
         self._snps = snps
 
-    def remap_snps(self, target_assembly, complement_bases=True):
+    def remap(self, target_assembly, complement_bases=True):
         """ Remap SNP coordinates from one assembly to another.
 
         This method uses the assembly map endpoint of the Ensembl REST API service (via
@@ -1338,7 +1338,7 @@ class SNPs:
                         s.__repr__(), s.build, self.build
                     )
                 )
-                s.remap_snps(self.build)
+                s.remap(self.build)
 
         def merge_properties(s):
             if not s.build_detected:
@@ -1509,3 +1509,8 @@ class SNPs:
         """ Deprecated. This method has been renamed to `sort`. """
         warnings.warn("This method has been renamed to `sort`.", DeprecationWarning)
         self.sort()
+
+    def remap_snps(self, target_assembly, complement_bases=True):
+        """ Deprecated. This method has been renamed to `remap`. """
+        warnings.warn("This method has been renamed to `remap`.", DeprecationWarning)
+        return self.remap(target_assembly, complement_bases)

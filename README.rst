@@ -171,7 +171,7 @@ Now, let's remap the merged SNPs to change the assembly / build:
 
 >>> s.snps.loc["rs3094315"].pos
 752566
->>> chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
+>>> chromosomes_remapped, chromosomes_not_remapped = s.remap(38)
 Downloading resources/GRCh37_GRCh38.tar.gz
 >>> s.build
 38

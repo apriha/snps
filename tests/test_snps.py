@@ -255,10 +255,10 @@ class TestSnps(BaseSNPsTestCase):
             with patch("snps.resources.Resources.get_assembly_mapping_data", mock):
                 f()
 
-    def test_remap_snps_36_to_37(self):
+    def test_remap_36_to_37(self):
         def f():
             s = SNPs("tests/input/NCBI36.csv")
-            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
+            chromosomes_remapped, chromosomes_not_remapped = s.remap(37)
             self.assertEqual(s.build, 37)
             self.assertEqual(s.assembly, "GRCh37")
             self.assertEqual(len(chromosomes_remapped), 2)
@@ -267,10 +267,10 @@ class TestSnps(BaseSNPsTestCase):
 
         self._run_remap_test(f, self.NCBI36_GRCh37())
 
-    def test_remap_snps_36_to_37_multiprocessing(self):
+    def test_remap_36_to_37_multiprocessing(self):
         def f():
             s = SNPs("tests/input/NCBI36.csv", parallelize=True)
-            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
+            chromosomes_remapped, chromosomes_not_remapped = s.remap(37)
             self.assertEqual(s.build, 37)
             self.assertEqual(s.assembly, "GRCh37")
             self.assertEqual(len(chromosomes_remapped), 2)
@@ -279,10 +279,10 @@ class TestSnps(BaseSNPsTestCase):
 
         self._run_remap_test(f, self.NCBI36_GRCh37())
 
-    def test_remap_snps_37_to_36(self):
+    def test_remap_37_to_36(self):
         def f():
             s = SNPs("tests/input/GRCh37.csv")
-            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(36)
+            chromosomes_remapped, chromosomes_not_remapped = s.remap(36)
             self.assertEqual(s.build, 36)
             self.assertEqual(s.assembly, "NCBI36")
             self.assertEqual(len(chromosomes_remapped), 2)
@@ -291,10 +291,10 @@ class TestSnps(BaseSNPsTestCase):
 
         self._run_remap_test(f, self.GRCh37_NCBI36())
 
-    def test_remap_snps_37_to_38(self):
+    def test_remap_37_to_38(self):
         def f():
             s = SNPs("tests/input/GRCh37.csv")
-            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
+            chromosomes_remapped, chromosomes_not_remapped = s.remap(38)
             self.assertEqual(s.build, 38)
             self.assertEqual(s.assembly, "GRCh38")
             self.assertEqual(len(chromosomes_remapped), 2)
@@ -303,11 +303,11 @@ class TestSnps(BaseSNPsTestCase):
 
         self._run_remap_test(f, self.GRCh37_GRCh38())
 
-    def test_remap_snps_37_to_38_with_PAR_SNP(self):
+    def test_remap_37_to_38_with_PAR_SNP(self):
         def f():
             s = self.load_assign_PAR_SNPs("tests/input/GRCh37_PAR.csv")
             self.assertEqual(s.snp_count, 4)
-            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
+            chromosomes_remapped, chromosomes_not_remapped = s.remap(38)
             self.assertEqual(s.build, 38)
             self.assertEqual(s.assembly, "GRCh38")
             self.assertEqual(len(chromosomes_remapped), 2)
@@ -319,26 +319,26 @@ class TestSnps(BaseSNPsTestCase):
 
         self._run_remap_test(f, self.GRCh37_GRCh38_PAR())
 
-    def test_remap_snps_37_to_37(self):
+    def test_remap_37_to_37(self):
         s = SNPs("tests/input/GRCh37.csv")
-        chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
+        chromosomes_remapped, chromosomes_not_remapped = s.remap(37)
         self.assertEqual(s.build, 37)
         self.assertEqual(s.assembly, "GRCh37")
         self.assertEqual(len(chromosomes_remapped), 0)
         self.assertEqual(len(chromosomes_not_remapped), 2)
         pd.testing.assert_frame_equal(s.snps, self.snps_GRCh37(), check_exact=True)
 
-    def test_remap_snps_invalid_assembly(self):
+    def test_remap_invalid_assembly(self):
         s = SNPs("tests/input/GRCh37.csv")
-        chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(-1)
+        chromosomes_remapped, chromosomes_not_remapped = s.remap(-1)
         self.assertEqual(s.build, 37)
         self.assertEqual(s.assembly, "GRCh37")
         self.assertEqual(len(chromosomes_remapped), 0)
         self.assertEqual(len(chromosomes_not_remapped), 2)
 
-    def test_remap_snps_no_snps(self):
+    def test_remap_no_snps(self):
         s = SNPs()
-        chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
+        chromosomes_remapped, chromosomes_not_remapped = s.remap(38)
         self.assertFalse(s.build)
         self.assertEqual(len(chromosomes_remapped), 0)
         self.assertEqual(len(chromosomes_not_remapped), 0)
@@ -771,7 +771,7 @@ class TestSNPsMerge(TestSnps):
         )
 
 
-class TestDeprecatedMethods(BaseSNPsTestCase):
+class TestDeprecatedMethods(TestSnps):
     def test_sort_snps(self):
         s = SNPs("tests/input/generic.csv")
         with warnings.catch_warnings(record=True) as w:
@@ -782,3 +782,24 @@ class TestDeprecatedMethods(BaseSNPsTestCase):
             self.assertEqual(
                 "This method has been renamed to `sort`.", str(w[-1].message)
             )
+
+    def test_remap_snps(self):
+        def f():
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                s = SNPs("tests/input/NCBI36.csv")
+                chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
+                self.assertEqual(s.build, 37)
+                self.assertEqual(s.assembly, "GRCh37")
+                self.assertEqual(len(chromosomes_remapped), 2)
+                self.assertEqual(len(chromosomes_not_remapped), 0)
+                pd.testing.assert_frame_equal(
+                    s.snps, self.snps_GRCh37(), check_exact=True
+                )
+                self.assertEqual(len(w), 1)
+                self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+                self.assertEqual(
+                    "This method has been renamed to `remap`.", str(w[-1].message)
+                )
+
+        self._run_remap_test(f, self.NCBI36_GRCh37())

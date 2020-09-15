@@ -39,6 +39,7 @@ from itertools import groupby, count
 import logging
 import os
 import re
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -131,7 +132,7 @@ class SNPs:
             self._phased = d["phased"]
 
             if not self._snps.empty:
-                self.sort_snps()
+                self.sort()
 
                 if deduplicate:
                     self._deduplicate_rsids()
@@ -151,7 +152,7 @@ class SNPs:
 
                 if assign_par_snps:
                     self._assign_par_snps()
-                    self.sort_snps()
+                    self.sort()
 
                 if deduplicate_XY_chrom:
                     if self.determine_sex() == "Male":
@@ -1012,7 +1013,7 @@ class SNPs:
         else:
             return pd.DataFrame()
 
-    def sort_snps(self):
+    def sort(self):
         """ Sort SNPs based on ordered chromosome list and position. """
 
         sorted_list = sorted(self._snps["chrom"].unique(), key=self._natural_sort_key)
@@ -1154,7 +1155,7 @@ class SNPs:
         snps.pos = snps.pos.astype(np.uint32)
 
         self._snps = snps
-        self.sort_snps()
+        self.sort()
         self._build = int(target_assembly[-2:])
 
         return chromosomes_remapped, chromosomes_not_remapped
@@ -1495,7 +1496,7 @@ class SNPs:
                 if merged:
                     merge_properties(snps_object)
                     merge_dfs(snps_object)
-                    self.sort_snps()
+                    self.sort()
 
                     d.update({"merged": True})
                     d.update(extra[0])
@@ -1503,3 +1504,8 @@ class SNPs:
             results.append(d)
 
         return results
+
+    def sort_snps(self):
+        """ Deprecated. This method has been renamed to `sort`. """
+        warnings.warn("This method has been renamed to `sort`.", DeprecationWarning)
+        self.sort()

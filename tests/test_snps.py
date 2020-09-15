@@ -35,6 +35,7 @@ import io
 import os
 import tempfile
 from unittest.mock import Mock, patch
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -729,7 +730,7 @@ class TestSNPsMerge(TestSnps):
             )
             expected_snps = SNPs()
             expected_snps._snps = expected
-            expected_snps.sort_snps()
+            expected_snps.sort()
             expected = expected_snps.snps
 
             pd.testing.assert_index_equal(
@@ -768,3 +769,16 @@ class TestSNPsMerge(TestSnps):
         pd.testing.assert_frame_equal(
             s.heterozygous_MT_snps, get_empty_snps_dataframe(), check_exact=True
         )
+
+
+class TestDeprecatedMethods(BaseSNPsTestCase):
+    def test_sort_snps(self):
+        s = SNPs("tests/input/generic.csv")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            s.sort_snps()
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            self.assertEqual(
+                "This method has been renamed to `sort`.", str(w[-1].message)
+            )

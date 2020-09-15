@@ -524,7 +524,7 @@ class SNPs:
         else:
             return True
 
-    def save_snps(self, filename="", vcf=False, atomic=True, **kwargs):
+    def save(self, filename="", vcf=False, atomic=True, **kwargs):
         """ Save SNPs to file.
 
         Parameters
@@ -1514,3 +1514,8 @@ class SNPs:
         """ Deprecated. This method has been renamed to `remap`. """
         warnings.warn("This method has been renamed to `remap`.", DeprecationWarning)
         return self.remap(target_assembly, complement_bases)
+
+    def save_snps(self, filename="", vcf=False, atomic=True, **kwargs):
+        """ Deprecated. This method has been renamed to `save`. """
+        warnings.warn("This method has been renamed to `save`.", DeprecationWarning)
+        return self.save(filename, vcf, atomic, **kwargs)

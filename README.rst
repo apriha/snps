@@ -189,14 +189,14 @@ Ok, so far we've merged the SNPs from two files (ensuring the same build in the 
 identifying discrepancies along the way). Then, we remapped the SNPs to Build 38. Now, let's save
 the merged and remapped dataset consisting of 1M+ SNPs to a tab-separated values (TSV) file:
 
->>> saved_snps = s.save_snps("out.txt")
+>>> saved_snps = s.save("out.txt")
 Saving output/out.txt
 >>> print(saved_snps)
 output/out.txt
 
 Moreover, let's get the reference sequences for this assembly and save the SNPs as a VCF file:
 
->>> saved_snps = s.save_snps("out.vcf", vcf=True)
+>>> saved_snps = s.save("out.vcf", vcf=True)
 Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.1.fa.gz
 Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.2.fa.gz
 Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.3.fa.gz

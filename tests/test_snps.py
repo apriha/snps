@@ -828,3 +828,14 @@ class TestDeprecatedMethods(TestSnps):
             self.assertEqual(
                 "This property has been renamed to `count`.", str(w[-1].message)
             )
+
+    def test_get_snp_count(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            s = SNPs("tests/input/NCBI36.csv")
+            self.assertEqual(s.get_snp_count(), 4)
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            self.assertEqual(
+                "This method has been renamed to `get_count`.", str(w[-1].message)
+            )

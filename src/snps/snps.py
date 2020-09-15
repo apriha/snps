@@ -355,7 +355,7 @@ class SNPs:
         -------
         int
         """
-        return self.get_snp_count()
+        return self.get_count()
 
     @property
     def chromosomes(self):
@@ -756,7 +756,7 @@ class SNPs:
         else:
             return ""
 
-    def get_snp_count(self, chrom=""):
+    def get_count(self, chrom=""):
         """ Count of SNPs.
 
         Parameters
@@ -854,7 +854,7 @@ class SNPs:
         return ""
 
     def _determine_sex_X(self, threshold):
-        x_snps = self.get_snp_count("X")
+        x_snps = self.get_count("X")
 
         if x_snps > 0:
             if len(self.heterozygous_snps("X")) / x_snps > threshold:
@@ -865,7 +865,7 @@ class SNPs:
             return ""
 
     def _determine_sex_Y(self, threshold):
-        y_snps = self.get_snp_count("Y")
+        y_snps = self.get_count("Y")
 
         if y_snps > 0:
             if len(self.not_null_snps("Y")) / y_snps > threshold:
@@ -1525,3 +1525,10 @@ class SNPs:
         """ Deprecated. This property has been renamed to `count`. """
         warnings.warn("This property has been renamed to `count`.", DeprecationWarning)
         return self.count
+
+    def get_snp_count(self, chrom=""):
+        """ Deprecated. This method has been renamed to `get_count`. """
+        warnings.warn(
+            "This method has been renamed to `get_count`.", DeprecationWarning
+        )
+        return self.get_count(chrom)

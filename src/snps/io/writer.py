@@ -322,11 +322,11 @@ class Writer:
         df = df.astype(
             {
                 "CHROM": object,
-                "POS": np.int64,
+                "POS": np.uint32,
                 "ID": object,
                 "REF": object,
                 "ALT": object,
-                "QUAL": np.int64,
+                "QUAL": np.float32,
                 "FILTER": object,
                 "INFO": object,
                 "FORMAT": object,

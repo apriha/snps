@@ -216,18 +216,6 @@ def clean_str(s):
     return re.sub(r"\W|^(?=\d)", "_", s)
 
 
-def get_empty_snps_dataframe():
-    """ Get empty dataframe normalized for usage with `snps`.
-
-    Returns
-    -------
-    pd.DataFrame
-    """
-    df = pd.DataFrame(columns=["rsid", "chrom", "pos", "genotype"])
-    df.set_index("rsid", inplace=True)
-    return df
-
-
 def zip_file(src, dest, arcname):
     """ Zip a file.
 

@@ -40,6 +40,7 @@ import numpy as np
 import pandas as pd
 
 from snps import SNPs
+from snps.io import get_empty_snps_dataframe
 from tests import BaseSNPsTestCase
 
 
@@ -692,10 +693,11 @@ class TestSNPsMerge(TestSnps):
                 index_col=0,
                 dtype={
                     "chrom": object,
-                    "pos_file1": np.int64,
-                    "pos_file2": np.int64,
+                    "pos_file1": np.uint32,
+                    "pos_file2": np.uint32,
                     "discrepant_position": bool,
                     "discrepant_genotype": bool,
+                    "expected_position": np.uint32,
                 },
             )
 
@@ -761,8 +763,8 @@ class TestSNPsMerge(TestSnps):
         pd.testing.assert_frame_equal(s.duplicate_snps, df, check_exact=True)
         pd.testing.assert_frame_equal(s.discrepant_XY_snps, df, check_exact=True)
         pd.testing.assert_frame_equal(
-            s.discrepant_positions_vcf, pd.DataFrame(), check_exact=True
+            s.discrepant_positions_vcf, get_empty_snps_dataframe(), check_exact=True
         )
         pd.testing.assert_frame_equal(
-            s.heterozygous_MT_snps, pd.DataFrame(), check_exact=True
+            s.heterozygous_MT_snps, get_empty_snps_dataframe(), check_exact=True
         )

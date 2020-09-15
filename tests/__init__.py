@@ -39,6 +39,7 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_object_dtype, is_unsigned_integer_dtype
 
 from snps import SNPs
 from snps.utils import gzip_file, zip_file
@@ -73,7 +74,7 @@ class BaseSNPsTestCase(TestCase):
 
         s._build = 37
 
-        positions = np.arange(pos_start, pos_max, pos_step, dtype=np.int64)
+        positions = np.arange(pos_start, pos_max, pos_step, dtype=np.uint32)
         snps = pd.DataFrame(
             {"chrom": chrom},
             index=pd.Index(
@@ -154,7 +155,10 @@ class BaseSNPsTestCase(TestCase):
             {"rsid": rsid, "chrom": chrom, "pos": pos, "genotype": genotype},
             columns=["rsid", "chrom", "pos", "genotype"],
         )
-        df["genotype"] = df["genotype"].astype(object)
+        df.rsid = df.rsid.astype(object)
+        df.chrom = df.chrom.astype(object)
+        df.pos = df.pos.astype(np.uint32)
+        df.genotype = df.genotype.astype(object)
         df = df.set_index("rsid")
         return df
 
@@ -683,6 +687,13 @@ class BaseSNPsTestCase(TestCase):
                 snps_df,
             )
 
+    def make_normalized_dataframe_assertions(self, df):
+        self.assertEqual(df.index.name, "rsid")
+        self.assertTrue(is_object_dtype(df.index.dtype))
+        self.assertTrue(is_object_dtype(df.chrom.dtype))
+        self.assertTrue(is_unsigned_integer_dtype(df.pos.dtype))
+        self.assertTrue(is_object_dtype(df.genotype.dtype))
+
     def parse_file(self, file, rsids=()):
         return SNPs(file, rsids=rsids)
 
@@ -702,6 +713,7 @@ class BaseSNPsTestCase(TestCase):
         self.assertTrue(snps.build_detected) if build_detected else self.assertFalse(
             snps.build_detected
         )
+        self.make_normalized_dataframe_assertions(snps.snps)
 
     def make_parsing_assertions_vcf(
         self, snps, source, phased, unannotated, rsids, build, build_detected, snps_df
@@ -727,3 +739,4 @@ class BaseSNPsTestCase(TestCase):
         self.assertTrue(snps.build_detected) if build_detected else self.assertFalse(
             snps.build_detected
         )
+        self.make_normalized_dataframe_assertions(snps.snps)

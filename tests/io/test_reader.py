@@ -33,10 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
 import tempfile
-import warnings
 
 from atomicwrites import atomic_write
-import pandas as pd
 
 from snps.resources import Resources
 from snps.utils import gzip_file
@@ -44,11 +42,6 @@ from tests import BaseSNPsTestCase
 
 
 class TestReader(BaseSNPsTestCase):
-    def setUp(self):
-        # set warnings filter (test runner overrides statement in `io/reader.py`)
-        warnings.filterwarnings("error", category=pd.errors.DtypeWarning)
-        super().setUp()
-
     @staticmethod
     def _setup_gsa_test(resources_dir):
         # reset resource if already loaded
@@ -129,8 +122,7 @@ class TestReader(BaseSNPsTestCase):
     def test_read_ancestry_extra_tab(self):
         # https://www.ancestry.com
 
-        # we need a large file to generate the `pd.errors.DtypeWarning`
-        total_snps = 500000
+        total_snps = 100
         s = "#Ancestry\r\n"
         s += "rsid\tchromosome\tposition\tallele1\tallele2\r\n"
         # add extra tab separator in first line
@@ -247,9 +239,8 @@ class TestReader(BaseSNPsTestCase):
     def test_read_ftdna_second_header(self):
         # https://www.familytreedna.com
 
-        # we need a large file to generate the `pd.errors.DtypeWarning`
-        total_snps1 = 500000
-        total_snps2 = 10000
+        total_snps1 = 100
+        total_snps2 = 10
         s = "RSID,CHROMOSOME,POSITION,RESULT\n"
         # generate first chunk of lines
         for i in range(0, total_snps1):

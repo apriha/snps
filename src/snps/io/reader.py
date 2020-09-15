@@ -42,20 +42,42 @@ import io
 import logging
 import os
 import re
-import warnings
 import zipfile
 import zlib
 
 import numpy as np
 import pandas as pd
 
-from snps.utils import get_empty_snps_dataframe
-
 
 logger = logging.getLogger(__name__)
 
-# raise exception if `pd.errors.DtypeWarning` occurs
-warnings.filterwarnings("error", category=pd.errors.DtypeWarning)
+NORMALIZED_DTYPES = {
+    "rsid": object,
+    "chrom": object,
+    "pos": np.uint32,
+    "genotype": object,
+}
+
+TWO_ALLELE_DTYPES = {
+    "rsid": object,
+    "chrom": object,
+    "pos": np.uint32,
+    "allele1": object,
+    "allele2": object,
+}
+
+
+def get_empty_snps_dataframe():
+    """ Get empty dataframe normalized for usage with `snps`.
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+    df = pd.DataFrame(columns=["rsid", "chrom", "pos", "genotype"])
+    df = df.astype(NORMALIZED_DTYPES)
+    df.set_index("rsid", inplace=True)
+    return df
 
 
 class Reader:
@@ -396,7 +418,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 ),
             )
@@ -427,10 +449,10 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 )
-            except pd.errors.DtypeWarning:
+            except ValueError:
                 # read files with second header for concatenated data
                 if isinstance(file, io.BytesIO):
                     file.seek(0)
@@ -451,7 +473,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 )
             except OSError:
@@ -482,7 +504,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=None,  # already decompressed
                 )
 
@@ -513,7 +535,7 @@ class Reader:
                 na_values="-",
                 names=["rsid", "chrom", "pos", "allele1", "allele2"],
                 index_col=0,
-                dtype={"chrom": object},
+                dtype=TWO_ALLELE_DTYPES,
                 compression=compression,
             )
 
@@ -555,27 +577,10 @@ class Reader:
                     na_values=0,
                     names=["rsid", "chrom", "pos", "allele1", "allele2"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=TWO_ALLELE_DTYPES,
                     compression=compression,
                 )
-            except pd.errors.DtypeWarning:
-                if isinstance(file, io.BytesIO):
-                    file.seek(0)
-
-                # read files with multiple separator tabs
-                df = pd.read_csv(
-                    file,
-                    comment="#",
-                    header=0,
-                    sep="\t+",
-                    engine="python",
-                    na_values=0,
-                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
-                    index_col=0,
-                    dtype={"chrom": object},
-                    compression=compression,
-                )
-            except pd.errors.ParserError:
+            except ValueError:
                 if isinstance(file, io.BytesIO):
                     file.seek(0)
 
@@ -589,7 +594,7 @@ class Reader:
                     na_values=0,
                     names=["rsid", "chrom", "pos", "allele1", "allele2"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=TWO_ALLELE_DTYPES,
                     compression=compression,
                 )
 
@@ -660,7 +665,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object, "pos": np.int64},
+                    dtype=NORMALIZED_DTYPES,
                 ),
             )
 
@@ -691,7 +696,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 ),
             )
@@ -722,7 +727,13 @@ class Reader:
                 na_values="--",
                 header=0,
                 index_col=1,
-                dtype={"Chr": object},
+                dtype={
+                    "rsID": object,
+                    "Chr": object,
+                    "Position": np.uint32,
+                    "Allele1...Top": object,
+                    "Allele2...Top": object,
+                },
                 compression=compression,
             )
 
@@ -760,7 +771,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 ),
             )
@@ -813,7 +824,7 @@ class Reader:
             )
             df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
 
-            df = df.astype({"chrom": object, "pos": np.int64})
+            df = df.astype(NORMALIZED_DTYPES)
             df = df[["rsid", "chrom", "pos", "genotype"]]
             df.set_index(["rsid"], inplace=True)
 
@@ -847,7 +858,7 @@ class Reader:
                 na_values="--",
                 names=["rsid", "chrom", "pos", "genotype"],
                 index_col=0,
-                dtype={"chrom": object, "pos": np.int64},
+                dtype=NORMALIZED_DTYPES,
                 compression=compression,
             )
             df.rename(index=gsa_resources["rsid_map"], inplace=True)
@@ -887,7 +898,7 @@ class Reader:
         dict
             result of `read_helper`
         """
-        dtype = {"Chr": object, "Position": np.int64}
+        dtype = {"Chr": object, "Position": np.uint32}
         return self._read_gsa_helper(file, "Sano", "Forward", dtype, na_values="-")
 
     def read_dnaland(self, file, compression):
@@ -915,7 +926,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 ),
             )
@@ -969,7 +980,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object, "pos": np.int64},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 )
 
@@ -1017,7 +1028,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object, "pos": np.int64},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 )
 
@@ -1042,7 +1053,7 @@ class Reader:
                         names=["rsid", "chrom", "pos", "genotype"],
                         usecols=[0, 1, 2, 3],
                         index_col=0,
-                        dtype={"chrom": object, "pos": np.int64},
+                        dtype=NORMALIZED_DTYPES,
                         compression=compression,
                     )
             return (df,)
@@ -1174,9 +1185,7 @@ class Reader:
                 phased = False
 
             df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
-            df = df.astype(
-                {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
-            )
+            df = df.astype(NORMALIZED_DTYPES)
 
             df.set_index("rsid", inplace=True, drop=True)
 

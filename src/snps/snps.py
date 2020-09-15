@@ -46,8 +46,8 @@ from pandas.api.types import CategoricalDtype
 
 from snps.ensembl import EnsemblRestClient
 from snps.resources import Resources
-from snps.io import Reader, Writer
-from snps.utils import Parallelizer, get_empty_snps_dataframe
+from snps.io import Reader, Writer, get_empty_snps_dataframe
+from snps.utils import Parallelizer
 
 logger = logging.getLogger(__name__)
 
@@ -97,12 +97,12 @@ class SNPs:
         self._file = file
         self._only_detect_source = only_detect_source
         self._snps = get_empty_snps_dataframe()
-        self._duplicate_snps = pd.DataFrame()
-        self._discrepant_XY_snps = pd.DataFrame()
+        self._duplicate_snps = get_empty_snps_dataframe()
+        self._discrepant_XY_snps = get_empty_snps_dataframe()
         self._discrepant_positions = pd.DataFrame()
-        self._discrepant_positions_vcf = pd.DataFrame()
+        self._discrepant_positions_vcf = get_empty_snps_dataframe()
         self._discrepant_genotypes = pd.DataFrame()
-        self._heterozygous_MT_snps = pd.DataFrame()
+        self._heterozygous_MT_snps = get_empty_snps_dataframe()
         self._source = []
         self._phased = False
         self._build = 0
@@ -1151,6 +1151,7 @@ class SNPs:
         # update SNP positions and genotypes
         snps.loc[remapped_snps.index, "pos"] = remapped_snps["pos"]
         snps.loc[remapped_snps.index, "genotype"] = remapped_snps["genotype"]
+        snps.pos = snps.pos.astype(np.uint32)
 
         self._snps = snps
         self.sort_snps()
@@ -1415,8 +1416,8 @@ class SNPs:
 
             # add new SNPs
             self._snps = self.snps.combine_first(s.snps)
-            # combine_first converts position to float64, so convert it back to int64
-            self._snps["pos"] = self.snps["pos"].astype(np.int64)
+            # combine_first converts position to float64, so convert it back to uint32
+            self._snps["pos"] = self.snps["pos"].astype(np.uint32)
 
             if 0 < len(discrepant_positions) < positions_threshold:
                 logger.warning(

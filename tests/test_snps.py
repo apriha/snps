@@ -523,7 +523,7 @@ class TestSNPsMerge(TestSnps):
             s = SNPs("tests/input/NCBI36.csv")
             results = s.merge([SNPs("tests/input/GRCh37.csv")])
             self.assertEqual(len(s.discrepant_merge_positions), 0)
-            self.assertEqual(len(s.discrepant_genotypes), 0)
+            self.assertEqual(len(s.discrepant_merge_genotypes), 0)
             pd.testing.assert_frame_equal(s.snps, self.snps_NCBI36(), check_exact=True)
             self.assert_results(
                 results,
@@ -550,9 +550,9 @@ class TestSNPsMerge(TestSnps):
             check_exact=True,
             check_names=True,
         )
-        self.assertEqual(len(s.discrepant_genotypes), 1)
+        self.assertEqual(len(s.discrepant_merge_genotypes), 1)
         pd.testing.assert_index_equal(
-            s.discrepant_genotypes.index,
+            s.discrepant_merge_genotypes.index,
             results[0]["discrepant_genotype_snps"],
             check_exact=True,
             check_names=True,
@@ -653,7 +653,7 @@ class TestSNPsMerge(TestSnps):
 
         results = s1.merge([s2], discrepant_positions_threshold=0)
         self.assertEqual(len(s1.discrepant_merge_positions), 0)
-        self.assertEqual(len(s1.discrepant_genotypes), 0)
+        self.assertEqual(len(s1.discrepant_merge_genotypes), 0)
         self.assertEqual(len(s1.discrepant_snps), 0)
         pd.testing.assert_frame_equal(s1.snps, self.generic_snps(), check_exact=True)
         self.assert_results(results, [{}])
@@ -665,7 +665,7 @@ class TestSNPsMerge(TestSnps):
 
         results = s1.merge([s2], discrepant_genotypes_threshold=0)
         self.assertEqual(len(s1.discrepant_merge_positions), 0)
-        self.assertEqual(len(s1.discrepant_genotypes), 0)
+        self.assertEqual(len(s1.discrepant_merge_genotypes), 0)
         self.assertEqual(len(s1.discrepant_snps), 0)
         pd.testing.assert_frame_equal(s1.snps, self.generic_snps(), check_exact=True)
         self.assert_results(results, [{}])
@@ -739,7 +739,7 @@ class TestSNPsMerge(TestSnps):
             )
 
             pd.testing.assert_index_equal(
-                s.discrepant_genotypes.index,
+                s.discrepant_merge_genotypes.index,
                 expected.loc[expected["discrepant_genotype"] == True].index,
             )
 

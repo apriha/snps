@@ -294,7 +294,7 @@ class SNPs:
         return self._discrepant_merge_genotypes
 
     @property
-    def discrepant_snps(self):
+    def discrepant_merge_positions_genotypes(self):
         """ SNPs with discrepant positions and / or genotypes discovered while merging SNPs.
 
         Notes

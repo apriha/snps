@@ -350,7 +350,14 @@ class SNPs:
         -------
         str
         """
-        return self.get_assembly()
+        if self.build == 37:
+            return "GRCh37"
+        elif self.build == 36:
+            return "NCBI36"
+        elif self.build == 38:
+            return "GRCh38"
+        else:
+            return ""
 
     @property
     def count(self):
@@ -747,23 +754,6 @@ class SNPs:
                 break
 
         return build
-
-    def get_assembly(self):
-        """ Get the assembly of a build.
-
-        Returns
-        -------
-        str
-        """
-
-        if self._build == 37:
-            return "GRCh37"
-        elif self._build == 36:
-            return "NCBI36"
-        elif self._build == 38:
-            return "GRCh38"
-        else:
-            return ""
 
     def get_count(self, chrom=""):
         """ Count of SNPs.
@@ -1556,3 +1546,8 @@ class SNPs:
             DeprecationWarning,
         )
         return self.summary
+
+    def get_assembly(self):
+        """ Deprecated. See the `assembly` property. """
+        warnings.warn("See the `assembly` property.", DeprecationWarning)
+        return self.assembly

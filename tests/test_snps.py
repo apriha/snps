@@ -166,9 +166,9 @@ class TestSnps(BaseSNPsTestCase):
             )
             self.assertEqual(snps.snps.index.name, "rsid")
 
-    def test_get_assembly_None(self):
+    def test_assembly_None(self):
         snps = SNPs()
-        self.assertFalse(snps.get_assembly())
+        self.assertFalse(snps.assembly)
 
     def test_summary(self):
         s = SNPs("tests/input/GRCh38.csv")
@@ -875,3 +875,12 @@ class TestDeprecatedMethods(TestSnps):
                 "This method has been renamed to `summary` and is now a property.",
                 str(w[-1].message),
             )
+
+    def test_get_assembly(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            s = SNPs("tests/input/GRCh38.csv")
+            self.assertEqual(s.get_assembly(), "GRCh38")
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            self.assertEqual("See the `assembly` property.", str(w[-1].message))

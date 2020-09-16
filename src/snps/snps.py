@@ -184,6 +184,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
         return self._snps
 
@@ -197,6 +198,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
         return self._duplicate_snps
 
@@ -210,6 +212,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
         return self._discrepant_XY_snps
 
@@ -246,6 +249,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
         return self._discrepant_positions_vcf
 
@@ -314,6 +318,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
         return self._heterozygous_MT_snps
 
@@ -427,6 +432,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
         if chrom:
             return self._snps.loc[
@@ -453,6 +459,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
         if chrom:
             return self._snps.loc[
@@ -479,6 +486,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
 
         if chrom:

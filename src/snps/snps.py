@@ -101,8 +101,8 @@ class SNPs:
         self._duplicate_snps = get_empty_snps_dataframe()
         self._discrepant_XY_snps = get_empty_snps_dataframe()
         self._heterozygous_MT_snps = get_empty_snps_dataframe()
-        self._discrepant_positions = pd.DataFrame()
         self._discrepant_vcf_position_snps = get_empty_snps_dataframe()
+        self._discrepant_positions = pd.DataFrame()
         self._discrepant_genotypes = pd.DataFrame()
         self._source = []
         self._phased = False
@@ -230,6 +230,17 @@ class SNPs:
         return self._heterozygous_MT_snps
 
     @property
+    def discrepant_vcf_position_snps(self):
+        """ SNPs with discrepant positions discovered while saving VCF.
+
+        Returns
+        -------
+        pandas.DataFrame
+            normalized `snps` dataframe
+        """
+        return self._discrepant_vcf_position_snps
+
+    @property
     def discrepant_positions(self):
         """ SNPs with discrepant positions discovered while merging SNPs.
 
@@ -254,17 +265,6 @@ class SNPs:
         pandas.DataFrame
         """
         return self._discrepant_positions
-
-    @property
-    def discrepant_vcf_position_snps(self):
-        """ SNPs with discrepant positions discovered while saving VCF.
-
-        Returns
-        -------
-        pandas.DataFrame
-            normalized `snps` dataframe
-        """
-        return self._discrepant_vcf_position_snps
 
     @property
     def discrepant_genotypes(self):
@@ -1323,8 +1323,8 @@ class SNPs:
             self._duplicate_snps = s.duplicate_snps
             self._discrepant_XY_snps = s.discrepant_XY_snps
             self._heterozygous_MT_snps = s.heterozygous_MT_snps
-            self._discrepant_positions = s.discrepant_positions
             self._discrepant_vcf_position_snps = s.discrepant_vcf_position_snps
+            self._discrepant_positions = s.discrepant_positions
             self._discrepant_genotypes = s.discrepant_genotypes
             self._source = s._source
             self._phased = s.phased

@@ -767,7 +767,7 @@ class TestSNPsMerge(TestSnps):
             s.heterozygous_MT_snps, get_empty_snps_dataframe(), check_exact=True
         )
         pd.testing.assert_frame_equal(
-            s.discrepant_positions_vcf, get_empty_snps_dataframe(), check_exact=True
+            s.discrepant_vcf_position_snps, get_empty_snps_dataframe(), check_exact=True
         )
 
 

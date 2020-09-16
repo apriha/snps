@@ -150,7 +150,7 @@ class TestWriter(BaseSNPsTestCase):
             self.assertEqual(os.path.relpath(s.save(vcf=True)), "output/vcf_GRCh37.vcf")
 
         pd.testing.assert_frame_equal(
-            s.discrepant_positions_vcf,
+            s.discrepant_vcf_position_snps,
             self.create_snp_df(
                 rsid=["rs1", "rs17"],
                 chrom=["1", "1"],

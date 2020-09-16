@@ -475,8 +475,8 @@ class SNPs:
                 & (self._snps.genotype.str[0] == self._snps.genotype.str[1])
             ]
 
-    def not_null_snps(self, chrom=""):
-        """ Get not null SNPs.
+    def notnull_snps(self, chrom=""):
+        """ Get not null genotype SNPs.
 
         Parameters
         ----------
@@ -876,7 +876,7 @@ class SNPs:
         y_snps = self.get_count("Y")
 
         if y_snps > 0:
-            if len(self.not_null_snps("Y")) / y_snps > threshold:
+            if len(self.notnull_snps("Y")) / y_snps > threshold:
                 return "Male"
             else:
                 return "Female"
@@ -1540,3 +1540,10 @@ class SNPs:
             "This method has been renamed to `get_count`.", DeprecationWarning
         )
         return self.get_count(chrom)
+
+    def not_null_snps(self, chrom=""):
+        """ Deprecated. This method has been renamed to `notnull_snps`. """
+        warnings.warn(
+            "This method has been renamed to `notnull_snps`.", DeprecationWarning
+        )
+        return self.notnull_snps(chrom)

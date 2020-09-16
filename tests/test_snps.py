@@ -236,11 +236,11 @@ class TestSnps(BaseSNPsTestCase):
         s = SNPs("tests/input/generic.csv")
         self.assertTrue(s.is_valid())
 
-    def test_not_null_snps(self):
+    def test_notnull_snps(self):
         s = SNPs("tests/input/generic.csv")
         snps = self.generic_snps()
         snps.drop("rs5", inplace=True)
-        pd.testing.assert_frame_equal(s.not_null_snps(), snps, check_exact=True)
+        pd.testing.assert_frame_equal(s.notnull_snps(), snps, check_exact=True)
 
     def test_only_detect_source(self):
         s = SNPs("tests/input/generic.csv", only_detect_source=True)
@@ -838,4 +838,17 @@ class TestDeprecatedMethods(TestSnps):
             self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
             self.assertEqual(
                 "This method has been renamed to `get_count`.", str(w[-1].message)
+            )
+
+    def test_not_null_snps(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            s = SNPs("tests/input/generic.csv")
+            snps = self.generic_snps()
+            snps.drop("rs5", inplace=True)
+            pd.testing.assert_frame_equal(s.not_null_snps(), snps, check_exact=True)
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            self.assertEqual(
+                "This method has been renamed to `notnull_snps`.", str(w[-1].message)
             )

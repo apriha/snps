@@ -445,9 +445,9 @@ class TestSNPsMerge(TestSnps):
 
             self.assertListEqual(
                 [
-                    "common_snps",
-                    "discrepant_genotype_snps",
-                    "discrepant_position_snps",
+                    "common_rsids",
+                    "discrepant_genotype_rsids",
+                    "discrepant_position_rsids",
                     "merged",
                 ],
                 sorted(list(result.keys())),
@@ -462,9 +462,9 @@ class TestSNPsMerge(TestSnps):
                 self.assertFalse(result["merged"])
 
             for key in [
-                "common_snps",
-                "discrepant_position_snps",
-                "discrepant_genotype_snps",
+                "common_rsids",
+                "discrepant_position_rsids",
+                "discrepant_genotype_rsids",
             ]:
                 if key in expected_result:
                     pd.testing.assert_index_equal(
@@ -510,7 +510,7 @@ class TestSNPsMerge(TestSnps):
                 {"merged": True},
                 {
                     "merged": True,
-                    "common_snps": pd.Index(
+                    "common_rsids": pd.Index(
                         ["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
                         name="rsid",
                     ),
@@ -530,7 +530,7 @@ class TestSNPsMerge(TestSnps):
                 [
                     {
                         "merged": True,
-                        "common_snps": pd.Index(
+                        "common_rsids": pd.Index(
                             ["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
                             name="rsid",
                         ),
@@ -546,21 +546,21 @@ class TestSNPsMerge(TestSnps):
         self.assertEqual(len(s.discrepant_merge_positions), 4)
         pd.testing.assert_index_equal(
             s.discrepant_merge_positions.index,
-            results[0]["discrepant_position_snps"],
+            results[0]["discrepant_position_rsids"],
             check_exact=True,
             check_names=True,
         )
         self.assertEqual(len(s.discrepant_merge_genotypes), 1)
         pd.testing.assert_index_equal(
             s.discrepant_merge_genotypes.index,
-            results[0]["discrepant_genotype_snps"],
+            results[0]["discrepant_genotype_rsids"],
             check_exact=True,
             check_names=True,
         )
         self.assertEqual(len(s.discrepant_merge_positions_genotypes), 4)
         pd.testing.assert_index_equal(
             s.discrepant_merge_positions_genotypes.index,
-            results[0]["discrepant_position_snps"],
+            results[0]["discrepant_position_rsids"],
             check_exact=True,
             check_names=True,
         )
@@ -574,15 +574,15 @@ class TestSNPsMerge(TestSnps):
             [
                 {
                     "merged": True,
-                    "common_snps": pd.Index(
+                    "common_rsids": pd.Index(
                         ["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
                         name="rsid",
                     ),
-                    "discrepant_position_snps": pd.Index(
+                    "discrepant_position_rsids": pd.Index(
                         ["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
                         name="rsid",
                     ),
-                    "discrepant_genotype_snps": pd.Index(["rs11928389"], name="rsid"),
+                    "discrepant_genotype_rsids": pd.Index(["rs11928389"], name="rsid"),
                 }
             ],
         )
@@ -601,7 +601,7 @@ class TestSNPsMerge(TestSnps):
             [
                 {
                     "merged": True,
-                    "common_snps": pd.Index(
+                    "common_rsids": pd.Index(
                         ["rs1", "rs2", "rs3", "rs4", "rs5", "rs6", "rs7", "rs8"],
                         name="rsid",
                     ),
@@ -622,7 +622,7 @@ class TestSNPsMerge(TestSnps):
             [
                 {
                     "merged": True,
-                    "common_snps": pd.Index(
+                    "common_rsids": pd.Index(
                         ["rs1", "rs2", "rs3", "rs4", "rs5", "rs6", "rs7", "rs8"],
                         name="rsid",
                     ),

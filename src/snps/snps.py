@@ -1273,11 +1273,11 @@ class SNPs:
 
             merged (bool)
                 whether `SNPs` object was merged
-            common_snps (pandas.Index)
+            common_rsids (pandas.Index)
                 SNPs in common
-            discrepant_position_snps (pandas.Index)
+            discrepant_position_rsids (pandas.Index)
                 SNPs with discrepant positions
-            discrepant_genotype_snps (pandas.Index)
+            discrepant_genotype_rsids (pandas.Index)
                 SNPs with discrepant genotypes
 
         References
@@ -1347,7 +1347,7 @@ class SNPs:
             # identify common SNPs (i.e., any rsids being added that already exist in self.snps)
             df = self.snps.join(s.snps, how="inner", rsuffix="_added")
 
-            common_snps = df.index
+            common_rsids = df.index
 
             discrepant_positions = df.loc[
                 (df.chrom != df.chrom_added) | (df.pos != df.pos_added)
@@ -1426,9 +1426,9 @@ class SNPs:
             return (
                 True,
                 {
-                    "common_snps": common_snps,
-                    "discrepant_position_snps": discrepant_positions.index,
-                    "discrepant_genotype_snps": discrepant_genotypes.index,
+                    "common_rsids": common_rsids,
+                    "discrepant_position_rsids": discrepant_positions.index,
+                    "discrepant_genotype_rsids": discrepant_genotypes.index,
                 },
             )
 
@@ -1436,9 +1436,9 @@ class SNPs:
         for snps_object in snps_objects:
             d = {
                 "merged": False,
-                "common_snps": pd.Index([], name="rsid"),
-                "discrepant_position_snps": pd.Index([], name="rsid"),
-                "discrepant_genotype_snps": pd.Index([], name="rsid"),
+                "common_rsids": pd.Index([], name="rsid"),
+                "discrepant_position_rsids": pd.Index([], name="rsid"),
+                "discrepant_genotype_rsids": pd.Index([], name="rsid"),
             }
 
             if not snps_object.is_valid():

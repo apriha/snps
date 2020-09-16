@@ -165,10 +165,10 @@ Finally, ``merge`` returns a list of ``dict``, where each ``dict`` has informati
 to the results of each merge (e.g., SNPs in common).
 
 >>> sorted(list(merge_results[0].keys()))
-['common_snps', 'discrepant_genotype_snps', 'discrepant_position_snps', 'merged']
+['common_rsids', 'discrepant_genotype_rsids', 'discrepant_position_rsids', 'merged']
 >>> merge_results[0]["merged"]
 True
->>> len(merge_results[0]["common_snps"])
+>>> len(merge_results[0]["common_rsids"])
 692918
 
 Remap SNPs

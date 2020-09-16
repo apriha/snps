@@ -522,7 +522,7 @@ class TestSNPsMerge(TestSnps):
         def f():
             s = SNPs("tests/input/NCBI36.csv")
             results = s.merge([SNPs("tests/input/GRCh37.csv")])
-            self.assertEqual(len(s.discrepant_positions), 0)
+            self.assertEqual(len(s.discrepant_merge_positions), 0)
             self.assertEqual(len(s.discrepant_genotypes), 0)
             pd.testing.assert_frame_equal(s.snps, self.snps_NCBI36(), check_exact=True)
             self.assert_results(
@@ -543,9 +543,9 @@ class TestSNPsMerge(TestSnps):
     def test_merge_remap_false(self):
         s = SNPs("tests/input/NCBI36.csv")
         results = s.merge([SNPs("tests/input/GRCh37.csv")], remap=False)
-        self.assertEqual(len(s.discrepant_positions), 4)
+        self.assertEqual(len(s.discrepant_merge_positions), 4)
         pd.testing.assert_index_equal(
-            s.discrepant_positions.index,
+            s.discrepant_merge_positions.index,
             results[0]["discrepant_position_snps"],
             check_exact=True,
             check_names=True,
@@ -652,7 +652,7 @@ class TestSNPsMerge(TestSnps):
         s2._snps.loc["rs1", "pos"] = 100
 
         results = s1.merge([s2], discrepant_positions_threshold=0)
-        self.assertEqual(len(s1.discrepant_positions), 0)
+        self.assertEqual(len(s1.discrepant_merge_positions), 0)
         self.assertEqual(len(s1.discrepant_genotypes), 0)
         self.assertEqual(len(s1.discrepant_snps), 0)
         pd.testing.assert_frame_equal(s1.snps, self.generic_snps(), check_exact=True)
@@ -664,7 +664,7 @@ class TestSNPsMerge(TestSnps):
         s2._snps.loc["rs1", "genotype"] = "CC"
 
         results = s1.merge([s2], discrepant_genotypes_threshold=0)
-        self.assertEqual(len(s1.discrepant_positions), 0)
+        self.assertEqual(len(s1.discrepant_merge_positions), 0)
         self.assertEqual(len(s1.discrepant_genotypes), 0)
         self.assertEqual(len(s1.discrepant_snps), 0)
         pd.testing.assert_frame_equal(s1.snps, self.generic_snps(), check_exact=True)
@@ -734,7 +734,7 @@ class TestSNPsMerge(TestSnps):
             expected = expected_snps.snps
 
             pd.testing.assert_index_equal(
-                s.discrepant_positions.index,
+                s.discrepant_merge_positions.index,
                 expected.loc[expected["discrepant_position"] == True].index,
             )
 

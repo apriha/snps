@@ -102,7 +102,7 @@ class SNPs:
         self._discrepant_XY_snps = get_empty_snps_dataframe()
         self._heterozygous_MT_snps = get_empty_snps_dataframe()
         self._discrepant_vcf_position_snps = get_empty_snps_dataframe()
-        self._discrepant_positions = pd.DataFrame()
+        self._discrepant_merge_positions = pd.DataFrame()
         self._discrepant_genotypes = pd.DataFrame()
         self._source = []
         self._phased = False
@@ -241,7 +241,7 @@ class SNPs:
         return self._discrepant_vcf_position_snps
 
     @property
-    def discrepant_positions(self):
+    def discrepant_merge_positions(self):
         """ SNPs with discrepant positions discovered while merging SNPs.
 
         Notes
@@ -264,7 +264,7 @@ class SNPs:
         -------
         pandas.DataFrame
         """
-        return self._discrepant_positions
+        return self._discrepant_merge_positions
 
     @property
     def discrepant_genotypes(self):
@@ -317,7 +317,7 @@ class SNPs:
         -------
         pandas.DataFrame
         """
-        df = self._discrepant_positions.append(self._discrepant_genotypes)
+        df = self._discrepant_merge_positions.append(self._discrepant_genotypes)
         if len(df) > 1:
             df = df.drop_duplicates()
         return df
@@ -1324,7 +1324,7 @@ class SNPs:
             self._discrepant_XY_snps = s.discrepant_XY_snps
             self._heterozygous_MT_snps = s.heterozygous_MT_snps
             self._discrepant_vcf_position_snps = s.discrepant_vcf_position_snps
-            self._discrepant_positions = s.discrepant_positions
+            self._discrepant_merge_positions = s.discrepant_merge_positions
             self._discrepant_genotypes = s.discrepant_genotypes
             self._source = s._source
             self._phased = s.phased
@@ -1446,7 +1446,7 @@ class SNPs:
             self._snps.loc[discrepant_genotypes.index, "genotype"] = np.nan
 
             # append discrepant positions dataframe
-            self._discrepant_positions = self._discrepant_positions.append(
+            self._discrepant_merge_positions = self._discrepant_merge_positions.append(
                 discrepant_positions, sort=True
             )
             # append discrepant genotypes dataframe

@@ -893,3 +893,14 @@ class TestDeprecatedMethods(TestSnps):
             self.assertEqual(len(w), 1)
             self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
             self.assertEqual("See the `chromosomes` property.", str(w[-1].message))
+
+    def test_get_chromosomes_summary(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            s = SNPs("tests/input/chromosomes.csv")
+            self.assertEqual(s.get_chromosomes_summary(), "1-3, 5, PAR, MT")
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            self.assertEqual(
+                "See the `chromosomes_summary` property.", str(w[-1].message)
+            )

@@ -392,7 +392,33 @@ class SNPs:
         str
             human-readable listing of chromosomes (e.g., '1-3, MT'), empty str if no chromosomes
         """
-        return self.get_chromosomes_summary()
+        if not self._snps.empty:
+            chroms = list(pd.unique(self._snps["chrom"]))
+
+            int_chroms = [int(chrom) for chrom in chroms if chrom.isdigit()]
+            str_chroms = [chrom for chrom in chroms if not chrom.isdigit()]
+
+            # https://codereview.stackexchange.com/a/5202
+            def as_range(iterable):
+                l = list(iterable)
+                if len(l) > 1:
+                    return "{0}-{1}".format(l[0], l[-1])
+                else:
+                    return "{0}".format(l[0])
+
+            # create str representations
+            int_chroms = ", ".join(
+                as_range(g)
+                for _, g in groupby(int_chroms, key=lambda n, c=count(): n - next(c))
+            )
+            str_chroms = ", ".join(str_chroms)
+
+            if int_chroms != "" and str_chroms != "":
+                int_chroms += ", "
+
+            return int_chroms + str_chroms
+        else:
+            return ""
 
     @property
     def sex(self):
@@ -774,43 +800,6 @@ class SNPs:
             return len(self._snps.loc[(self._snps.chrom == chrom)])
         else:
             return len(self._snps)
-
-    def get_chromosomes_summary(self):
-        """ Summary of the chromosomes of SNPs.
-
-        Returns
-        -------
-        str
-            human-readable listing of chromosomes (e.g., '1-3, MT'), empty str if no chromosomes
-        """
-
-        if not self._snps.empty:
-            chroms = list(pd.unique(self._snps["chrom"]))
-
-            int_chroms = [int(chrom) for chrom in chroms if chrom.isdigit()]
-            str_chroms = [chrom for chrom in chroms if not chrom.isdigit()]
-
-            # https://codereview.stackexchange.com/a/5202
-            def as_range(iterable):
-                l = list(iterable)
-                if len(l) > 1:
-                    return "{0}-{1}".format(l[0], l[-1])
-                else:
-                    return "{0}".format(l[0])
-
-            # create str representations
-            int_chroms = ", ".join(
-                as_range(g)
-                for _, g in groupby(int_chroms, key=lambda n, c=count(): n - next(c))
-            )
-            str_chroms = ", ".join(str_chroms)
-
-            if int_chroms != "" and str_chroms != "":
-                int_chroms += ", "
-
-            return int_chroms + str_chroms
-        else:
-            return ""
 
     def determine_sex(
         self,
@@ -1545,3 +1534,8 @@ class SNPs:
         """ Deprecated. See the `chromosomes` property. """
         warnings.warn("See the `chromosomes` property.", DeprecationWarning)
         return self.chromosomes
+
+    def get_chromosomes_summary(self):
+        """ Deprecated. See the `chromosomes_summary` property. """
+        warnings.warn("See the `chromosomes_summary` property.", DeprecationWarning)
+        return self.chromosomes_summary

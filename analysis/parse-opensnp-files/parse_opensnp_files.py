@@ -46,7 +46,7 @@ def load_file(task):
         return {"msg": str(err).strip()[:100], "file": file}
 
     if s.count != 0:
-        d = s.get_summary()
+        d = s.summary
         d.update({"file": file})
         return d
     else:

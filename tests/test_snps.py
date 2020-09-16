@@ -170,10 +170,10 @@ class TestSnps(BaseSNPsTestCase):
         snps = SNPs()
         self.assertFalse(snps.get_assembly())
 
-    def test_get_summary(self):
+    def test_summary(self):
         s = SNPs("tests/input/GRCh38.csv")
         self.assertDictEqual(
-            s.get_summary(),
+            s.summary,
             {
                 "source": "generic",
                 "assembly": "GRCh38",
@@ -185,9 +185,9 @@ class TestSnps(BaseSNPsTestCase):
             },
         )
 
-    def test_get_summary_no_snps(self):
+    def test_summary_no_snps(self):
         for snps in self.empty_snps():
-            self.assertFalse(snps.get_summary())
+            self.assertDictEqual(snps.summary, {})
 
     def test_heterozygous_snps(self):
         s = SNPs("tests/input/generic.csv")
@@ -851,4 +851,27 @@ class TestDeprecatedMethods(TestSnps):
             self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
             self.assertEqual(
                 "This method has been renamed to `notnull_snps`.", str(w[-1].message)
+            )
+
+    def test_get_summary(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            s = SNPs("tests/input/GRCh38.csv")
+            self.assertDictEqual(
+                s.get_summary(),
+                {
+                    "source": "generic",
+                    "assembly": "GRCh38",
+                    "build": 38,
+                    "build_detected": True,
+                    "count": 4,
+                    "chromosomes": "1, 3",
+                    "sex": "",
+                },
+            )
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            self.assertEqual(
+                "This method has been renamed to `summary` and is now a property.",
+                str(w[-1].message),
             )

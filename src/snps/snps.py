@@ -496,8 +496,9 @@ class SNPs:
         else:
             return self._snps.loc[self._snps.genotype.notnull()]
 
-    def get_summary(self):
-        """ Get summary of ``SNPs``.
+    @property
+    def summary(self):
+        """ Summary of ``SNPs``.
 
         Returns
         -------
@@ -1547,3 +1548,11 @@ class SNPs:
             "This method has been renamed to `notnull_snps`.", DeprecationWarning
         )
         return self.notnull_snps(chrom)
+
+    def get_summary(self):
+        """ Deprecated. This method has been renamed to `summary` and is now a property. """
+        warnings.warn(
+            "This method has been renamed to `summary` and is now a property.",
+            DeprecationWarning,
+        )
+        return self.summary

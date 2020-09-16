@@ -108,6 +108,12 @@ infer the data source and load the SNPs. The loaded SNPs are normalized and avai
 array(['chrom', 'pos', 'genotype'], dtype=object)
 >>> df.index.name
 'rsid'
+>>> df.chrom.dtype.name
+'object'
+>>> df.pos.dtype.name
+'uint32'
+>>> df.genotype.dtype.name
+'object'
 >>> len(df)
 991786
 

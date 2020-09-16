@@ -378,7 +378,10 @@ class SNPs:
         list
             list of str chromosomes (e.g., ['1', '2', '3', 'MT'], empty list if no chromosomes
         """
-        return self.get_chromosomes()
+        if not self._snps.empty:
+            return list(pd.unique(self._snps["chrom"]))
+        else:
+            return []
 
     @property
     def chromosomes_summary(self):
@@ -771,20 +774,6 @@ class SNPs:
             return len(self._snps.loc[(self._snps.chrom == chrom)])
         else:
             return len(self._snps)
-
-    def get_chromosomes(self):
-        """ Get the chromosomes of SNPs.
-
-        Returns
-        -------
-        list
-            list of str chromosomes (e.g., ['1', '2', '3', 'MT'], empty list if no chromosomes
-        """
-
-        if not self._snps.empty:
-            return list(pd.unique(self._snps["chrom"]))
-        else:
-            return []
 
     def get_chromosomes_summary(self):
         """ Summary of the chromosomes of SNPs.
@@ -1551,3 +1540,8 @@ class SNPs:
         """ Deprecated. See the `assembly` property. """
         warnings.warn("See the `assembly` property.", DeprecationWarning)
         return self.assembly
+
+    def get_chromosomes(self):
+        """ Deprecated. See the `chromosomes` property. """
+        warnings.warn("See the `chromosomes` property.", DeprecationWarning)
+        return self.chromosomes

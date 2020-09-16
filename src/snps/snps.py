@@ -100,10 +100,10 @@ class SNPs:
         self._snps = get_empty_snps_dataframe()
         self._duplicate_snps = get_empty_snps_dataframe()
         self._discrepant_XY_snps = get_empty_snps_dataframe()
+        self._heterozygous_MT_snps = get_empty_snps_dataframe()
         self._discrepant_positions = pd.DataFrame()
         self._discrepant_positions_vcf = get_empty_snps_dataframe()
         self._discrepant_genotypes = pd.DataFrame()
-        self._heterozygous_MT_snps = get_empty_snps_dataframe()
         self._source = []
         self._phased = False
         self._build = 0
@@ -217,6 +217,19 @@ class SNPs:
         return self._discrepant_XY_snps
 
     @property
+    def heterozygous_MT_snps(self):
+        """ Get any heterozygous MT SNPs.
+
+        Heterozygous SNPs on the MT chromosome found during deduplication.
+
+        Returns
+        -------
+        pandas.DataFrame
+            normalized `snps` dataframe
+        """
+        return self._heterozygous_MT_snps
+
+    @property
     def discrepant_positions(self):
         """ SNPs with discrepant positions discovered while merging SNPs.
 
@@ -308,19 +321,6 @@ class SNPs:
         if len(df) > 1:
             df = df.drop_duplicates()
         return df
-
-    @property
-    def heterozygous_MT_snps(self):
-        """ Get any heterozygous MT SNPs.
-
-        Heterozygous SNPs on the MT chromosome found during deduplication.
-
-        Returns
-        -------
-        pandas.DataFrame
-            normalized `snps` dataframe
-        """
-        return self._heterozygous_MT_snps
 
     @property
     def build(self):
@@ -1322,10 +1322,10 @@ class SNPs:
             self._snps = s.snps
             self._duplicate_snps = s.duplicate_snps
             self._discrepant_XY_snps = s.discrepant_XY_snps
+            self._heterozygous_MT_snps = s.heterozygous_MT_snps
             self._discrepant_positions = s.discrepant_positions
             self._discrepant_positions_vcf = s.discrepant_positions_vcf
             self._discrepant_genotypes = s.discrepant_genotypes
-            self._heterozygous_MT_snps = s.heterozygous_MT_snps
             self._source = s._source
             self._phased = s.phased
             self._build = s.build
@@ -1365,11 +1365,11 @@ class SNPs:
             self._discrepant_XY_snps = self.discrepant_XY_snps.append(
                 s.discrepant_XY_snps
             )
-            self._discrepant_positions_vcf = self.discrepant_positions_vcf.append(
-                s.discrepant_positions_vcf
-            )
             self._heterozygous_MT_snps = self.heterozygous_MT_snps.append(
                 s.heterozygous_MT_snps
+            )
+            self._discrepant_positions_vcf = self.discrepant_positions_vcf.append(
+                s.discrepant_positions_vcf
             )
 
         def merge_snps(s, positions_threshold, genotypes_threshold):

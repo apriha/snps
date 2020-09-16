@@ -764,10 +764,10 @@ class TestSNPsMerge(TestSnps):
         pd.testing.assert_frame_equal(s.duplicate_snps, df, check_exact=True)
         pd.testing.assert_frame_equal(s.discrepant_XY_snps, df, check_exact=True)
         pd.testing.assert_frame_equal(
-            s.discrepant_positions_vcf, get_empty_snps_dataframe(), check_exact=True
+            s.heterozygous_MT_snps, get_empty_snps_dataframe(), check_exact=True
         )
         pd.testing.assert_frame_equal(
-            s.heterozygous_MT_snps, get_empty_snps_dataframe(), check_exact=True
+            s.discrepant_positions_vcf, get_empty_snps_dataframe(), check_exact=True
         )
 
 

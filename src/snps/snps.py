@@ -179,7 +179,7 @@ class SNPs:
 
     @property
     def snps(self):
-        """ Get a copy of SNPs.
+        """ Get SNPs.
 
         Returns
         -------

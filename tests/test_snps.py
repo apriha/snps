@@ -132,7 +132,7 @@ class TestSnps(BaseSNPsTestCase):
             rsid=["rs3"], chrom=["MT"], pos=[103], genotype=["GC"]
         )
         pd.testing.assert_frame_equal(
-            snps.heterozygous_MT_snps, heterozygous_MT_snps, check_exact=True
+            snps.heterozygous_MT, heterozygous_MT_snps, check_exact=True
         )
 
     def test_deduplicate_MT_chrom_false(self):
@@ -762,7 +762,7 @@ class TestSNPsMerge(TestSnps):
         pd.testing.assert_frame_equal(s.duplicate, df, check_exact=True)
         pd.testing.assert_frame_equal(s.discrepant_XY, df, check_exact=True)
         pd.testing.assert_frame_equal(
-            s.heterozygous_MT_snps, get_empty_snps_dataframe(), check_exact=True
+            s.heterozygous_MT, get_empty_snps_dataframe(), check_exact=True
         )
         pd.testing.assert_frame_equal(
             s.discrepant_vcf_position_snps, get_empty_snps_dataframe(), check_exact=True
@@ -914,4 +914,27 @@ class TestDeprecatedMethods(TestSnps):
 
         self.run_deprecated_test(
             f, "This property has been renamed to `discrepant_XY`."
+        )
+
+    def test_heterozygous_MT_snps(self):
+        def f():
+            snps = SNPs("tests/input/ancestry_mt.txt")
+
+            result = self.create_snp_df(
+                rsid=["rs1", "rs2"],
+                chrom=["MT", "MT"],
+                pos=[101, 102],
+                genotype=["A", np.nan],
+            )
+            pd.testing.assert_frame_equal(snps.snps, result, check_exact=True)
+
+            heterozygous_MT_snps = self.create_snp_df(
+                rsid=["rs3"], chrom=["MT"], pos=[103], genotype=["GC"]
+            )
+            pd.testing.assert_frame_equal(
+                snps.heterozygous_MT_snps, heterozygous_MT_snps, check_exact=True
+            )
+
+        self.run_deprecated_test(
+            f, "This property has been renamed to `heterozygous_MT`."
         )

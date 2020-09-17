@@ -87,7 +87,7 @@ class SNPs:
         deduplicate_XY_chrom : bool
             deduplicate alleles in the non-PAR regions of X and Y for males; see `discrepant_XY`
         deduplicate_MT_chrom : bool
-            deduplicate alleles on MT; see `heterozygous_MT_snps`
+            deduplicate alleles on MT; see `heterozygous_MT`
         parallelize : bool
             utilize multiprocessing to speedup calculations
         processes : int
@@ -100,7 +100,7 @@ class SNPs:
         self._snps = get_empty_snps_dataframe()
         self._duplicate = get_empty_snps_dataframe()
         self._discrepant_XY = get_empty_snps_dataframe()
-        self._heterozygous_MT_snps = get_empty_snps_dataframe()
+        self._heterozygous_MT = get_empty_snps_dataframe()
         self._discrepant_vcf_position_snps = get_empty_snps_dataframe()
         self._discrepant_merge_positions = pd.DataFrame()
         self._discrepant_merge_genotypes = pd.DataFrame()
@@ -217,7 +217,7 @@ class SNPs:
         return self._discrepant_XY
 
     @property
-    def heterozygous_MT_snps(self):
+    def heterozygous_MT(self):
         """ Get any heterozygous MT SNPs.
 
         Heterozygous SNPs on the MT chromosome found during deduplication.
@@ -227,7 +227,7 @@ class SNPs:
         pandas.DataFrame
             normalized `snps` dataframe
         """
-        return self._heterozygous_MT_snps
+        return self._heterozygous_MT
 
     @property
     def discrepant_vcf_position_snps(self):
@@ -925,7 +925,7 @@ class SNPs:
         heterozygous_MT_snps = self._snps.loc[self.heterozygous_snps("MT").index].index
 
         # save heterozygous MT SNPs
-        self._heterozygous_MT_snps = self._heterozygous_MT_snps.append(
+        self._heterozygous_MT = self._heterozygous_MT.append(
             self._snps.loc[heterozygous_MT_snps]
         )
 
@@ -1289,7 +1289,7 @@ class SNPs:
             self._snps = s.snps
             self._duplicate = s.duplicate
             self._discrepant_XY = s.discrepant_XY
-            self._heterozygous_MT_snps = s.heterozygous_MT_snps
+            self._heterozygous_MT = s.heterozygous_MT
             self._discrepant_vcf_position_snps = s.discrepant_vcf_position_snps
             self._discrepant_merge_positions = s.discrepant_merge_positions
             self._discrepant_merge_genotypes = s.discrepant_merge_genotypes
@@ -1330,9 +1330,7 @@ class SNPs:
             # append dataframes created when a `SNPs` object is instantiated
             self._duplicate = self.duplicate.append(s.duplicate)
             self._discrepant_XY = self.discrepant_XY.append(s.discrepant_XY)
-            self._heterozygous_MT_snps = self.heterozygous_MT_snps.append(
-                s.heterozygous_MT_snps
-            )
+            self._heterozygous_MT = self.heterozygous_MT.append(s.heterozygous_MT)
             self._discrepant_vcf_position_snps = self.discrepant_vcf_position_snps.append(
                 s.discrepant_vcf_position_snps
             )
@@ -1551,3 +1549,11 @@ class SNPs:
             "This property has been renamed to `discrepant_XY`.", DeprecationWarning
         )
         return self.discrepant_XY
+
+    @property
+    def heterozygous_MT_snps(self):
+        """ Deprecated. This property has been renamed to `heterozygous_MT`. """
+        warnings.warn(
+            "This property has been renamed to `heterozygous_MT`.", DeprecationWarning
+        )
+        return self.heterozygous_MT

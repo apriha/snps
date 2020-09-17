@@ -101,7 +101,7 @@ class SNPs:
         self._duplicate = get_empty_snps_dataframe()
         self._discrepant_XY = get_empty_snps_dataframe()
         self._heterozygous_MT = get_empty_snps_dataframe()
-        self._discrepant_vcf_position_snps = get_empty_snps_dataframe()
+        self._discrepant_vcf_position = get_empty_snps_dataframe()
         self._discrepant_merge_positions = pd.DataFrame()
         self._discrepant_merge_genotypes = pd.DataFrame()
         self._source = []
@@ -230,7 +230,7 @@ class SNPs:
         return self._heterozygous_MT
 
     @property
-    def discrepant_vcf_position_snps(self):
+    def discrepant_vcf_position(self):
         """ SNPs with discrepant positions discovered while saving VCF.
 
         Returns
@@ -238,7 +238,7 @@ class SNPs:
         pandas.DataFrame
             normalized `snps` dataframe
         """
-        return self._discrepant_vcf_position_snps
+        return self._discrepant_vcf_position
 
     @property
     def discrepant_merge_positions(self):
@@ -601,11 +601,11 @@ class SNPs:
         )
 
         if len(extra) == 1 and not extra[0].empty:
-            self._discrepant_vcf_position_snps = extra[0]
-            self._discrepant_vcf_position_snps.set_index("rsid", inplace=True)
+            self._discrepant_vcf_position = extra[0]
+            self._discrepant_vcf_position.set_index("rsid", inplace=True)
             logger.warning(
                 "{} SNP positions were found to be discrepant when saving VCF".format(
-                    len(self.discrepant_vcf_position_snps)
+                    len(self.discrepant_vcf_position)
                 )
             )
 
@@ -1290,7 +1290,7 @@ class SNPs:
             self._duplicate = s.duplicate
             self._discrepant_XY = s.discrepant_XY
             self._heterozygous_MT = s.heterozygous_MT
-            self._discrepant_vcf_position_snps = s.discrepant_vcf_position_snps
+            self._discrepant_vcf_position = s.discrepant_vcf_position
             self._discrepant_merge_positions = s.discrepant_merge_positions
             self._discrepant_merge_genotypes = s.discrepant_merge_genotypes
             self._source = s._source
@@ -1331,8 +1331,8 @@ class SNPs:
             self._duplicate = self.duplicate.append(s.duplicate)
             self._discrepant_XY = self.discrepant_XY.append(s.discrepant_XY)
             self._heterozygous_MT = self.heterozygous_MT.append(s.heterozygous_MT)
-            self._discrepant_vcf_position_snps = self.discrepant_vcf_position_snps.append(
-                s.discrepant_vcf_position_snps
+            self._discrepant_vcf_position = self.discrepant_vcf_position.append(
+                s.discrepant_vcf_position
             )
 
         def merge_snps(s, positions_threshold, genotypes_threshold):

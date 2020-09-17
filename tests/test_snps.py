@@ -200,10 +200,10 @@ class TestSnps(BaseSNPsTestCase):
             check_exact=True,
         )
 
-    def test_homozygous_snps(self):
+    def test_homozygous(self):
         s = SNPs("tests/input/generic.csv")
         pd.testing.assert_frame_equal(
-            s.homozygous_snps(),
+            s.homozygous(),
             self.create_snp_df(
                 rsid=["rs1", "rs2", "rs3", "rs4"],
                 chrom=["1", "1", "1", "1"],
@@ -213,10 +213,10 @@ class TestSnps(BaseSNPsTestCase):
             check_exact=True,
         )
 
-    def test_homozygous_snps_chrom(self):
+    def test_homozygous_chrom(self):
         s = SNPs("tests/input/generic.csv")
         pd.testing.assert_frame_equal(
-            s.homozygous_snps("1"),
+            s.homozygous("1"),
             self.create_snp_df(
                 rsid=["rs1", "rs2", "rs3", "rs4"],
                 chrom=["1", "1", "1", "1"],
@@ -954,3 +954,19 @@ class TestDeprecatedMethods(TestSnps):
             )
 
         self.run_deprecated_test(f, "This method has been renamed to `heterozygous`.")
+
+    def test_homozygous_snps(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            pd.testing.assert_frame_equal(
+                s.homozygous_snps(),
+                self.create_snp_df(
+                    rsid=["rs1", "rs2", "rs3", "rs4"],
+                    chrom=["1", "1", "1", "1"],
+                    pos=[101, 102, 103, 104],
+                    genotype=["AA", "CC", "GG", "TT"],
+                ),
+                check_exact=True,
+            )
+
+        self.run_deprecated_test(f, "This method has been renamed to `homozygous`.")

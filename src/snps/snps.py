@@ -484,7 +484,7 @@ class SNPs:
                 & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
             ]
 
-    def homozygous_snps(self, chrom=""):
+    def homozygous(self, chrom=""):
         """ Get homozygous SNPs.
 
         Parameters
@@ -932,7 +932,7 @@ class SNPs:
         # drop heterozygous MT SNPs since it's ambiguous for which allele to deduplicate
         self._snps.drop(heterozygous_MT_snps, inplace=True)
 
-        self._deduplicate_alleles(self.homozygous_snps("MT").index)
+        self._deduplicate_alleles(self.homozygous("MT").index)
 
     @staticmethod
     def get_par_regions(build):
@@ -1564,3 +1564,10 @@ class SNPs:
             "This method has been renamed to `heterozygous`.", DeprecationWarning
         )
         return self.heterozygous(chrom)
+
+    def homozygous_snps(self, chrom=""):
+        """ Deprecated. This method has been renamed to `homozygous`. """
+        warnings.warn(
+            "This method has been renamed to `homozygous`.", DeprecationWarning
+        )
+        return self.homozygous(chrom)

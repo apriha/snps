@@ -85,7 +85,7 @@ class SNPs:
         deduplicate : bool
             deduplicate RSIDs and make SNPs available as `duplicate`
         deduplicate_XY_chrom : bool
-            deduplicate alleles in the non-PAR regions of X and Y for males; see `discrepant_XY_snps`
+            deduplicate alleles in the non-PAR regions of X and Y for males; see `discrepant_XY`
         deduplicate_MT_chrom : bool
             deduplicate alleles on MT; see `heterozygous_MT_snps`
         parallelize : bool
@@ -99,7 +99,7 @@ class SNPs:
         self._only_detect_source = only_detect_source
         self._snps = get_empty_snps_dataframe()
         self._duplicate = get_empty_snps_dataframe()
-        self._discrepant_XY_snps = get_empty_snps_dataframe()
+        self._discrepant_XY = get_empty_snps_dataframe()
         self._heterozygous_MT_snps = get_empty_snps_dataframe()
         self._discrepant_vcf_position_snps = get_empty_snps_dataframe()
         self._discrepant_merge_positions = pd.DataFrame()
@@ -203,7 +203,7 @@ class SNPs:
         return self._duplicate
 
     @property
-    def discrepant_XY_snps(self):
+    def discrepant_XY(self):
         """ Get any discrepant XY SNPs.
 
         A discrepant XY SNP is a heterozygous SNP in the non-PAR region of the X
@@ -214,7 +214,7 @@ class SNPs:
         pandas.DataFrame
             normalized `snps` dataframe
         """
-        return self._discrepant_XY_snps
+        return self._discrepant_XY
 
     @property
     def heterozygous_MT_snps(self):
@@ -903,7 +903,7 @@ class SNPs:
         discrepant_XY_snps = self._get_non_par_snps(chrom)
 
         # save discrepant XY SNPs
-        self._discrepant_XY_snps = self._discrepant_XY_snps.append(
+        self._discrepant_XY = self._discrepant_XY.append(
             self._snps.loc[discrepant_XY_snps]
         )
 
@@ -1288,7 +1288,7 @@ class SNPs:
             # initialize this SNPs object with properties of the SNPs object being merged
             self._snps = s.snps
             self._duplicate = s.duplicate
-            self._discrepant_XY_snps = s.discrepant_XY_snps
+            self._discrepant_XY = s.discrepant_XY
             self._heterozygous_MT_snps = s.heterozygous_MT_snps
             self._discrepant_vcf_position_snps = s.discrepant_vcf_position_snps
             self._discrepant_merge_positions = s.discrepant_merge_positions
@@ -1329,9 +1329,7 @@ class SNPs:
         def merge_dfs(s):
             # append dataframes created when a `SNPs` object is instantiated
             self._duplicate = self.duplicate.append(s.duplicate)
-            self._discrepant_XY_snps = self.discrepant_XY_snps.append(
-                s.discrepant_XY_snps
-            )
+            self._discrepant_XY = self.discrepant_XY.append(s.discrepant_XY)
             self._heterozygous_MT_snps = self.heterozygous_MT_snps.append(
                 s.heterozygous_MT_snps
             )
@@ -1545,3 +1543,11 @@ class SNPs:
             "This property has been renamed to `duplicate`.", DeprecationWarning
         )
         return self.duplicate
+
+    @property
+    def discrepant_XY_snps(self):
+        """ Deprecated. This property has been renamed to `discrepant_XY`. """
+        warnings.warn(
+            "This property has been renamed to `discrepant_XY`.", DeprecationWarning
+        )
+        return self.discrepant_XY

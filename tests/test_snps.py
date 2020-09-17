@@ -384,10 +384,10 @@ class TestSnps(BaseSNPsTestCase):
         self.assertEqual(s.count, 15528)
         s._deduplicate_XY_chrom()
         self.assertEqual(s.count, 15528)
-        self.assertEqual(len(s.discrepant_XY_snps), 0)
+        self.assertEqual(len(s.discrepant_XY), 0)
         self.assertEqual(s.sex, "Male")
 
-    def test_sex_Male_X_chrom_discrepant_XY_snps(self):
+    def test_sex_Male_X_chrom_discrepant_XY(self):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
         )
@@ -398,7 +398,7 @@ class TestSnps(BaseSNPsTestCase):
         result = self.create_snp_df(
             rsid=["rs8001"], chrom=["X"], pos=[80000001], genotype=["AC"]
         )
-        pd.testing.assert_frame_equal(s.discrepant_XY_snps, result, check_exact=True)
+        pd.testing.assert_frame_equal(s.discrepant_XY, result, check_exact=True)
         self.assertEqual(s.sex, "Male")
 
     def test_sex_Male_Y_chrom(self):
@@ -752,7 +752,7 @@ class TestSNPsMerge(TestSnps):
         s._duplicate = self.create_snp_df(
             rsid=["rs1"], chrom=["1"], pos=[1], genotype=["AA"]
         )
-        s._discrepant_XY_snps = self.create_snp_df(
+        s._discrepant_XY = self.create_snp_df(
             rsid=["rs1"], chrom=["1"], pos=[1], genotype=["AA"]
         )
         s.merge([s])
@@ -760,7 +760,7 @@ class TestSNPsMerge(TestSnps):
             rsid=["rs1", "rs1"], chrom=["1", "1"], pos=[1, 1], genotype=["AA", "AA"]
         )
         pd.testing.assert_frame_equal(s.duplicate, df, check_exact=True)
-        pd.testing.assert_frame_equal(s.discrepant_XY_snps, df, check_exact=True)
+        pd.testing.assert_frame_equal(s.discrepant_XY, df, check_exact=True)
         pd.testing.assert_frame_equal(
             s.heterozygous_MT_snps, get_empty_snps_dataframe(), check_exact=True
         )
@@ -894,3 +894,24 @@ class TestDeprecatedMethods(TestSnps):
             )
 
         self.run_deprecated_test(f, "This property has been renamed to `duplicate`.")
+
+    def test_discrepant_XY_snps(self):
+        def f():
+            s = self.simulate_snps(
+                chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
+            )
+            self.assertEqual(s.count, 15528)
+            s._snps.loc["rs8001", "genotype"] = "AC"
+            s._deduplicate_XY_chrom()
+            self.assertEqual(s.count, 15527)
+            result = self.create_snp_df(
+                rsid=["rs8001"], chrom=["X"], pos=[80000001], genotype=["AC"]
+            )
+            pd.testing.assert_frame_equal(
+                s.discrepant_XY_snps, result, check_exact=True
+            )
+            self.assertEqual(s.sex, "Male")
+
+        self.run_deprecated_test(
+            f, "This property has been renamed to `discrepant_XY`."
+        )

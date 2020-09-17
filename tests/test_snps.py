@@ -234,11 +234,11 @@ class TestSnps(BaseSNPsTestCase):
         s = SNPs("tests/input/generic.csv")
         self.assertTrue(s.is_valid())
 
-    def test_notnull_snps(self):
+    def test_notnull(self):
         s = SNPs("tests/input/generic.csv")
         snps = self.generic_snps()
         snps.drop("rs5", inplace=True)
-        pd.testing.assert_frame_equal(s.notnull_snps(), snps, check_exact=True)
+        pd.testing.assert_frame_equal(s.notnull(), snps, check_exact=True)
 
     def test_only_detect_source(self):
         s = SNPs("tests/input/generic.csv", only_detect_source=True)
@@ -833,7 +833,7 @@ class TestDeprecatedMethods(TestSnps):
             snps.drop("rs5", inplace=True)
             pd.testing.assert_frame_equal(s.not_null_snps(), snps, check_exact=True)
 
-        self.run_deprecated_test(f, "This method has been renamed to `notnull_snps`.")
+        self.run_deprecated_test(f, "This method has been renamed to `notnull`.")
 
     def test_get_summary(self):
         def f():

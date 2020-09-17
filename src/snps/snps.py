@@ -457,7 +457,7 @@ class SNPs:
         """
         return self._phased
 
-    def heterozygous_snps(self, chrom=""):
+    def heterozygous(self, chrom=""):
         """ Get heterozygous SNPs.
 
         Parameters
@@ -834,7 +834,7 @@ class SNPs:
         x_snps = self.get_count("X")
 
         if x_snps > 0:
-            if len(self.heterozygous_snps("X")) / x_snps > threshold:
+            if len(self.heterozygous("X")) / x_snps > threshold:
                 return "Female"
             else:
                 return "Male"
@@ -922,7 +922,7 @@ class SNPs:
 
     def _deduplicate_MT_chrom(self):
         """ Deduplicate MT chromosome. """
-        heterozygous_MT_snps = self._snps.loc[self.heterozygous_snps("MT").index].index
+        heterozygous_MT_snps = self._snps.loc[self.heterozygous("MT").index].index
 
         # save heterozygous MT SNPs
         self._heterozygous_MT = self._heterozygous_MT.append(
@@ -1557,3 +1557,10 @@ class SNPs:
             "This property has been renamed to `heterozygous_MT`.", DeprecationWarning
         )
         return self.heterozygous_MT
+
+    def heterozygous_snps(self, chrom=""):
+        """ Deprecated. This method has been renamed to `heterozygous`. """
+        warnings.warn(
+            "This method has been renamed to `heterozygous`.", DeprecationWarning
+        )
+        return self.heterozygous(chrom)

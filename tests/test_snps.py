@@ -187,10 +187,10 @@ class TestSnps(BaseSNPsTestCase):
         for snps in self.empty_snps():
             self.assertDictEqual(snps.summary, {})
 
-    def test_heterozygous_snps(self):
+    def test_heterozygous(self):
         s = SNPs("tests/input/generic.csv")
         pd.testing.assert_frame_equal(
-            s.heterozygous_snps(),
+            s.heterozygous(),
             self.create_snp_df(
                 rsid=["rs6", "rs7", "rs8"],
                 chrom=["1", "1", "1"],
@@ -938,3 +938,19 @@ class TestDeprecatedMethods(TestSnps):
         self.run_deprecated_test(
             f, "This property has been renamed to `heterozygous_MT`."
         )
+
+    def test_heterozygous_snps(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            pd.testing.assert_frame_equal(
+                s.heterozygous_snps(),
+                self.create_snp_df(
+                    rsid=["rs6", "rs7", "rs8"],
+                    chrom=["1", "1", "1"],
+                    pos=[106, 107, 108],
+                    genotype=["GC", "TC", "AT"],
+                ),
+                check_exact=True,
+            )
+
+        self.run_deprecated_test(f, "This method has been renamed to `heterozygous`.")

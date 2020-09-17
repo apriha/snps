@@ -772,21 +772,24 @@ class TestSNPsMerge(TestSnps):
 
 
 class TestDeprecatedMethods(TestSnps):
-    def test_sort_snps(self):
-        s = SNPs("tests/input/generic.csv")
+    def run_deprecated_test(self, f, msg):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            s.sort_snps()
+            f()
             self.assertEqual(len(w), 1)
             self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-            self.assertEqual(
-                "This method has been renamed to `sort`.", str(w[-1].message)
-            )
+            self.assertEqual(str(w[-1].message), msg)
+
+    def test_sort_snps(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            s.sort_snps()
+
+        self.run_deprecated_test(f, "This method has been renamed to `sort`.")
 
     def test_remap_snps(self):
-        def f():
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
+        def f1():
+            def f2():
                 s = SNPs("tests/input/NCBI36.csv")
                 chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
                 self.assertEqual(s.build, 37)
@@ -796,66 +799,46 @@ class TestDeprecatedMethods(TestSnps):
                 pd.testing.assert_frame_equal(
                     s.snps, self.snps_GRCh37(), check_exact=True
                 )
-                self.assertEqual(len(w), 1)
-                self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-                self.assertEqual(
-                    "This method has been renamed to `remap`.", str(w[-1].message)
-                )
 
-        self._run_remap_test(f, self.NCBI36_GRCh37())
+            self._run_remap_test(f2, self.NCBI36_GRCh37())
+
+        self.run_deprecated_test(f1, "This method has been renamed to `remap`.")
 
     def test_save_snps(self):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        def f():
             snps = SNPs("tests/input/generic.csv")
             self.assertEqual(
                 os.path.relpath(snps.save_snps(sep=",")), "output/generic_GRCh37.csv"
             )
             self.run_parsing_tests("output/generic_GRCh37.csv", "generic")
-            self.assertEqual(len(w), 1)
-            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-            self.assertEqual(
-                "This method has been renamed to `save`.", str(w[-1].message)
-            )
+
+        self.run_deprecated_test(f, "This method has been renamed to `save`.")
 
     def test_snp_count(self):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        def f():
             s = SNPs("tests/input/NCBI36.csv")
             self.assertEqual(s.snp_count, 4)
-            self.assertEqual(len(w), 1)
-            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-            self.assertEqual(
-                "This property has been renamed to `count`.", str(w[-1].message)
-            )
+
+        self.run_deprecated_test(f, "This property has been renamed to `count`.")
 
     def test_get_snp_count(self):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        def f():
             s = SNPs("tests/input/NCBI36.csv")
             self.assertEqual(s.get_snp_count(), 4)
-            self.assertEqual(len(w), 1)
-            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-            self.assertEqual(
-                "This method has been renamed to `get_count`.", str(w[-1].message)
-            )
+
+        self.run_deprecated_test(f, "This method has been renamed to `get_count`.")
 
     def test_not_null_snps(self):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        def f():
             s = SNPs("tests/input/generic.csv")
             snps = self.generic_snps()
             snps.drop("rs5", inplace=True)
             pd.testing.assert_frame_equal(s.not_null_snps(), snps, check_exact=True)
-            self.assertEqual(len(w), 1)
-            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-            self.assertEqual(
-                "This method has been renamed to `notnull_snps`.", str(w[-1].message)
-            )
+
+        self.run_deprecated_test(f, "This method has been renamed to `notnull_snps`.")
 
     def test_get_summary(self):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        def f():
             s = SNPs("tests/input/GRCh38.csv")
             self.assertDictEqual(
                 s.get_summary(),
@@ -869,38 +852,28 @@ class TestDeprecatedMethods(TestSnps):
                     "sex": "",
                 },
             )
-            self.assertEqual(len(w), 1)
-            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-            self.assertEqual(
-                "This method has been renamed to `summary` and is now a property.",
-                str(w[-1].message),
-            )
+
+        self.run_deprecated_test(
+            f, "This method has been renamed to `summary` and is now a property."
+        )
 
     def test_get_assembly(self):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        def f():
             s = SNPs("tests/input/GRCh38.csv")
             self.assertEqual(s.get_assembly(), "GRCh38")
-            self.assertEqual(len(w), 1)
-            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-            self.assertEqual("See the `assembly` property.", str(w[-1].message))
+
+        self.run_deprecated_test(f, "See the `assembly` property.")
 
     def test_get_chromosomes(self):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        def f():
             s = SNPs("tests/input/chromosomes.csv")
             self.assertListEqual(s.get_chromosomes(), ["1", "2", "3", "5", "PAR", "MT"])
-            self.assertEqual(len(w), 1)
-            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-            self.assertEqual("See the `chromosomes` property.", str(w[-1].message))
+
+        self.run_deprecated_test(f, "See the `chromosomes` property.")
 
     def test_get_chromosomes_summary(self):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        def f():
             s = SNPs("tests/input/chromosomes.csv")
             self.assertEqual(s.get_chromosomes_summary(), "1-3, 5, PAR, MT")
-            self.assertEqual(len(w), 1)
-            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-            self.assertEqual(
-                "See the `chromosomes_summary` property.", str(w[-1].message)
-            )
+
+        self.run_deprecated_test(f, "See the `chromosomes_summary` property.")

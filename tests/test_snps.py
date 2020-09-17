@@ -151,13 +151,11 @@ class TestSnps(BaseSNPsTestCase):
         result = self.create_snp_df(
             rsid=["rs1"], chrom=["1"], pos=[101], genotype=["AA"]
         )
-        duplicate_snps = self.create_snp_df(
+        duplicate = self.create_snp_df(
             rsid=["rs1", "rs1"], chrom=["1", "1"], pos=[102, 103], genotype=["CC", "GG"]
         )
         pd.testing.assert_frame_equal(snps.snps, result, check_exact=True)
-        pd.testing.assert_frame_equal(
-            snps.duplicate_snps, duplicate_snps, check_exact=True
-        )
+        pd.testing.assert_frame_equal(snps.duplicate, duplicate, check_exact=True)
 
     def test_empty_dataframe(self):
         for snps in self.empty_snps():
@@ -751,7 +749,7 @@ class TestSNPsMerge(TestSnps):
         s._snps = self.create_snp_df(
             rsid=["rs1"], chrom=["1"], pos=[1], genotype=["AA"]
         )
-        s._duplicate_snps = self.create_snp_df(
+        s._duplicate = self.create_snp_df(
             rsid=["rs1"], chrom=["1"], pos=[1], genotype=["AA"]
         )
         s._discrepant_XY_snps = self.create_snp_df(
@@ -761,7 +759,7 @@ class TestSNPsMerge(TestSnps):
         df = self.create_snp_df(
             rsid=["rs1", "rs1"], chrom=["1", "1"], pos=[1, 1], genotype=["AA", "AA"]
         )
-        pd.testing.assert_frame_equal(s.duplicate_snps, df, check_exact=True)
+        pd.testing.assert_frame_equal(s.duplicate, df, check_exact=True)
         pd.testing.assert_frame_equal(s.discrepant_XY_snps, df, check_exact=True)
         pd.testing.assert_frame_equal(
             s.heterozygous_MT_snps, get_empty_snps_dataframe(), check_exact=True
@@ -877,3 +875,22 @@ class TestDeprecatedMethods(TestSnps):
             self.assertEqual(s.get_chromosomes_summary(), "1-3, 5, PAR, MT")
 
         self.run_deprecated_test(f, "See the `chromosomes_summary` property.")
+
+    def test_duplicate_snps(self):
+        def f():
+            snps = SNPs("tests/input/duplicate_rsids.csv")
+            result = self.create_snp_df(
+                rsid=["rs1"], chrom=["1"], pos=[101], genotype=["AA"]
+            )
+            duplicate = self.create_snp_df(
+                rsid=["rs1", "rs1"],
+                chrom=["1", "1"],
+                pos=[102, 103],
+                genotype=["CC", "GG"],
+            )
+            pd.testing.assert_frame_equal(snps.snps, result, check_exact=True)
+            pd.testing.assert_frame_equal(
+                snps.duplicate_snps, duplicate, check_exact=True
+            )
+
+        self.run_deprecated_test(f, "This property has been renamed to `duplicate`.")

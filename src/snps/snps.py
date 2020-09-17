@@ -83,7 +83,7 @@ class SNPs:
         resources_dir : str
             name / path of resources directory
         deduplicate : bool
-            deduplicate RSIDs and make SNPs available as `duplicate_snps`
+            deduplicate RSIDs and make SNPs available as `duplicate`
         deduplicate_XY_chrom : bool
             deduplicate alleles in the non-PAR regions of X and Y for males; see `discrepant_XY_snps`
         deduplicate_MT_chrom : bool
@@ -98,7 +98,7 @@ class SNPs:
         self._file = file
         self._only_detect_source = only_detect_source
         self._snps = get_empty_snps_dataframe()
-        self._duplicate_snps = get_empty_snps_dataframe()
+        self._duplicate = get_empty_snps_dataframe()
         self._discrepant_XY_snps = get_empty_snps_dataframe()
         self._heterozygous_MT_snps = get_empty_snps_dataframe()
         self._discrepant_vcf_position_snps = get_empty_snps_dataframe()
@@ -189,7 +189,7 @@ class SNPs:
         return self._snps
 
     @property
-    def duplicate_snps(self):
+    def duplicate(self):
         """ Get any duplicate SNPs.
 
         A duplicate SNP has the same RSID as another SNP. The first occurrence
@@ -200,7 +200,7 @@ class SNPs:
         pandas.DataFrame
             normalized `snps` dataframe
         """
-        return self._duplicate_snps
+        return self._duplicate
 
     @property
     def discrepant_XY_snps(self):
@@ -887,9 +887,7 @@ class SNPs:
         # Keep first duplicate rsid.
         duplicate_rsids = self._snps.index.duplicated(keep="first")
         # save duplicate SNPs
-        self._duplicate_snps = self._duplicate_snps.append(
-            self._snps.loc[duplicate_rsids]
-        )
+        self._duplicate = self._duplicate.append(self._snps.loc[duplicate_rsids])
         # deduplicate
         self._snps = self._snps.loc[~duplicate_rsids]
 
@@ -1289,7 +1287,7 @@ class SNPs:
         def init(s):
             # initialize this SNPs object with properties of the SNPs object being merged
             self._snps = s.snps
-            self._duplicate_snps = s.duplicate_snps
+            self._duplicate = s.duplicate
             self._discrepant_XY_snps = s.discrepant_XY_snps
             self._heterozygous_MT_snps = s.heterozygous_MT_snps
             self._discrepant_vcf_position_snps = s.discrepant_vcf_position_snps
@@ -1330,7 +1328,7 @@ class SNPs:
 
         def merge_dfs(s):
             # append dataframes created when a `SNPs` object is instantiated
-            self._duplicate_snps = self.duplicate_snps.append(s.duplicate_snps)
+            self._duplicate = self.duplicate.append(s.duplicate)
             self._discrepant_XY_snps = self.discrepant_XY_snps.append(
                 s.discrepant_XY_snps
             )
@@ -1539,3 +1537,11 @@ class SNPs:
         """ Deprecated. See the `chromosomes_summary` property. """
         warnings.warn("See the `chromosomes_summary` property.", DeprecationWarning)
         return self.chromosomes_summary
+
+    @property
+    def duplicate_snps(self):
+        """ Deprecated. This property has been renamed to `duplicate`. """
+        warnings.warn(
+            "This property has been renamed to `duplicate`.", DeprecationWarning
+        )
+        return self.duplicate

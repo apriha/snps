@@ -1,4 +1,4 @@
-""" `SNPs` reads, writes, and remaps genotype / raw data files.
+""" `SNPs` reads, writes, merges, and remaps genotype / raw data files.
 
 """
 

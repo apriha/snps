@@ -39,6 +39,7 @@ from itertools import groupby, count
 import logging
 import os
 import re
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -82,11 +83,11 @@ class SNPs:
         resources_dir : str
             name / path of resources directory
         deduplicate : bool
-            deduplicate RSIDs and make SNPs available as `duplicate_snps`
+            deduplicate RSIDs and make SNPs available as `duplicate`
         deduplicate_XY_chrom : bool
-            deduplicate alleles in the non-PAR regions of X and Y for males; see `discrepant_XY_snps`
+            deduplicate alleles in the non-PAR regions of X and Y for males; see `discrepant_XY`
         deduplicate_MT_chrom : bool
-            deduplicate alleles on MT; see `heterozygous_MT_snps`
+            deduplicate alleles on MT; see `heterozygous_MT`
         parallelize : bool
             utilize multiprocessing to speedup calculations
         processes : int
@@ -97,12 +98,12 @@ class SNPs:
         self._file = file
         self._only_detect_source = only_detect_source
         self._snps = get_empty_snps_dataframe()
-        self._duplicate_snps = get_empty_snps_dataframe()
-        self._discrepant_XY_snps = get_empty_snps_dataframe()
-        self._discrepant_positions = pd.DataFrame()
-        self._discrepant_positions_vcf = get_empty_snps_dataframe()
-        self._discrepant_genotypes = pd.DataFrame()
-        self._heterozygous_MT_snps = get_empty_snps_dataframe()
+        self._duplicate = get_empty_snps_dataframe()
+        self._discrepant_XY = get_empty_snps_dataframe()
+        self._heterozygous_MT = get_empty_snps_dataframe()
+        self._discrepant_vcf_position = get_empty_snps_dataframe()
+        self._discrepant_merge_positions = pd.DataFrame()
+        self._discrepant_merge_genotypes = pd.DataFrame()
         self._source = []
         self._phased = False
         self._build = 0
@@ -131,7 +132,7 @@ class SNPs:
             self._phased = d["phased"]
 
             if not self._snps.empty:
-                self.sort_snps()
+                self.sort()
 
                 if deduplicate:
                     self._deduplicate_rsids()
@@ -151,7 +152,7 @@ class SNPs:
 
                 if assign_par_snps:
                     self._assign_par_snps()
-                    self.sort_snps()
+                    self.sort()
 
                 if deduplicate_XY_chrom:
                     if self.determine_sex() == "Male":
@@ -178,16 +179,17 @@ class SNPs:
 
     @property
     def snps(self):
-        """ Get a copy of SNPs.
+        """ Get SNPs.
 
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
         return self._snps
 
     @property
-    def duplicate_snps(self):
+    def duplicate(self):
         """ Get any duplicate SNPs.
 
         A duplicate SNP has the same RSID as another SNP. The first occurrence
@@ -196,11 +198,12 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
-        return self._duplicate_snps
+        return self._duplicate
 
     @property
-    def discrepant_XY_snps(self):
+    def discrepant_XY(self):
         """ Get any discrepant XY SNPs.
 
         A discrepant XY SNP is a heterozygous SNP in the non-PAR region of the X
@@ -209,11 +212,36 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
-        return self._discrepant_XY_snps
+        return self._discrepant_XY
 
     @property
-    def discrepant_positions(self):
+    def heterozygous_MT(self):
+        """ Get any heterozygous MT SNPs.
+
+        Heterozygous SNPs on the MT chromosome found during deduplication.
+
+        Returns
+        -------
+        pandas.DataFrame
+            normalized `snps` dataframe
+        """
+        return self._heterozygous_MT
+
+    @property
+    def discrepant_vcf_position(self):
+        """ SNPs with discrepant positions discovered while saving VCF.
+
+        Returns
+        -------
+        pandas.DataFrame
+            normalized `snps` dataframe
+        """
+        return self._discrepant_vcf_position
+
+    @property
+    def discrepant_merge_positions(self):
         """ SNPs with discrepant positions discovered while merging SNPs.
 
         Notes
@@ -236,20 +264,10 @@ class SNPs:
         -------
         pandas.DataFrame
         """
-        return self._discrepant_positions
+        return self._discrepant_merge_positions
 
     @property
-    def discrepant_positions_vcf(self):
-        """ SNPs with discrepant positions discovered while saving VCF.
-
-        Returns
-        -------
-        pandas.DataFrame
-        """
-        return self._discrepant_positions_vcf
-
-    @property
-    def discrepant_genotypes(self):
+    def discrepant_merge_genotypes(self):
         """ SNPs with discrepant genotypes discovered while merging SNPs.
 
         Notes
@@ -273,10 +291,10 @@ class SNPs:
         -------
         pandas.DataFrame
         """
-        return self._discrepant_genotypes
+        return self._discrepant_merge_genotypes
 
     @property
-    def discrepant_snps(self):
+    def discrepant_merge_positions_genotypes(self):
         """ SNPs with discrepant positions and / or genotypes discovered while merging SNPs.
 
         Notes
@@ -299,22 +317,10 @@ class SNPs:
         -------
         pandas.DataFrame
         """
-        df = self._discrepant_positions.append(self._discrepant_genotypes)
+        df = self._discrepant_merge_positions.append(self._discrepant_merge_genotypes)
         if len(df) > 1:
             df = df.drop_duplicates()
         return df
-
-    @property
-    def heterozygous_MT_snps(self):
-        """ Get any heterozygous MT SNPs.
-
-        Heterozygous SNPs on the MT chromosome found during deduplication.
-
-        Returns
-        -------
-        pandas.DataFrame
-        """
-        return self._heterozygous_MT_snps
 
     @property
     def build(self):
@@ -344,17 +350,24 @@ class SNPs:
         -------
         str
         """
-        return self.get_assembly()
+        if self.build == 37:
+            return "GRCh37"
+        elif self.build == 36:
+            return "NCBI36"
+        elif self.build == 38:
+            return "GRCh38"
+        else:
+            return ""
 
     @property
-    def snp_count(self):
+    def count(self):
         """ Count of SNPs.
 
         Returns
         -------
         int
         """
-        return self.get_snp_count()
+        return self.get_count()
 
     @property
     def chromosomes(self):
@@ -365,7 +378,10 @@ class SNPs:
         list
             list of str chromosomes (e.g., ['1', '2', '3', 'MT'], empty list if no chromosomes
         """
-        return self.get_chromosomes()
+        if not self._snps.empty:
+            return list(pd.unique(self._snps["chrom"]))
+        else:
+            return []
 
     @property
     def chromosomes_summary(self):
@@ -376,7 +392,33 @@ class SNPs:
         str
             human-readable listing of chromosomes (e.g., '1-3, MT'), empty str if no chromosomes
         """
-        return self.get_chromosomes_summary()
+        if not self._snps.empty:
+            chroms = list(pd.unique(self._snps["chrom"]))
+
+            int_chroms = [int(chrom) for chrom in chroms if chrom.isdigit()]
+            str_chroms = [chrom for chrom in chroms if not chrom.isdigit()]
+
+            # https://codereview.stackexchange.com/a/5202
+            def as_range(iterable):
+                l = list(iterable)
+                if len(l) > 1:
+                    return "{0}-{1}".format(l[0], l[-1])
+                else:
+                    return "{0}".format(l[0])
+
+            # create str representations
+            int_chroms = ", ".join(
+                as_range(g)
+                for _, g in groupby(int_chroms, key=lambda n, c=count(): n - next(c))
+            )
+            str_chroms = ", ".join(str_chroms)
+
+            if int_chroms != "" and str_chroms != "":
+                int_chroms += ", "
+
+            return int_chroms + str_chroms
+        else:
+            return ""
 
     @property
     def sex(self):
@@ -400,7 +442,7 @@ class SNPs:
         -------
         bool
         """
-        if self.snp_count == 0 and self.source == "vcf":
+        if self.count == 0 and self.source == "vcf":
             return True
 
         return False
@@ -415,7 +457,7 @@ class SNPs:
         """
         return self._phased
 
-    def heterozygous_snps(self, chrom=""):
+    def heterozygous(self, chrom=""):
         """ Get heterozygous SNPs.
 
         Parameters
@@ -426,6 +468,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
         if chrom:
             return self._snps.loc[
@@ -441,7 +484,7 @@ class SNPs:
                 & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
             ]
 
-    def homozygous_snps(self, chrom=""):
+    def homozygous(self, chrom=""):
         """ Get homozygous SNPs.
 
         Parameters
@@ -452,6 +495,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
         if chrom:
             return self._snps.loc[
@@ -467,8 +511,8 @@ class SNPs:
                 & (self._snps.genotype.str[0] == self._snps.genotype.str[1])
             ]
 
-    def not_null_snps(self, chrom=""):
-        """ Get not null SNPs.
+    def notnull(self, chrom=""):
+        """ Get not null genotype SNPs.
 
         Parameters
         ----------
@@ -478,6 +522,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
+            normalized `snps` dataframe
         """
 
         if chrom:
@@ -487,8 +532,9 @@ class SNPs:
         else:
             return self._snps.loc[self._snps.genotype.notnull()]
 
-    def get_summary(self):
-        """ Get summary of ``SNPs``.
+    @property
+    def summary(self):
+        """ Summary of ``SNPs``.
 
         Returns
         -------
@@ -503,7 +549,7 @@ class SNPs:
                 "assembly": self.assembly,
                 "build": self.build,
                 "build_detected": self.build_detected,
-                "snp_count": self.snp_count,
+                "count": self.count,
                 "chromosomes": self.chromosomes_summary,
                 "sex": self.sex,
             }
@@ -523,7 +569,7 @@ class SNPs:
         else:
             return True
 
-    def save_snps(self, filename="", vcf=False, atomic=True, **kwargs):
+    def save(self, filename="", vcf=False, atomic=True, **kwargs):
         """ Save SNPs to file.
 
         Parameters
@@ -555,11 +601,11 @@ class SNPs:
         )
 
         if len(extra) == 1 and not extra[0].empty:
-            self._discrepant_positions_vcf = extra[0]
-            self._discrepant_positions_vcf.set_index("rsid", inplace=True)
+            self._discrepant_vcf_position = extra[0]
+            self._discrepant_vcf_position.set_index("rsid", inplace=True)
             logger.warning(
                 "{} SNP positions were found to be discrepant when saving VCF".format(
-                    len(self.discrepant_positions_vcf)
+                    len(self.discrepant_vcf_position)
                 )
             )
 
@@ -738,24 +784,7 @@ class SNPs:
 
         return build
 
-    def get_assembly(self):
-        """ Get the assembly of a build.
-
-        Returns
-        -------
-        str
-        """
-
-        if self._build == 37:
-            return "GRCh37"
-        elif self._build == 36:
-            return "NCBI36"
-        elif self._build == 38:
-            return "GRCh38"
-        else:
-            return ""
-
-    def get_snp_count(self, chrom=""):
+    def get_count(self, chrom=""):
         """ Count of SNPs.
 
         Parameters
@@ -771,57 +800,6 @@ class SNPs:
             return len(self._snps.loc[(self._snps.chrom == chrom)])
         else:
             return len(self._snps)
-
-    def get_chromosomes(self):
-        """ Get the chromosomes of SNPs.
-
-        Returns
-        -------
-        list
-            list of str chromosomes (e.g., ['1', '2', '3', 'MT'], empty list if no chromosomes
-        """
-
-        if not self._snps.empty:
-            return list(pd.unique(self._snps["chrom"]))
-        else:
-            return []
-
-    def get_chromosomes_summary(self):
-        """ Summary of the chromosomes of SNPs.
-
-        Returns
-        -------
-        str
-            human-readable listing of chromosomes (e.g., '1-3, MT'), empty str if no chromosomes
-        """
-
-        if not self._snps.empty:
-            chroms = list(pd.unique(self._snps["chrom"]))
-
-            int_chroms = [int(chrom) for chrom in chroms if chrom.isdigit()]
-            str_chroms = [chrom for chrom in chroms if not chrom.isdigit()]
-
-            # https://codereview.stackexchange.com/a/5202
-            def as_range(iterable):
-                l = list(iterable)
-                if len(l) > 1:
-                    return "{0}-{1}".format(l[0], l[-1])
-                else:
-                    return "{0}".format(l[0])
-
-            # create str representations
-            int_chroms = ", ".join(
-                as_range(g)
-                for _, g in groupby(int_chroms, key=lambda n, c=count(): n - next(c))
-            )
-            str_chroms = ", ".join(str_chroms)
-
-            if int_chroms != "" and str_chroms != "":
-                int_chroms += ", "
-
-            return int_chroms + str_chroms
-        else:
-            return ""
 
     def determine_sex(
         self,
@@ -853,10 +831,10 @@ class SNPs:
         return ""
 
     def _determine_sex_X(self, threshold):
-        x_snps = self.get_snp_count("X")
+        x_snps = self.get_count("X")
 
         if x_snps > 0:
-            if len(self.heterozygous_snps("X")) / x_snps > threshold:
+            if len(self.heterozygous("X")) / x_snps > threshold:
                 return "Female"
             else:
                 return "Male"
@@ -864,10 +842,10 @@ class SNPs:
             return ""
 
     def _determine_sex_Y(self, threshold):
-        y_snps = self.get_snp_count("Y")
+        y_snps = self.get_count("Y")
 
         if y_snps > 0:
-            if len(self.not_null_snps("Y")) / y_snps > threshold:
+            if len(self.notnull("Y")) / y_snps > threshold:
                 return "Male"
             else:
                 return "Female"
@@ -909,9 +887,7 @@ class SNPs:
         # Keep first duplicate rsid.
         duplicate_rsids = self._snps.index.duplicated(keep="first")
         # save duplicate SNPs
-        self._duplicate_snps = self._duplicate_snps.append(
-            self._snps.loc[duplicate_rsids]
-        )
+        self._duplicate = self._duplicate.append(self._snps.loc[duplicate_rsids])
         # deduplicate
         self._snps = self._snps.loc[~duplicate_rsids]
 
@@ -927,7 +903,7 @@ class SNPs:
         discrepant_XY_snps = self._get_non_par_snps(chrom)
 
         # save discrepant XY SNPs
-        self._discrepant_XY_snps = self._discrepant_XY_snps.append(
+        self._discrepant_XY = self._discrepant_XY.append(
             self._snps.loc[discrepant_XY_snps]
         )
 
@@ -946,17 +922,17 @@ class SNPs:
 
     def _deduplicate_MT_chrom(self):
         """ Deduplicate MT chromosome. """
-        heterozygous_MT_snps = self._snps.loc[self.heterozygous_snps("MT").index].index
+        heterozygous_MT_snps = self._snps.loc[self.heterozygous("MT").index].index
 
         # save heterozygous MT SNPs
-        self._heterozygous_MT_snps = self._heterozygous_MT_snps.append(
+        self._heterozygous_MT = self._heterozygous_MT.append(
             self._snps.loc[heterozygous_MT_snps]
         )
 
         # drop heterozygous MT SNPs since it's ambiguous for which allele to deduplicate
         self._snps.drop(heterozygous_MT_snps, inplace=True)
 
-        self._deduplicate_alleles(self.homozygous_snps("MT").index)
+        self._deduplicate_alleles(self.homozygous("MT").index)
 
     @staticmethod
     def get_par_regions(build):
@@ -1012,7 +988,7 @@ class SNPs:
         else:
             return pd.DataFrame()
 
-    def sort_snps(self):
+    def sort(self):
         """ Sort SNPs based on ordered chromosome list and position. """
 
         sorted_list = sorted(self._snps["chrom"].unique(), key=self._natural_sort_key)
@@ -1040,7 +1016,7 @@ class SNPs:
 
         self._snps = snps
 
-    def remap_snps(self, target_assembly, complement_bases=True):
+    def remap(self, target_assembly, complement_bases=True):
         """ Remap SNP coordinates from one assembly to another.
 
         This method uses the assembly map endpoint of the Ensembl REST API service (via
@@ -1154,7 +1130,7 @@ class SNPs:
         snps.pos = snps.pos.astype(np.uint32)
 
         self._snps = snps
-        self.sort_snps()
+        self.sort()
         self._build = int(target_assembly[-2:])
 
         return chromosomes_remapped, chromosomes_not_remapped
@@ -1295,11 +1271,11 @@ class SNPs:
 
             merged (bool)
                 whether `SNPs` object was merged
-            common_snps (pandas.Index)
+            common_rsids (pandas.Index)
                 SNPs in common
-            discrepant_position_snps (pandas.Index)
+            discrepant_position_rsids (pandas.Index)
                 SNPs with discrepant positions
-            discrepant_genotype_snps (pandas.Index)
+            discrepant_genotype_rsids (pandas.Index)
                 SNPs with discrepant genotypes
 
         References
@@ -1311,12 +1287,12 @@ class SNPs:
         def init(s):
             # initialize this SNPs object with properties of the SNPs object being merged
             self._snps = s.snps
-            self._duplicate_snps = s.duplicate_snps
-            self._discrepant_XY_snps = s.discrepant_XY_snps
-            self._discrepant_positions = s.discrepant_positions
-            self._discrepant_positions_vcf = s.discrepant_positions_vcf
-            self._discrepant_genotypes = s.discrepant_genotypes
-            self._heterozygous_MT_snps = s.heterozygous_MT_snps
+            self._duplicate = s.duplicate
+            self._discrepant_XY = s.discrepant_XY
+            self._heterozygous_MT = s.heterozygous_MT
+            self._discrepant_vcf_position = s.discrepant_vcf_position
+            self._discrepant_merge_positions = s.discrepant_merge_positions
+            self._discrepant_merge_genotypes = s.discrepant_merge_genotypes
             self._source = s._source
             self._phased = s.phased
             self._build = s.build
@@ -1337,7 +1313,7 @@ class SNPs:
                         s.__repr__(), s.build, self.build
                     )
                 )
-                s.remap_snps(self.build)
+                s.remap(self.build)
 
         def merge_properties(s):
             if not s.build_detected:
@@ -1352,15 +1328,11 @@ class SNPs:
 
         def merge_dfs(s):
             # append dataframes created when a `SNPs` object is instantiated
-            self._duplicate_snps = self.duplicate_snps.append(s.duplicate_snps)
-            self._discrepant_XY_snps = self.discrepant_XY_snps.append(
-                s.discrepant_XY_snps
-            )
-            self._discrepant_positions_vcf = self.discrepant_positions_vcf.append(
-                s.discrepant_positions_vcf
-            )
-            self._heterozygous_MT_snps = self.heterozygous_MT_snps.append(
-                s.heterozygous_MT_snps
+            self._duplicate = self.duplicate.append(s.duplicate)
+            self._discrepant_XY = self.discrepant_XY.append(s.discrepant_XY)
+            self._heterozygous_MT = self.heterozygous_MT.append(s.heterozygous_MT)
+            self._discrepant_vcf_position = self.discrepant_vcf_position.append(
+                s.discrepant_vcf_position
             )
 
         def merge_snps(s, positions_threshold, genotypes_threshold):
@@ -1369,7 +1341,7 @@ class SNPs:
             # identify common SNPs (i.e., any rsids being added that already exist in self.snps)
             df = self.snps.join(s.snps, how="inner", rsuffix="_added")
 
-            common_snps = df.index
+            common_rsids = df.index
 
             discrepant_positions = df.loc[
                 (df.chrom != df.chrom_added) | (df.pos != df.pos_added)
@@ -1437,20 +1409,20 @@ class SNPs:
             self._snps.loc[discrepant_genotypes.index, "genotype"] = np.nan
 
             # append discrepant positions dataframe
-            self._discrepant_positions = self._discrepant_positions.append(
+            self._discrepant_merge_positions = self._discrepant_merge_positions.append(
                 discrepant_positions, sort=True
             )
             # append discrepant genotypes dataframe
-            self._discrepant_genotypes = self._discrepant_genotypes.append(
+            self._discrepant_merge_genotypes = self._discrepant_merge_genotypes.append(
                 discrepant_genotypes, sort=True
             )
 
             return (
                 True,
                 {
-                    "common_snps": common_snps,
-                    "discrepant_position_snps": discrepant_positions.index,
-                    "discrepant_genotype_snps": discrepant_genotypes.index,
+                    "common_rsids": common_rsids,
+                    "discrepant_position_rsids": discrepant_positions.index,
+                    "discrepant_genotype_rsids": discrepant_genotypes.index,
                 },
             )
 
@@ -1458,9 +1430,9 @@ class SNPs:
         for snps_object in snps_objects:
             d = {
                 "merged": False,
-                "common_snps": pd.Index([], name="rsid"),
-                "discrepant_position_snps": pd.Index([], name="rsid"),
-                "discrepant_genotype_snps": pd.Index([], name="rsid"),
+                "common_rsids": pd.Index([], name="rsid"),
+                "discrepant_position_rsids": pd.Index([], name="rsid"),
+                "discrepant_genotype_rsids": pd.Index([], name="rsid"),
             }
 
             if not snps_object.is_valid():
@@ -1495,7 +1467,7 @@ class SNPs:
                 if merged:
                     merge_properties(snps_object)
                     merge_dfs(snps_object)
-                    self.sort_snps()
+                    self.sort()
 
                     d.update({"merged": True})
                     d.update(extra[0])
@@ -1503,3 +1475,97 @@ class SNPs:
             results.append(d)
 
         return results
+
+    def sort_snps(self):
+        """ Deprecated. This method has been renamed to `sort`. """
+        warnings.warn("This method has been renamed to `sort`.", DeprecationWarning)
+        self.sort()
+
+    def remap_snps(self, target_assembly, complement_bases=True):
+        """ Deprecated. This method has been renamed to `remap`. """
+        warnings.warn("This method has been renamed to `remap`.", DeprecationWarning)
+        return self.remap(target_assembly, complement_bases)
+
+    def save_snps(self, filename="", vcf=False, atomic=True, **kwargs):
+        """ Deprecated. This method has been renamed to `save`. """
+        warnings.warn("This method has been renamed to `save`.", DeprecationWarning)
+        return self.save(filename, vcf, atomic, **kwargs)
+
+    @property
+    def snp_count(self):
+        """ Deprecated. This property has been renamed to `count`. """
+        warnings.warn("This property has been renamed to `count`.", DeprecationWarning)
+        return self.count
+
+    def get_snp_count(self, chrom=""):
+        """ Deprecated. This method has been renamed to `get_count`. """
+        warnings.warn(
+            "This method has been renamed to `get_count`.", DeprecationWarning
+        )
+        return self.get_count(chrom)
+
+    def not_null_snps(self, chrom=""):
+        """ Deprecated. This method has been renamed to `notnull`. """
+        warnings.warn("This method has been renamed to `notnull`.", DeprecationWarning)
+        return self.notnull(chrom)
+
+    def get_summary(self):
+        """ Deprecated. This method has been renamed to `summary` and is now a property. """
+        warnings.warn(
+            "This method has been renamed to `summary` and is now a property.",
+            DeprecationWarning,
+        )
+        return self.summary
+
+    def get_assembly(self):
+        """ Deprecated. See the `assembly` property. """
+        warnings.warn("See the `assembly` property.", DeprecationWarning)
+        return self.assembly
+
+    def get_chromosomes(self):
+        """ Deprecated. See the `chromosomes` property. """
+        warnings.warn("See the `chromosomes` property.", DeprecationWarning)
+        return self.chromosomes
+
+    def get_chromosomes_summary(self):
+        """ Deprecated. See the `chromosomes_summary` property. """
+        warnings.warn("See the `chromosomes_summary` property.", DeprecationWarning)
+        return self.chromosomes_summary
+
+    @property
+    def duplicate_snps(self):
+        """ Deprecated. This property has been renamed to `duplicate`. """
+        warnings.warn(
+            "This property has been renamed to `duplicate`.", DeprecationWarning
+        )
+        return self.duplicate
+
+    @property
+    def discrepant_XY_snps(self):
+        """ Deprecated. This property has been renamed to `discrepant_XY`. """
+        warnings.warn(
+            "This property has been renamed to `discrepant_XY`.", DeprecationWarning
+        )
+        return self.discrepant_XY
+
+    @property
+    def heterozygous_MT_snps(self):
+        """ Deprecated. This property has been renamed to `heterozygous_MT`. """
+        warnings.warn(
+            "This property has been renamed to `heterozygous_MT`.", DeprecationWarning
+        )
+        return self.heterozygous_MT
+
+    def heterozygous_snps(self, chrom=""):
+        """ Deprecated. This method has been renamed to `heterozygous`. """
+        warnings.warn(
+            "This method has been renamed to `heterozygous`.", DeprecationWarning
+        )
+        return self.heterozygous(chrom)
+
+    def homozygous_snps(self, chrom=""):
+        """ Deprecated. This method has been renamed to `homozygous`. """
+        warnings.warn(
+            "This method has been renamed to `homozygous`.", DeprecationWarning
+        )
+        return self.homozygous(chrom)

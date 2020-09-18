@@ -99,7 +99,7 @@ class Writer:
         -------
         str
             path to file in output directory if SNPs were saved, else empty str
-        discrepant_positions_vcf : pd.DataFrame
+        discrepant_vcf_position : pd.DataFrame
             SNPs with discrepant positions discovered while saving VCF
         """
         w = cls(snps=snps, filename=filename, vcf=vcf, atomic=atomic, **kwargs)
@@ -135,7 +135,7 @@ class Writer:
                 self._snps.build,
                 self._snps.build_detected,
                 self._snps.phased,
-                self._snps.snp_count,
+                self._snps.count,
                 self._snps.chromosomes_summary,
             )
         )
@@ -167,7 +167,7 @@ class Writer:
         -------
         str
             path to file in output directory if SNPs were saved, else empty str
-        discrepant_positions_vcf : pd.DataFrame
+        discrepant_vcf_position : pd.DataFrame
             SNPs with discrepant positions discovered while saving VCF
         """
         filename = self._filename
@@ -255,14 +255,14 @@ class Writer:
 
         contigs = []
         vcf = [pd.DataFrame()]
-        discrepant_positions_vcf = [pd.DataFrame()]
+        discrepant_vcf_position = [pd.DataFrame()]
         for result in list(results):
             contigs.append(result["contig"])
             vcf.append(result["vcf"])
-            discrepant_positions_vcf.append(result["discrepant_positions_vcf"])
+            discrepant_vcf_position.append(result["discrepant_vcf_position"])
 
         vcf = pd.concat(vcf)
-        discrepant_positions_vcf = pd.concat(discrepant_positions_vcf)
+        discrepant_vcf_position = pd.concat(discrepant_vcf_position)
 
         comment += "".join(contigs)
         comment += '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n'
@@ -280,7 +280,7 @@ class Writer:
                 na_rep=".",
                 sep="\t",
             ),
-            discrepant_positions_vcf,
+            discrepant_vcf_position,
         )
 
     def _create_vcf_representation(self, task):
@@ -293,7 +293,7 @@ class Writer:
             return {
                 "contig": "",
                 "vcf": pd.DataFrame(),
-                "discrepant_positions_vcf": pd.DataFrame(),
+                "discrepant_vcf_position": pd.DataFrame(),
             }
 
         seqs = resources.get_reference_sequences(assembly, [chrom])
@@ -339,10 +339,10 @@ class Writer:
         df["ID"] = snps["rsid"]
 
         # drop SNPs with discrepant positions (outside reference sequence)
-        discrepant_positions_vcf = snps.loc[
+        discrepant_vcf_position = snps.loc[
             (snps.pos - seq.start < 0) | (snps.pos - seq.start > seq.length - 1)
         ]
-        df.drop(discrepant_positions_vcf.index, inplace=True)
+        df.drop(discrepant_vcf_position.index, inplace=True)
 
         # https://stackoverflow.com/a/24838429
         df["REF"] = list(map(chr, seq.sequence[df.POS - seq.start]))
@@ -373,7 +373,7 @@ class Writer:
         return {
             "contig": contig,
             "vcf": df,
-            "discrepant_positions_vcf": discrepant_positions_vcf,
+            "discrepant_vcf_position": discrepant_vcf_position,
         }
 
     def _compute_alt(self, ref, genotype):

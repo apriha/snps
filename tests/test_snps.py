@@ -35,6 +35,7 @@ import io
 import os
 import tempfile
 from unittest.mock import Mock, patch
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -131,7 +132,7 @@ class TestSnps(BaseSNPsTestCase):
             rsid=["rs3"], chrom=["MT"], pos=[103], genotype=["GC"]
         )
         pd.testing.assert_frame_equal(
-            snps.heterozygous_MT_snps, heterozygous_MT_snps, check_exact=True
+            snps.heterozygous_MT, heterozygous_MT_snps, check_exact=True
         )
 
     def test_deduplicate_MT_chrom_false(self):
@@ -150,13 +151,11 @@ class TestSnps(BaseSNPsTestCase):
         result = self.create_snp_df(
             rsid=["rs1"], chrom=["1"], pos=[101], genotype=["AA"]
         )
-        duplicate_snps = self.create_snp_df(
+        duplicate = self.create_snp_df(
             rsid=["rs1", "rs1"], chrom=["1", "1"], pos=[102, 103], genotype=["CC", "GG"]
         )
         pd.testing.assert_frame_equal(snps.snps, result, check_exact=True)
-        pd.testing.assert_frame_equal(
-            snps.duplicate_snps, duplicate_snps, check_exact=True
-        )
+        pd.testing.assert_frame_equal(snps.duplicate, duplicate, check_exact=True)
 
     def test_empty_dataframe(self):
         for snps in self.empty_snps():
@@ -165,33 +164,33 @@ class TestSnps(BaseSNPsTestCase):
             )
             self.assertEqual(snps.snps.index.name, "rsid")
 
-    def test_get_assembly_None(self):
+    def test_assembly_None(self):
         snps = SNPs()
-        self.assertFalse(snps.get_assembly())
+        self.assertFalse(snps.assembly)
 
-    def test_get_summary(self):
+    def test_summary(self):
         s = SNPs("tests/input/GRCh38.csv")
         self.assertDictEqual(
-            s.get_summary(),
+            s.summary,
             {
                 "source": "generic",
                 "assembly": "GRCh38",
                 "build": 38,
                 "build_detected": True,
-                "snp_count": 4,
+                "count": 4,
                 "chromosomes": "1, 3",
                 "sex": "",
             },
         )
 
-    def test_get_summary_no_snps(self):
+    def test_summary_no_snps(self):
         for snps in self.empty_snps():
-            self.assertFalse(snps.get_summary())
+            self.assertDictEqual(snps.summary, {})
 
-    def test_heterozygous_snps(self):
+    def test_heterozygous(self):
         s = SNPs("tests/input/generic.csv")
         pd.testing.assert_frame_equal(
-            s.heterozygous_snps(),
+            s.heterozygous(),
             self.create_snp_df(
                 rsid=["rs6", "rs7", "rs8"],
                 chrom=["1", "1", "1"],
@@ -201,10 +200,10 @@ class TestSnps(BaseSNPsTestCase):
             check_exact=True,
         )
 
-    def test_homozygous_snps(self):
+    def test_homozygous(self):
         s = SNPs("tests/input/generic.csv")
         pd.testing.assert_frame_equal(
-            s.homozygous_snps(),
+            s.homozygous(),
             self.create_snp_df(
                 rsid=["rs1", "rs2", "rs3", "rs4"],
                 chrom=["1", "1", "1", "1"],
@@ -214,10 +213,10 @@ class TestSnps(BaseSNPsTestCase):
             check_exact=True,
         )
 
-    def test_homozygous_snps_chrom(self):
+    def test_homozygous_chrom(self):
         s = SNPs("tests/input/generic.csv")
         pd.testing.assert_frame_equal(
-            s.homozygous_snps("1"),
+            s.homozygous("1"),
             self.create_snp_df(
                 rsid=["rs1", "rs2", "rs3", "rs4"],
                 chrom=["1", "1", "1", "1"],
@@ -235,16 +234,16 @@ class TestSnps(BaseSNPsTestCase):
         s = SNPs("tests/input/generic.csv")
         self.assertTrue(s.is_valid())
 
-    def test_not_null_snps(self):
+    def test_notnull(self):
         s = SNPs("tests/input/generic.csv")
         snps = self.generic_snps()
         snps.drop("rs5", inplace=True)
-        pd.testing.assert_frame_equal(s.not_null_snps(), snps, check_exact=True)
+        pd.testing.assert_frame_equal(s.notnull(), snps, check_exact=True)
 
     def test_only_detect_source(self):
         s = SNPs("tests/input/generic.csv", only_detect_source=True)
         self.assertEqual(s.source, "generic")
-        self.assertEqual(s.snp_count, 0)
+        self.assertEqual(s.count, 0)
 
     def _run_remap_test(self, f, mappings):
         if self.downloads_enabled:
@@ -254,10 +253,10 @@ class TestSnps(BaseSNPsTestCase):
             with patch("snps.resources.Resources.get_assembly_mapping_data", mock):
                 f()
 
-    def test_remap_snps_36_to_37(self):
+    def test_remap_36_to_37(self):
         def f():
             s = SNPs("tests/input/NCBI36.csv")
-            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
+            chromosomes_remapped, chromosomes_not_remapped = s.remap(37)
             self.assertEqual(s.build, 37)
             self.assertEqual(s.assembly, "GRCh37")
             self.assertEqual(len(chromosomes_remapped), 2)
@@ -266,10 +265,10 @@ class TestSnps(BaseSNPsTestCase):
 
         self._run_remap_test(f, self.NCBI36_GRCh37())
 
-    def test_remap_snps_36_to_37_multiprocessing(self):
+    def test_remap_36_to_37_multiprocessing(self):
         def f():
             s = SNPs("tests/input/NCBI36.csv", parallelize=True)
-            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
+            chromosomes_remapped, chromosomes_not_remapped = s.remap(37)
             self.assertEqual(s.build, 37)
             self.assertEqual(s.assembly, "GRCh37")
             self.assertEqual(len(chromosomes_remapped), 2)
@@ -278,10 +277,10 @@ class TestSnps(BaseSNPsTestCase):
 
         self._run_remap_test(f, self.NCBI36_GRCh37())
 
-    def test_remap_snps_37_to_36(self):
+    def test_remap_37_to_36(self):
         def f():
             s = SNPs("tests/input/GRCh37.csv")
-            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(36)
+            chromosomes_remapped, chromosomes_not_remapped = s.remap(36)
             self.assertEqual(s.build, 36)
             self.assertEqual(s.assembly, "NCBI36")
             self.assertEqual(len(chromosomes_remapped), 2)
@@ -290,10 +289,10 @@ class TestSnps(BaseSNPsTestCase):
 
         self._run_remap_test(f, self.GRCh37_NCBI36())
 
-    def test_remap_snps_37_to_38(self):
+    def test_remap_37_to_38(self):
         def f():
             s = SNPs("tests/input/GRCh37.csv")
-            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
+            chromosomes_remapped, chromosomes_not_remapped = s.remap(38)
             self.assertEqual(s.build, 38)
             self.assertEqual(s.assembly, "GRCh38")
             self.assertEqual(len(chromosomes_remapped), 2)
@@ -302,63 +301,63 @@ class TestSnps(BaseSNPsTestCase):
 
         self._run_remap_test(f, self.GRCh37_GRCh38())
 
-    def test_remap_snps_37_to_38_with_PAR_SNP(self):
+    def test_remap_37_to_38_with_PAR_SNP(self):
         def f():
             s = self.load_assign_PAR_SNPs("tests/input/GRCh37_PAR.csv")
-            self.assertEqual(s.snp_count, 4)
-            chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
+            self.assertEqual(s.count, 4)
+            chromosomes_remapped, chromosomes_not_remapped = s.remap(38)
             self.assertEqual(s.build, 38)
             self.assertEqual(s.assembly, "GRCh38")
             self.assertEqual(len(chromosomes_remapped), 2)
             self.assertEqual(len(chromosomes_not_remapped), 1)
-            self.assertEqual(s.snp_count, 3)
+            self.assertEqual(s.count, 3)
             pd.testing.assert_frame_equal(
                 s.snps, self.snps_GRCh38_PAR(), check_exact=True
             )
 
         self._run_remap_test(f, self.GRCh37_GRCh38_PAR())
 
-    def test_remap_snps_37_to_37(self):
+    def test_remap_37_to_37(self):
         s = SNPs("tests/input/GRCh37.csv")
-        chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
+        chromosomes_remapped, chromosomes_not_remapped = s.remap(37)
         self.assertEqual(s.build, 37)
         self.assertEqual(s.assembly, "GRCh37")
         self.assertEqual(len(chromosomes_remapped), 0)
         self.assertEqual(len(chromosomes_not_remapped), 2)
         pd.testing.assert_frame_equal(s.snps, self.snps_GRCh37(), check_exact=True)
 
-    def test_remap_snps_invalid_assembly(self):
+    def test_remap_invalid_assembly(self):
         s = SNPs("tests/input/GRCh37.csv")
-        chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(-1)
+        chromosomes_remapped, chromosomes_not_remapped = s.remap(-1)
         self.assertEqual(s.build, 37)
         self.assertEqual(s.assembly, "GRCh37")
         self.assertEqual(len(chromosomes_remapped), 0)
         self.assertEqual(len(chromosomes_not_remapped), 2)
 
-    def test_remap_snps_no_snps(self):
+    def test_remap_no_snps(self):
         s = SNPs()
-        chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
+        chromosomes_remapped, chromosomes_not_remapped = s.remap(38)
         self.assertFalse(s.build)
         self.assertEqual(len(chromosomes_remapped), 0)
         self.assertEqual(len(chromosomes_not_remapped), 0)
 
-    def test_save_snps_buffer(self):
+    def test_save_buffer(self):
         s = SNPs("tests/input/generic.csv")
         out = io.StringIO()
-        s.save_snps(out)
+        s.save(out)
         self.assertTrue(out.read().startswith("# Generated by snps"))
 
-    def test_save_snps_no_snps(self):
+    def test_save_no_snps(self):
         s = SNPs()
-        self.assertFalse(s.save_snps())
+        self.assertFalse(s.save())
 
-    def test_save_snps_no_snps_vcf(self):
+    def test_save_no_snps_vcf(self):
         s = SNPs()
-        self.assertFalse(s.save_snps(vcf=True))
+        self.assertFalse(s.save(vcf=True))
 
-    def test_save_snps_source(self):
+    def test_save_source(self):
         s = SNPs("tests/input/GRCh38.csv")
-        self.assertEqual(os.path.relpath(s.save_snps()), "output/generic_GRCh38.txt")
+        self.assertEqual(os.path.relpath(s.save()), "output/generic_GRCh38.txt")
         snps = SNPs("output/generic_GRCh38.txt")
         self.assertEqual(snps.build, 38)
         self.assertTrue(snps.build_detected)
@@ -382,24 +381,24 @@ class TestSnps(BaseSNPsTestCase):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
         )
-        self.assertEqual(s.snp_count, 15528)
+        self.assertEqual(s.count, 15528)
         s._deduplicate_XY_chrom()
-        self.assertEqual(s.snp_count, 15528)
-        self.assertEqual(len(s.discrepant_XY_snps), 0)
+        self.assertEqual(s.count, 15528)
+        self.assertEqual(len(s.discrepant_XY), 0)
         self.assertEqual(s.sex, "Male")
 
-    def test_sex_Male_X_chrom_discrepant_XY_snps(self):
+    def test_sex_Male_X_chrom_discrepant_XY(self):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
         )
-        self.assertEqual(s.snp_count, 15528)
+        self.assertEqual(s.count, 15528)
         s._snps.loc["rs8001", "genotype"] = "AC"
         s._deduplicate_XY_chrom()
-        self.assertEqual(s.snp_count, 15527)
+        self.assertEqual(s.count, 15527)
         result = self.create_snp_df(
             rsid=["rs8001"], chrom=["X"], pos=[80000001], genotype=["AC"]
         )
-        pd.testing.assert_frame_equal(s.discrepant_XY_snps, result, check_exact=True)
+        pd.testing.assert_frame_equal(s.discrepant_XY, result, check_exact=True)
         self.assertEqual(s.sex, "Male")
 
     def test_sex_Male_Y_chrom(self):
@@ -425,13 +424,13 @@ class TestSnps(BaseSNPsTestCase):
         for snps in self.empty_snps():
             self.assertFalse(snps.source)
 
-    def test_snp_count(self):
+    def test_count(self):
         s = SNPs("tests/input/NCBI36.csv")
-        self.assertEqual(s.snp_count, 4)
+        self.assertEqual(s.count, 4)
 
-    def test_snp_count_no_snps(self):
+    def test_count_no_snps(self):
         for snps in self.empty_snps():
-            self.assertFalse(snps.snp_count)
+            self.assertEqual(snps.count, 0)
             self.assertTrue(snps.snps.empty)
 
 
@@ -444,9 +443,9 @@ class TestSNPsMerge(TestSnps):
 
             self.assertListEqual(
                 [
-                    "common_snps",
-                    "discrepant_genotype_snps",
-                    "discrepant_position_snps",
+                    "common_rsids",
+                    "discrepant_genotype_rsids",
+                    "discrepant_position_rsids",
                     "merged",
                 ],
                 sorted(list(result.keys())),
@@ -461,9 +460,9 @@ class TestSNPsMerge(TestSnps):
                 self.assertFalse(result["merged"])
 
             for key in [
-                "common_snps",
-                "discrepant_position_snps",
-                "discrepant_genotype_snps",
+                "common_rsids",
+                "discrepant_position_rsids",
+                "discrepant_genotype_rsids",
             ]:
                 if key in expected_result:
                     pd.testing.assert_index_equal(
@@ -487,7 +486,7 @@ class TestSNPsMerge(TestSnps):
         self.assertEqual(s.source, "generic, 23andMe")
         self.assertListEqual(s._source, ["generic", "23andMe"])
         self.assertEqual(
-            os.path.relpath(s.save_snps()), "output/generic__23andMe_GRCh37.txt"
+            os.path.relpath(s.save()), "output/generic__23andMe_GRCh37.txt"
         )
         s = SNPs("output/generic__23andMe_GRCh37.txt")
         self.assertEqual(s.source, "generic, 23andMe")
@@ -509,7 +508,7 @@ class TestSNPsMerge(TestSnps):
                 {"merged": True},
                 {
                     "merged": True,
-                    "common_snps": pd.Index(
+                    "common_rsids": pd.Index(
                         ["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
                         name="rsid",
                     ),
@@ -521,15 +520,15 @@ class TestSNPsMerge(TestSnps):
         def f():
             s = SNPs("tests/input/NCBI36.csv")
             results = s.merge([SNPs("tests/input/GRCh37.csv")])
-            self.assertEqual(len(s.discrepant_positions), 0)
-            self.assertEqual(len(s.discrepant_genotypes), 0)
+            self.assertEqual(len(s.discrepant_merge_positions), 0)
+            self.assertEqual(len(s.discrepant_merge_genotypes), 0)
             pd.testing.assert_frame_equal(s.snps, self.snps_NCBI36(), check_exact=True)
             self.assert_results(
                 results,
                 [
                     {
                         "merged": True,
-                        "common_snps": pd.Index(
+                        "common_rsids": pd.Index(
                             ["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
                             name="rsid",
                         ),
@@ -542,24 +541,24 @@ class TestSNPsMerge(TestSnps):
     def test_merge_remap_false(self):
         s = SNPs("tests/input/NCBI36.csv")
         results = s.merge([SNPs("tests/input/GRCh37.csv")], remap=False)
-        self.assertEqual(len(s.discrepant_positions), 4)
+        self.assertEqual(len(s.discrepant_merge_positions), 4)
         pd.testing.assert_index_equal(
-            s.discrepant_positions.index,
-            results[0]["discrepant_position_snps"],
+            s.discrepant_merge_positions.index,
+            results[0]["discrepant_position_rsids"],
             check_exact=True,
             check_names=True,
         )
-        self.assertEqual(len(s.discrepant_genotypes), 1)
+        self.assertEqual(len(s.discrepant_merge_genotypes), 1)
         pd.testing.assert_index_equal(
-            s.discrepant_genotypes.index,
-            results[0]["discrepant_genotype_snps"],
+            s.discrepant_merge_genotypes.index,
+            results[0]["discrepant_genotype_rsids"],
             check_exact=True,
             check_names=True,
         )
-        self.assertEqual(len(s.discrepant_snps), 4)
+        self.assertEqual(len(s.discrepant_merge_positions_genotypes), 4)
         pd.testing.assert_index_equal(
-            s.discrepant_snps.index,
-            results[0]["discrepant_position_snps"],
+            s.discrepant_merge_positions_genotypes.index,
+            results[0]["discrepant_position_rsids"],
             check_exact=True,
             check_names=True,
         )
@@ -573,15 +572,15 @@ class TestSNPsMerge(TestSnps):
             [
                 {
                     "merged": True,
-                    "common_snps": pd.Index(
+                    "common_rsids": pd.Index(
                         ["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
                         name="rsid",
                     ),
-                    "discrepant_position_snps": pd.Index(
+                    "discrepant_position_rsids": pd.Index(
                         ["rs3094315", "rs2500347", "rsIndelTest", "rs11928389"],
                         name="rsid",
                     ),
-                    "discrepant_genotype_snps": pd.Index(["rs11928389"], name="rsid"),
+                    "discrepant_genotype_rsids": pd.Index(["rs11928389"], name="rsid"),
                 }
             ],
         )
@@ -600,7 +599,7 @@ class TestSNPsMerge(TestSnps):
             [
                 {
                     "merged": True,
-                    "common_snps": pd.Index(
+                    "common_rsids": pd.Index(
                         ["rs1", "rs2", "rs3", "rs4", "rs5", "rs6", "rs7", "rs8"],
                         name="rsid",
                     ),
@@ -621,7 +620,7 @@ class TestSNPsMerge(TestSnps):
             [
                 {
                     "merged": True,
-                    "common_snps": pd.Index(
+                    "common_rsids": pd.Index(
                         ["rs1", "rs2", "rs3", "rs4", "rs5", "rs6", "rs7", "rs8"],
                         name="rsid",
                     ),
@@ -651,9 +650,9 @@ class TestSNPsMerge(TestSnps):
         s2._snps.loc["rs1", "pos"] = 100
 
         results = s1.merge([s2], discrepant_positions_threshold=0)
-        self.assertEqual(len(s1.discrepant_positions), 0)
-        self.assertEqual(len(s1.discrepant_genotypes), 0)
-        self.assertEqual(len(s1.discrepant_snps), 0)
+        self.assertEqual(len(s1.discrepant_merge_positions), 0)
+        self.assertEqual(len(s1.discrepant_merge_genotypes), 0)
+        self.assertEqual(len(s1.discrepant_merge_positions_genotypes), 0)
         pd.testing.assert_frame_equal(s1.snps, self.generic_snps(), check_exact=True)
         self.assert_results(results, [{}])
 
@@ -663,9 +662,9 @@ class TestSNPsMerge(TestSnps):
         s2._snps.loc["rs1", "genotype"] = "CC"
 
         results = s1.merge([s2], discrepant_genotypes_threshold=0)
-        self.assertEqual(len(s1.discrepant_positions), 0)
-        self.assertEqual(len(s1.discrepant_genotypes), 0)
-        self.assertEqual(len(s1.discrepant_snps), 0)
+        self.assertEqual(len(s1.discrepant_merge_positions), 0)
+        self.assertEqual(len(s1.discrepant_merge_genotypes), 0)
+        self.assertEqual(len(s1.discrepant_merge_positions_genotypes), 0)
         pd.testing.assert_frame_equal(s1.snps, self.generic_snps(), check_exact=True)
         self.assert_results(results, [{}])
 
@@ -729,16 +728,16 @@ class TestSNPsMerge(TestSnps):
             )
             expected_snps = SNPs()
             expected_snps._snps = expected
-            expected_snps.sort_snps()
+            expected_snps.sort()
             expected = expected_snps.snps
 
             pd.testing.assert_index_equal(
-                s.discrepant_positions.index,
+                s.discrepant_merge_positions.index,
                 expected.loc[expected["discrepant_position"] == True].index,
             )
 
             pd.testing.assert_index_equal(
-                s.discrepant_genotypes.index,
+                s.discrepant_merge_genotypes.index,
                 expected.loc[expected["discrepant_genotype"] == True].index,
             )
 
@@ -750,21 +749,224 @@ class TestSNPsMerge(TestSnps):
         s._snps = self.create_snp_df(
             rsid=["rs1"], chrom=["1"], pos=[1], genotype=["AA"]
         )
-        s._duplicate_snps = self.create_snp_df(
+        s._duplicate = self.create_snp_df(
             rsid=["rs1"], chrom=["1"], pos=[1], genotype=["AA"]
         )
-        s._discrepant_XY_snps = self.create_snp_df(
+        s._discrepant_XY = self.create_snp_df(
             rsid=["rs1"], chrom=["1"], pos=[1], genotype=["AA"]
         )
         s.merge([s])
         df = self.create_snp_df(
             rsid=["rs1", "rs1"], chrom=["1", "1"], pos=[1, 1], genotype=["AA", "AA"]
         )
-        pd.testing.assert_frame_equal(s.duplicate_snps, df, check_exact=True)
-        pd.testing.assert_frame_equal(s.discrepant_XY_snps, df, check_exact=True)
+        pd.testing.assert_frame_equal(s.duplicate, df, check_exact=True)
+        pd.testing.assert_frame_equal(s.discrepant_XY, df, check_exact=True)
         pd.testing.assert_frame_equal(
-            s.discrepant_positions_vcf, get_empty_snps_dataframe(), check_exact=True
+            s.heterozygous_MT, get_empty_snps_dataframe(), check_exact=True
         )
         pd.testing.assert_frame_equal(
-            s.heterozygous_MT_snps, get_empty_snps_dataframe(), check_exact=True
+            s.discrepant_vcf_position, get_empty_snps_dataframe(), check_exact=True
         )
+
+
+class TestDeprecatedMethods(TestSnps):
+    def run_deprecated_test(self, f, msg):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            f()
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            self.assertEqual(str(w[-1].message), msg)
+
+    def test_sort_snps(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            s.sort_snps()
+
+        self.run_deprecated_test(f, "This method has been renamed to `sort`.")
+
+    def test_remap_snps(self):
+        def f1():
+            def f2():
+                s = SNPs("tests/input/NCBI36.csv")
+                chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(37)
+                self.assertEqual(s.build, 37)
+                self.assertEqual(s.assembly, "GRCh37")
+                self.assertEqual(len(chromosomes_remapped), 2)
+                self.assertEqual(len(chromosomes_not_remapped), 0)
+                pd.testing.assert_frame_equal(
+                    s.snps, self.snps_GRCh37(), check_exact=True
+                )
+
+            self._run_remap_test(f2, self.NCBI36_GRCh37())
+
+        self.run_deprecated_test(f1, "This method has been renamed to `remap`.")
+
+    def test_save_snps(self):
+        def f():
+            snps = SNPs("tests/input/generic.csv")
+            self.assertEqual(
+                os.path.relpath(snps.save_snps(sep=",")), "output/generic_GRCh37.csv"
+            )
+            self.run_parsing_tests("output/generic_GRCh37.csv", "generic")
+
+        self.run_deprecated_test(f, "This method has been renamed to `save`.")
+
+    def test_snp_count(self):
+        def f():
+            s = SNPs("tests/input/NCBI36.csv")
+            self.assertEqual(s.snp_count, 4)
+
+        self.run_deprecated_test(f, "This property has been renamed to `count`.")
+
+    def test_get_snp_count(self):
+        def f():
+            s = SNPs("tests/input/NCBI36.csv")
+            self.assertEqual(s.get_snp_count(), 4)
+
+        self.run_deprecated_test(f, "This method has been renamed to `get_count`.")
+
+    def test_not_null_snps(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            snps = self.generic_snps()
+            snps.drop("rs5", inplace=True)
+            pd.testing.assert_frame_equal(s.not_null_snps(), snps, check_exact=True)
+
+        self.run_deprecated_test(f, "This method has been renamed to `notnull`.")
+
+    def test_get_summary(self):
+        def f():
+            s = SNPs("tests/input/GRCh38.csv")
+            self.assertDictEqual(
+                s.get_summary(),
+                {
+                    "source": "generic",
+                    "assembly": "GRCh38",
+                    "build": 38,
+                    "build_detected": True,
+                    "count": 4,
+                    "chromosomes": "1, 3",
+                    "sex": "",
+                },
+            )
+
+        self.run_deprecated_test(
+            f, "This method has been renamed to `summary` and is now a property."
+        )
+
+    def test_get_assembly(self):
+        def f():
+            s = SNPs("tests/input/GRCh38.csv")
+            self.assertEqual(s.get_assembly(), "GRCh38")
+
+        self.run_deprecated_test(f, "See the `assembly` property.")
+
+    def test_get_chromosomes(self):
+        def f():
+            s = SNPs("tests/input/chromosomes.csv")
+            self.assertListEqual(s.get_chromosomes(), ["1", "2", "3", "5", "PAR", "MT"])
+
+        self.run_deprecated_test(f, "See the `chromosomes` property.")
+
+    def test_get_chromosomes_summary(self):
+        def f():
+            s = SNPs("tests/input/chromosomes.csv")
+            self.assertEqual(s.get_chromosomes_summary(), "1-3, 5, PAR, MT")
+
+        self.run_deprecated_test(f, "See the `chromosomes_summary` property.")
+
+    def test_duplicate_snps(self):
+        def f():
+            snps = SNPs("tests/input/duplicate_rsids.csv")
+            result = self.create_snp_df(
+                rsid=["rs1"], chrom=["1"], pos=[101], genotype=["AA"]
+            )
+            duplicate = self.create_snp_df(
+                rsid=["rs1", "rs1"],
+                chrom=["1", "1"],
+                pos=[102, 103],
+                genotype=["CC", "GG"],
+            )
+            pd.testing.assert_frame_equal(snps.snps, result, check_exact=True)
+            pd.testing.assert_frame_equal(
+                snps.duplicate_snps, duplicate, check_exact=True
+            )
+
+        self.run_deprecated_test(f, "This property has been renamed to `duplicate`.")
+
+    def test_discrepant_XY_snps(self):
+        def f():
+            s = self.simulate_snps(
+                chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
+            )
+            self.assertEqual(s.count, 15528)
+            s._snps.loc["rs8001", "genotype"] = "AC"
+            s._deduplicate_XY_chrom()
+            self.assertEqual(s.count, 15527)
+            result = self.create_snp_df(
+                rsid=["rs8001"], chrom=["X"], pos=[80000001], genotype=["AC"]
+            )
+            pd.testing.assert_frame_equal(
+                s.discrepant_XY_snps, result, check_exact=True
+            )
+            self.assertEqual(s.sex, "Male")
+
+        self.run_deprecated_test(
+            f, "This property has been renamed to `discrepant_XY`."
+        )
+
+    def test_heterozygous_MT_snps(self):
+        def f():
+            snps = SNPs("tests/input/ancestry_mt.txt")
+
+            result = self.create_snp_df(
+                rsid=["rs1", "rs2"],
+                chrom=["MT", "MT"],
+                pos=[101, 102],
+                genotype=["A", np.nan],
+            )
+            pd.testing.assert_frame_equal(snps.snps, result, check_exact=True)
+
+            heterozygous_MT_snps = self.create_snp_df(
+                rsid=["rs3"], chrom=["MT"], pos=[103], genotype=["GC"]
+            )
+            pd.testing.assert_frame_equal(
+                snps.heterozygous_MT_snps, heterozygous_MT_snps, check_exact=True
+            )
+
+        self.run_deprecated_test(
+            f, "This property has been renamed to `heterozygous_MT`."
+        )
+
+    def test_heterozygous_snps(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            pd.testing.assert_frame_equal(
+                s.heterozygous_snps(),
+                self.create_snp_df(
+                    rsid=["rs6", "rs7", "rs8"],
+                    chrom=["1", "1", "1"],
+                    pos=[106, 107, 108],
+                    genotype=["GC", "TC", "AT"],
+                ),
+                check_exact=True,
+            )
+
+        self.run_deprecated_test(f, "This method has been renamed to `heterozygous`.")
+
+    def test_homozygous_snps(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            pd.testing.assert_frame_equal(
+                s.homozygous_snps(),
+                self.create_snp_df(
+                    rsid=["rs1", "rs2", "rs3", "rs4"],
+                    chrom=["1", "1", "1", "1"],
+                    pos=[101, 102, 103, 104],
+                    genotype=["AA", "CC", "GG", "TT"],
+                ),
+                check_exact=True,
+            )
+
+        self.run_deprecated_test(f, "This method has been renamed to `homozygous`.")

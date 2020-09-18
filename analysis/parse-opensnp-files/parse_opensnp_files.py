@@ -45,8 +45,8 @@ def load_file(task):
     except Exception as err:
         return {"msg": str(err).strip()[:100], "file": file}
 
-    if s.snp_count != 0:
-        d = s.get_summary()
+    if s.count != 0:
+        d = s.summary
         d.update({"file": file})
         return d
     else:
@@ -78,19 +78,12 @@ def main():
     # run tasks; results is a list of dicts
     results = p(load_file, tasks)
 
-    # get results from `load_file` where `snp_count` was non-zero
+    # get results from `load_file` where `count` was non-zero
     rows = [item for item in results if "msg" not in item]
 
     df = pd.DataFrame(
         rows,
-        columns=[
-            "file",
-            "source",
-            "build",
-            "build_detected",
-            "chromosomes",
-            "snp_count",
-        ],
+        columns=["file", "source", "build", "build_detected", "chromosomes", "count"],
     )
 
     save_df_as_csv(df, OUTPUT_DIR, "parse-opensnp-files.csv")

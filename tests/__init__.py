@@ -725,7 +725,7 @@ class BaseSNPsTestCase(TestCase):
 
         if unannotated:
             self.assertTrue(snps.unannotated_vcf)
-            self.assertEqual(0, snps.snp_count)
+            self.assertEqual(0, snps.count)
         else:
             self.assertFalse(snps.unannotated_vcf)
             pd.testing.assert_frame_equal(

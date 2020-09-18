@@ -96,7 +96,7 @@ Load a `23andMe <https://www.23andme.com>`_ raw data file:
 >>> s = SNPs("resources/662.23andme.340.txt.gz")
 >>> s.source
 '23andMe'
->>> s.snp_count
+>>> s.count
 991786
 
 The ``SNPs`` class accepts a path to a file or a bytes object. A ``Reader`` class attempts to
@@ -108,6 +108,12 @@ infer the data source and load the SNPs. The loaded SNPs are normalized and avai
 array(['chrom', 'pos', 'genotype'], dtype=object)
 >>> df.index.name
 'rsid'
+>>> df.chrom.dtype.name
+'object'
+>>> df.pos.dtype.name
+'uint32'
+>>> df.genotype.dtype.name
+'object'
 >>> len(df)
 991786
 
@@ -134,7 +140,7 @@ Downloading resources/NCBI36_GRCh37.tar.gz
 151 SNP genotypes were discrepant; marking those as null
 >>> s.source
 '23andMe, FTDNA'
->>> s.snp_count
+>>> s.count
 1006960
 >>> s.build
 37
@@ -152,17 +158,17 @@ discrepant SNPs are available for inspection after the merge via properties of t
 Additionally, any non-called / null genotypes will be updated during the merge, if the file
 being merged has a called genotype for the SNP.
 
->>> len(s.discrepant_snps)  # SNPs with discrepant positions and genotypes, dropping dups
-169
+>>> len(s.discrepant_merge_genotypes)
+151
 
 Finally, ``merge`` returns a list of ``dict``, where each ``dict`` has information corresponding
 to the results of each merge (e.g., SNPs in common).
 
 >>> sorted(list(merge_results[0].keys()))
-['common_snps', 'discrepant_genotype_snps', 'discrepant_position_snps', 'merged']
+['common_rsids', 'discrepant_genotype_rsids', 'discrepant_position_rsids', 'merged']
 >>> merge_results[0]["merged"]
 True
->>> len(merge_results[0]["common_snps"])
+>>> len(merge_results[0]["common_rsids"])
 692918
 
 Remap SNPs
@@ -171,7 +177,7 @@ Now, let's remap the merged SNPs to change the assembly / build:
 
 >>> s.snps.loc["rs3094315"].pos
 752566
->>> chromosomes_remapped, chromosomes_not_remapped = s.remap_snps(38)
+>>> chromosomes_remapped, chromosomes_not_remapped = s.remap(38)
 Downloading resources/GRCh37_GRCh38.tar.gz
 >>> s.build
 38
@@ -189,14 +195,14 @@ Ok, so far we've merged the SNPs from two files (ensuring the same build in the 
 identifying discrepancies along the way). Then, we remapped the SNPs to Build 38. Now, let's save
 the merged and remapped dataset consisting of 1M+ SNPs to a tab-separated values (TSV) file:
 
->>> saved_snps = s.save_snps("out.txt")
+>>> saved_snps = s.save("out.txt")
 Saving output/out.txt
 >>> print(saved_snps)
 output/out.txt
 
 Moreover, let's get the reference sequences for this assembly and save the SNPs as a VCF file:
 
->>> saved_snps = s.save_snps("out.vcf", vcf=True)
+>>> saved_snps = s.save("out.vcf", vcf=True)
 Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.1.fa.gz
 Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.2.fa.gz
 Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.3.fa.gz

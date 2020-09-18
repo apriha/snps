@@ -133,6 +133,9 @@ class Reader:
         else:
             return d
 
+        print(first_line)
+        print(data)
+
         if "23andMe" in first_line:
             d = self.read_23andme(file, compression)
         elif "Ancestry" in first_line:
@@ -169,10 +172,9 @@ class Reader:
             d = self.read_genes_for_good(file, compression)
         elif "DNA.Land" in comments:
             d = self.read_dnaland(file, compression)
-        elif "CODIGO46" in comments:
-            d = self.read_codigo46(file)
-        elif "SANO" in comments:
-            d = self.read_sano(file)
+        elif first_line.startswith("[Header]"):
+            # Global Screening Array, includes SANO and CODIGO46
+            d = self.read_gsa(file, compression, comments)
 
         d.update({"build": self._detect_build_from_comments(comments)})
 
@@ -901,51 +903,95 @@ class Reader:
 
         return self.read_helper("tellmeGen", parser)
 
-    def read_codigo46(self, file):
-        """ Read and parse Codigo46 files.
+    def read_gsa(self, data_or_filename, compresion, comments):
+        """ Read and parse Illumina Global Screening Array files
 
-        https://codigo46.com.mx
 
         Parameters
         ----------
-        data : str
-            data string
+        data_or_filename : str or bytes
+            either the filename to read from or the bytes data itself
 
         Returns
         -------
         dict
             result of `read_helper`
         """
+        
+        # pick the source
+        # ideally we want something more specific than GSA
+        if "SANO" in comments:
+            source = "Sano"
+        elif "CODIGO46" in comments:
+            source = "Codigo46"
+        else:
+            # default to generic global screening array
+            source = "GSA"
+
+        def peek_headers(f):
+            is_header = False
+            for line in f:
+                print(line[0:6],"!")
+                if is_header:
+                    return line
+                elif line[0:6] == "[Data]":
+                    # next line is the header
+                    is_header = True
+                elif line[0:6] == b"[Data]":
+                    # next line is the header
+                    is_header = True
+            raise ValueError("Unable to find header!")
+
+        # peek at the data header on the first line inside [Data]
+        # use the headers to determine what columns to read
+        headers = None
         dtype = {
             "Chr": object,
             "Position": np.int64,
-            "Allele1 - Plus": object,
-            "Allele2 - Plus": object,
         }
-        return self._read_gsa_helper(file, "Codigo46", "Plus", dtype, na_values="-",)
+        if isinstance(data_or_filename, str) and os.path.exists(data_or_filename):
+            # we've been given a filename, so need to open it
+            filename = data_or_filename
+            if compresion == "zip":
+                with zipfile.ZipFile(filename) as z:
+                    with z.open(z.namelist()[0], "r") as f:
+                        headers = peek_headers(f)
+            elif compresion == "gzip":
+                with gzip.open(filename, "rt") as f:
+                    headers = peek_headers(f)
+            else:
+                f = open(filename, "rt")
+                headers = peek_headers(f)
+        else:
+            # assume we've been given byte content already wrapped in io.BytesIO
+            data = data_or_filename
+            if compresion == "zip":
+                with zipfile.ZipFile(data) as z:
+                    with z.open(z.namelist()[0], "r") as f:
+                        headers = peek_headers(f)
+            elif compresion == "gzip":
+                with gzip.open(data, "rt") as f:
+                    headers = peek_headers(f)
+            else:
+                headers = peek_headers(data)
+            data.seek(0)
 
-    def read_sano(self, file):
-        """ Read and parse Sano Genetics files.
+        # ensure its a string
+        if isinstance(headers, bytes):
+            headers = headers.decode("utf-8")
 
-        https://sanogenetics.com
-
-        Parameters
-        ----------
-        data : str
-            data string
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
-        """
-        dtype = {
-            "Chr": object,
-            "Position": np.int64,
-            "Allele1 - Forward": object,
-            "Allele2 - Forward": object,
-        }
-        return self._read_gsa_helper(file, "Sano", "Forward", dtype, na_values="-",)
+        if "Allele1 - Plus" in headers:
+            # prefer PLUS strand if possible
+            dtype["Allele1 - Plus"] = object
+            dtype["Allele2 - Plus"] = object
+            print("Plus")
+            return self._read_gsa_helper(data_or_filename, source, "Plus", dtype, na_values="-",)
+        elif "Allele1 - Forward" in headers:
+            # fall back to FORWARD (relative to dbSNP which might not be forward relative to reference)
+            dtype["Allele1 - Forward"] = object
+            dtype["Allele2 - Forward"] = object
+            print("Forward")
+            return self._read_gsa_helper(data_or_filename, source, "Forward", dtype, na_values="-",)
 
     def read_dnaland(self, file, compression):
         """ Read and parse DNA.land files.

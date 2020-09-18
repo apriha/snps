@@ -1054,7 +1054,7 @@ class SNPs:
 
         return temp
 
-    def _complement_bases(self, genotype):
+    def _complement_bases(self, genotype, reverse=False):
         if pd.isnull(genotype):
             return np.nan
 
@@ -1072,7 +1072,11 @@ class SNPs:
             else:
                 complement += base
 
+        if reverse:
+            complement = ''.join(reversed(complement))
+
         return complement
+
 
     # https://stackoverflow.com/a/16090640
     @staticmethod

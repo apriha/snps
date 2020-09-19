@@ -1569,3 +1569,31 @@ class SNPs:
             "This method has been renamed to `homozygous`.", DeprecationWarning
         )
         return self.homozygous(chrom)
+
+    @property
+    def discrepant_positions(self):
+        """ Deprecated. This property has been renamed to `discrepant_merge_positions`. """
+        warnings.warn(
+            "This property has been renamed to `discrepant_merge_positions`.",
+            DeprecationWarning,
+        )
+        return self.discrepant_merge_positions
+
+    @property
+    def discrepant_genotypes(self):
+        """ Deprecated. This property has been renamed to `discrepant_merge_genotypes`. """
+        warnings.warn(
+            "This property has been renamed to `discrepant_merge_genotypes`.",
+            DeprecationWarning,
+        )
+        return self.discrepant_merge_genotypes
+
+    @property
+    def discrepant_snps(self):
+        """ Deprecated. This property has been renamed to
+        `discrepant_merge_positions_genotypes`. """
+        warnings.warn(
+            "This property has been renamed to `discrepant_merge_positions_genotypes`.",
+            DeprecationWarning,
+        )
+        return self.discrepant_merge_positions_genotypes

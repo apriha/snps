@@ -970,3 +970,55 @@ class TestDeprecatedMethods(TestSnps):
             )
 
         self.run_deprecated_test(f, "This method has been renamed to `homozygous`.")
+
+    def test_discrepant_positions(self):
+        def f():
+            s = SNPs("tests/input/NCBI36.csv")
+            results = s.merge([SNPs("tests/input/GRCh37.csv")], remap=False)
+            df = s.discrepant_positions
+            self.assertEqual(len(df), 4)
+            pd.testing.assert_index_equal(
+                df.index,
+                results[0]["discrepant_position_rsids"],
+                check_exact=True,
+                check_names=True,
+            )
+
+        self.run_deprecated_test(
+            f, "This property has been renamed to `discrepant_merge_positions`."
+        )
+
+    def test_discrepant_genotypes(self):
+        def f():
+            s = SNPs("tests/input/NCBI36.csv")
+            results = s.merge([SNPs("tests/input/GRCh37.csv")], remap=False)
+            df = s.discrepant_genotypes
+            self.assertEqual(len(df), 1)
+            pd.testing.assert_index_equal(
+                df.index,
+                results[0]["discrepant_genotype_rsids"],
+                check_exact=True,
+                check_names=True,
+            )
+
+        self.run_deprecated_test(
+            f, "This property has been renamed to `discrepant_merge_genotypes`."
+        )
+
+    def test_discrepant_snps(self):
+        def f():
+            s = SNPs("tests/input/NCBI36.csv")
+            results = s.merge([SNPs("tests/input/GRCh37.csv")], remap=False)
+            df = s.discrepant_snps
+            self.assertEqual(len(df), 4)
+            pd.testing.assert_index_equal(
+                df.index,
+                results[0]["discrepant_position_rsids"],
+                check_exact=True,
+                check_names=True,
+            )
+
+        self.run_deprecated_test(
+            f,
+            "This property has been renamed to `discrepant_merge_positions_genotypes`.",
+        )

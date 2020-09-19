@@ -1,6 +1,6 @@
 .. image:: https://raw.githubusercontent.com/apriha/snps/master/docs/images/snps_banner.png
 
-|build| |codecov| |docs| |pypi| |python| |downloads|
+|build| |codecov| |docs| |pypi| |python| |downloads| |black|
 
 snps
 ====
@@ -259,3 +259,5 @@ Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org
    :target: https://www.python.org
 .. |downloads| image:: https://pepy.tech/badge/snps
    :target: https://pepy.tech/project/snps
+.. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+   :target: https://github.com/psf/black

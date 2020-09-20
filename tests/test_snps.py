@@ -226,13 +226,13 @@ class TestSnps(BaseSNPsTestCase):
             check_exact=True,
         )
 
-    def test_is_valid_False(self):
+    def test_valid_False(self):
         for snps in self.empty_snps():
-            self.assertFalse(snps.is_valid())
+            self.assertFalse(snps.valid)
 
-    def test_is_valid_True(self):
+    def test_valid_True(self):
         s = SNPs("tests/input/generic.csv")
-        self.assertTrue(s.is_valid())
+        self.assertTrue(s.valid)
 
     def test_notnull(self):
         s = SNPs("tests/input/generic.csv")
@@ -1021,4 +1021,13 @@ class TestDeprecatedMethods(TestSnps):
         self.run_deprecated_test(
             f,
             "This property has been renamed to `discrepant_merge_positions_genotypes`.",
+        )
+
+    def test_is_valid(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            self.assertTrue(s.is_valid())
+
+        self.run_deprecated_test(
+            f, "This method has been renamed to `valid` and is now a property."
         )

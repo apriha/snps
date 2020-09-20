@@ -541,7 +541,7 @@ class SNPs:
         dict
             summary info if ``SNPs`` is valid, else {}
         """
-        if not self.is_valid():
+        if not self.valid:
             return {}
         else:
             return {
@@ -554,7 +554,8 @@ class SNPs:
                 "sex": self.sex,
             }
 
-    def is_valid(self):
+    @property
+    def valid(self):
         """ Determine if ``SNPs`` is valid.
 
         ``SNPs`` is valid when the input file has been successfully parsed.
@@ -564,7 +565,7 @@ class SNPs:
         bool
             True if ``SNPs`` is valid
         """
-        if self._snps.empty:
+        if self.snps.empty:
             return False
         else:
             return True
@@ -1435,12 +1436,12 @@ class SNPs:
                 "discrepant_genotype_rsids": pd.Index([], name="rsid"),
             }
 
-            if not snps_object.is_valid():
+            if not snps_object.valid:
                 logger.warning("No SNPs to merge...")
                 results.append(d)
                 continue
 
-            if not self.is_valid():
+            if not self.valid:
                 logger.info("Loading {}".format(snps_object.__repr__()))
 
                 init(snps_object)
@@ -1578,3 +1579,10 @@ class SNPs:
             DeprecationWarning,
         )
         return self.discrepant_merge_positions_genotypes
+
+    def is_valid(self):
+        warnings.warn(
+            "This method has been renamed to `valid` and is now a property.",
+            DeprecationWarning,
+        )
+        return self.valid

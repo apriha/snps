@@ -42,20 +42,42 @@ import io
 import logging
 import os
 import re
-import warnings
 import zipfile
 import zlib
 
 import numpy as np
 import pandas as pd
 
-from snps.utils import get_empty_snps_dataframe
-
 
 logger = logging.getLogger(__name__)
 
-# raise exception if `pd.errors.DtypeWarning` occurs
-warnings.filterwarnings("error", category=pd.errors.DtypeWarning)
+NORMALIZED_DTYPES = {
+    "rsid": object,
+    "chrom": object,
+    "pos": np.uint32,
+    "genotype": object,
+}
+
+TWO_ALLELE_DTYPES = {
+    "rsid": object,
+    "chrom": object,
+    "pos": np.uint32,
+    "allele1": object,
+    "allele2": object,
+}
+
+
+def get_empty_snps_dataframe():
+    """ Get empty dataframe normalized for usage with ``snps``.
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+    df = pd.DataFrame(columns=["rsid", "chrom", "pos", "genotype"])
+    df = df.astype(NORMALIZED_DTYPES)
+    df.set_index("rsid", inplace=True)
+    return df
 
 
 class Reader:
@@ -114,9 +136,11 @@ class Reader:
                         first_line, comments, data = self._extract_comments(
                             f, decode=True
                         )
+                    compression = "zip"
             elif ".gz" in file:
                 with gzip.open(file, "rt") as f:
                     first_line, comments, data = self._extract_comments(f)
+                compression = "gzip"
             else:
                 with open(file, "rb") as f:
                     first_line, comments, data, compression = self._handle_bytes_data(
@@ -147,12 +171,14 @@ class Reader:
             d = self.read_mapmygenome(file, compression)
         elif "lineage" in first_line or "snps" in first_line:
             d = self.read_snps_csv(file, comments, compression)
+        elif "Chromosome" in first_line:
+            d = self.read_tellmegen(file, compression)
         elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
             d = self.read_generic(file, compression)
         elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
             d = self.read_generic(file, compression, skip=0)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
-            d = self.read_vcf(file, compression, self._rsids)
+            d = self.read_vcf(file, compression, "vcf", self._rsids)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
             d = self.read_genes_for_good(file, compression)
         elif "DNA.Land" in comments:
@@ -162,7 +188,9 @@ class Reader:
         elif "SANO" in comments:
             d = self.read_sano(file)
 
-        d.update({"build": self._detect_build_from_comments(comments)})
+        # detect build from comments if build was not already detected from `read` method
+        if not d["build"]:
+            d.update({"build": self._detect_build_from_comments(comments, d["source"])})
 
         return d
 
@@ -230,15 +258,35 @@ class Reader:
             f.seek(0)
         return first_line, comments, data
 
-    def _detect_build_from_comments(self, comments):
-        if "build 37" in comments.lower():
+    def _detect_build_from_comments(self, comments, source):
+        comments = comments.lower()
+        if "build 37" in comments:
             return 37
-        elif "build 36" in comments.lower():
+        elif "build 36" in comments:
             return 36
-        elif "b37" in comments.lower():
-            return 37
-        elif "hg19" in comments.lower():
-            return 37
+
+        # allow more variations for VCF
+        if source == "vcf":
+            if "https://pypi.org/project/snps/" in comments:  # remove `snps` version
+                comments = "{}{}".format(
+                    comments[: comments.find("snps v")],
+                    comments[comments.find("https://pypi.org/project/snps/") :],
+                )
+
+            if "hg19" in comments:
+                return 37
+            elif "ncbi36" in comments:
+                return 36
+            elif "grch38" in comments:
+                return 38
+            elif "build 38" in comments:
+                return 38
+            elif "b37" in comments:
+                return 37
+            elif "hg38" in comments:
+                return 38
+            elif "b38" in comments:
+                return 38
         return 0
 
     def _handle_bytes_data(self, file, include_data=False):
@@ -269,6 +317,7 @@ class Reader:
                 )
 
         else:
+            compression = None
             file = io.BytesIO(file)
             first_line, comments, data = self._extract_comments(
                 deepcopy(file), decode=True, include_data=include_data
@@ -308,6 +357,8 @@ class Reader:
                 dataframe of parsed SNPs (empty if only detecting source)
             1 (bool), optional
                 flag indicating if SNPs are phased
+            2 (int), optional
+                detected build of SNPs
 
         Returns
         -------
@@ -320,6 +371,8 @@ class Reader:
                 detected source of SNPs
             phased (bool)
                 flag indicating if SNPs are phased
+            build (int)
+                detected build of SNPs
 
         References
         ----------
@@ -327,6 +380,7 @@ class Reader:
            978-1-491-94600-8.
         """
         phased = False
+        build = 0
 
         if self._only_detect_source:
             df = get_empty_snps_dataframe()
@@ -335,8 +389,11 @@ class Reader:
 
             if len(extra) == 1:
                 phased = extra[0]
+            elif len(extra) == 2:
+                phased = extra[0]
+                build = extra[1]
 
-        return {"snps": df, "source": source, "phased": phased}
+        return {"snps": df, "source": source, "phased": phased, "build": build}
 
     def read_23andme(self, file, compression):
         """ Read and parse 23andMe file.
@@ -363,7 +420,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 ),
             )
@@ -394,10 +451,10 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 )
-            except pd.errors.DtypeWarning:
+            except ValueError:
                 # read files with second header for concatenated data
                 if isinstance(file, io.BytesIO):
                     file.seek(0)
@@ -418,7 +475,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 )
             except OSError:
@@ -449,7 +506,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=None,  # already decompressed
                 )
 
@@ -480,7 +537,7 @@ class Reader:
                 na_values="-",
                 names=["rsid", "chrom", "pos", "allele1", "allele2"],
                 index_col=0,
-                dtype={"chrom": object},
+                dtype=TWO_ALLELE_DTYPES,
                 compression=compression,
             )
 
@@ -522,27 +579,10 @@ class Reader:
                     na_values=0,
                     names=["rsid", "chrom", "pos", "allele1", "allele2"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=TWO_ALLELE_DTYPES,
                     compression=compression,
                 )
-            except pd.errors.DtypeWarning:
-                if isinstance(file, io.BytesIO):
-                    file.seek(0)
-
-                # read files with multiple separator tabs
-                df = pd.read_csv(
-                    file,
-                    comment="#",
-                    header=0,
-                    sep="\t+",
-                    engine="python",
-                    na_values=0,
-                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
-                    index_col=0,
-                    dtype={"chrom": object},
-                    compression=compression,
-                )
-            except pd.errors.ParserError:
+            except ValueError:
                 if isinstance(file, io.BytesIO):
                     file.seek(0)
 
@@ -556,7 +596,7 @@ class Reader:
                     na_values=0,
                     names=["rsid", "chrom", "pos", "allele1", "allele2"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=TWO_ALLELE_DTYPES,
                     compression=compression,
                 )
 
@@ -595,16 +635,39 @@ class Reader:
         """
 
         def parser():
+
+            if isinstance(file, str):
+                with open(file, "rb") as f:
+                    first_line, comments, data, comrpession = self._handle_bytes_data(
+                        f.read(), include_data=True
+                    )
+            else:
+                first_line, comments, data, compression = self._handle_bytes_data(
+                    file.read(), include_data=True
+                )
+
+            file_string_in = io.StringIO(data)
+            file_string_out = io.StringIO()
+            for line in file_string_in:
+                # user the number of quotes in a line to tell old from new
+                if line.count('"') == 14:
+                    # extra-quoted new variant file
+                    # can all be stripped so pandas can read it normally
+                    line = line.replace('"', "")
+                    # take it apart and put it back together so it looks
+                    # like the older MyHeritage files
+                    line = '"' + '","'.join(line.strip().split(",")) + '"\n'
+                file_string_out.write(line)
+
             return (
                 pd.read_csv(
-                    file,
+                    io.StringIO(file_string_out.getvalue()),
                     comment="#",
                     header=0,
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object, "pos": np.int64},
-                    compression=compression,
+                    dtype=NORMALIZED_DTYPES,
                 ),
             )
 
@@ -635,7 +698,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 ),
             )
@@ -666,7 +729,13 @@ class Reader:
                 na_values="--",
                 header=0,
                 index_col=1,
-                dtype={"Chr": object},
+                dtype={
+                    "rsID": object,
+                    "Chr": object,
+                    "Position": np.uint32,
+                    "Allele1...Top": object,
+                    "Allele2...Top": object,
+                },
                 compression=compression,
             )
 
@@ -704,14 +773,14 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 ),
             )
 
         return self.read_helper("GenesForGood", parser)
 
-    def _read_gsa_helper(self, file, source, strand, na_values="--"):
+    def _read_gsa_helper(self, file, source, strand, dtypes, na_values="--"):
         def parser():
             gsa_resources = self._resources.get_gsa_resources()
 
@@ -735,7 +804,8 @@ class Reader:
                     file.read(), include_data=True
                 )
 
-            df = pd.read_csv(io.StringIO(data), sep="\t", na_values=na_values)
+            data_io = io.StringIO(data)
+            df = pd.read_csv(data_io, sep="\t", dtype=dtypes, na_values=na_values)
 
             def map_rsids(x):
                 return gsa_resources["rsid_map"].get(x)
@@ -756,13 +826,47 @@ class Reader:
             )
             df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
 
-            df = df.astype({"chrom": object, "pos": np.int64})
+            df = df.astype(NORMALIZED_DTYPES)
             df = df[["rsid", "chrom", "pos", "genotype"]]
             df.set_index(["rsid"], inplace=True)
 
             return (df,)
 
         return self.read_helper(source, parser)
+
+    def read_tellmegen(self, file, compression):
+        """ Read and parse tellmeGen files.
+
+        https://www.tellmegen.com/
+
+        Parameters
+        ----------
+        data : str
+            data string
+
+        Returns
+        -------
+        dict
+            result of `read_helper`
+        """
+
+        def parser():
+            gsa_resources = self._resources.get_gsa_resources()
+
+            df = pd.read_csv(
+                file,
+                sep="\t",
+                skiprows=1,
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype=NORMALIZED_DTYPES,
+                compression=compression,
+            )
+            df.rename(index=gsa_resources["rsid_map"], inplace=True)
+            return (df,)
+
+        return self.read_helper("tellmeGen", parser)
 
     def read_codigo46(self, file):
         """ Read and parse Codigo46 files.
@@ -779,7 +883,7 @@ class Reader:
         dict
             result of `read_helper`
         """
-        return self._read_gsa_helper(file, "Codigo46", "Plus")
+        return self._read_gsa_helper(file, "Codigo46", "Plus", {})
 
     def read_sano(self, file):
         """ Read and parse Sano Genetics files.
@@ -796,7 +900,8 @@ class Reader:
         dict
             result of `read_helper`
         """
-        return self._read_gsa_helper(file, "Sano", "Forward", na_values="-")
+        dtype = {"Chr": object, "Position": np.uint32}
+        return self._read_gsa_helper(file, "Sano", "Forward", dtype, na_values="-")
 
     def read_dnaland(self, file, compression):
         """ Read and parse DNA.land files.
@@ -823,7 +928,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 ),
             )
@@ -831,7 +936,9 @@ class Reader:
         return self.read_helper("DNA.Land", parser)
 
     def read_snps_csv(self, file, comments, compression):
-        """ Read and parse CSV file generated by `snps`.
+        """ Read and parse CSV file generated by ``snps``.
+
+        https://pypi.org/project/snps/
 
         Parameters
         ----------
@@ -842,25 +949,28 @@ class Reader:
 
         Returns
         -------
-        pandas.DataFrame
-            genetic data normalized for use with `snps`
-        str
-            name of data source(s)
+        dict
+            result of `read_helper`
         """
         source = ""
         phased = False
+        build = 0
 
-        for comment in comments.split("\n"):
-            if "Source(s):" in comment:
-                source = comment.split("Source(s):")[1].strip()
-                break
-
-        for comment in comments.split("\n"):
-            if "Phased:" in comment:
-                phased_str = comment.split("Phased:")[1].strip()
-                if phased_str == "True":
+        comment_lines = comments.split("\n")
+        for comment1 in comment_lines:
+            if "Source(s):" in comment1:
+                source = comment1.split("Source(s):")[1].strip()
+            elif "Phased:" in comment1:
+                if comment1.split("Phased:")[1].strip() == "True":
                     phased = True
-                break
+            elif "Build:" in comment1:
+                temp = int(comment1.split("Build:")[1].strip())
+                for comment2 in comment_lines:
+                    if "Build Detected:" in comment2:
+                        # only assign build if it was detected
+                        if comment2.split("Build Detected:")[1].strip() == "True":
+                            build = temp
+                        break
 
         def parser():
             def parse_csv(sep):
@@ -872,7 +982,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object, "pos": np.int64},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 )
 
@@ -882,7 +992,7 @@ class Reader:
                 if isinstance(file, io.BufferedIOBase):
                     file.seek(0)
 
-                return (parse_csv("\t"), phased)
+                return (parse_csv("\t"), phased, build)
 
         return self.read_helper(source, parser)
 
@@ -920,7 +1030,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object, "pos": np.int64},
+                    dtype=NORMALIZED_DTYPES,
                     compression=compression,
                 )
 
@@ -945,14 +1055,14 @@ class Reader:
                         names=["rsid", "chrom", "pos", "genotype"],
                         usecols=[0, 1, 2, 3],
                         index_col=0,
-                        dtype={"chrom": object, "pos": np.int64},
+                        dtype=NORMALIZED_DTYPES,
                         compression=compression,
                     )
             return (df,)
 
         return self.read_helper("generic", parser)
 
-    def read_vcf(self, file, compression, rsids=()):
+    def read_vcf(self, file, compression, provider, rsids=()):
         """ Read and parse VCF file.
 
         Notes
@@ -990,7 +1100,7 @@ class Reader:
 
             return (df, phased)
 
-        return self.read_helper("vcf", parser)
+        return self.read_helper(provider, parser)
 
     def _parse_vcf(self, buffer, rsids):
         rows = []
@@ -1032,29 +1142,35 @@ class Reader:
                 if len(alt.split(",")) > 1 and alt.split(",")[1] == "<NON_REF>":
                     alt = alt.split(",")[0]
 
-                zygote = line_split[9]
-                zygote = zygote.split(":")[0]
-
                 ref_alt = [ref] + alt.split(",")
 
                 # skip insertions and deletions
                 if sum(map(len, ref_alt)) > len(ref_alt):
                     continue
 
-                zygote1, zygote2 = zygote.replace("|", " ").replace("/", " ").split(" ")
-                if zygote1 == "." or zygote2 == ".":
-                    # assign null genotypes if either allele is None
-                    genotype = np.nan
-                elif (zygote1 == "0" or zygote2 == "0") and ref == ".":
-                    # sample allele specifies REF allele, which is None
-                    genotype = np.nan
-                elif (zygote1 == "1" or zygote2 == "1") and alt == ".":
-                    # sample allele specifies ALT allele, which is None
-                    genotype = np.nan
-                else:
-                    # Could capture full genotype, if REF is None, but genotype is 1/1 or
-                    # if ALT is None, but genotype is 0/0
-                    genotype = ref_alt[int(zygote1)] + ref_alt[int(zygote2)]
+                # GT (genotype) is usually the first sample-specific field
+                # | = diploid phased
+                # / = diploid unphased
+                # or haploid e.g. male sex chromosome
+                genotype = ""
+                zygote = line_split[9]
+                zygote = zygote.split(":")[0]
+                for z in zygote.replace("|", "/").split("/"):
+                    if z == ".":
+                        # missing genotype
+                        genotype = np.nan
+                        break
+                    z = int(z)
+                    if z > len(ref_alt):
+                        # invalid genotype number
+                        genotype = np.nan
+                        break
+                    elif ref_alt[z] == ".":
+                        # missing genotype in ref or alt
+                        genotype = np.nan
+                        break
+                    else:
+                        genotype = genotype + ref_alt[z]
 
                 if "/" in zygote and pd.notna(genotype):
                     phased = False
@@ -1071,9 +1187,7 @@ class Reader:
                 phased = False
 
             df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
-            df = df.astype(
-                {"rsid": object, "chrom": object, "pos": np.int64, "genotype": object}
-            )
+            df = df.astype(NORMALIZED_DTYPES)
 
             df.set_index("rsid", inplace=True, drop=True)
 

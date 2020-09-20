@@ -76,7 +76,7 @@ class Writer:
         if self._vcf:
             return self._write_vcf()
         else:
-            return self._write_csv()
+            return (self._write_csv(),)
 
     @classmethod
     def write_file(cls, snps=None, filename="", vcf=False, atomic=True, **kwargs):
@@ -99,6 +99,8 @@ class Writer:
         -------
         str
             path to file in output directory if SNPs were saved, else empty str
+        discrepant_vcf_position : pd.DataFrame
+            SNPs with discrepant positions discovered while saving VCF
         """
         w = cls(snps=snps, filename=filename, vcf=vcf, atomic=atomic, **kwargs)
         return w()
@@ -113,20 +115,27 @@ class Writer:
         """
         filename = self._filename
         if not filename:
+            ext = ".txt"
+
+            if "sep" in self._kwargs and self._kwargs["sep"] == ",":
+                ext = ".csv"
+
             filename = "{}_{}{}".format(
-                clean_str(self._snps._source), self._snps.assembly, ".csv"
+                clean_str(self._snps.source), self._snps.assembly, ext
             )
 
         comment = (
             "# Source(s): {}\n"
-            "# Assembly: {}\n"
+            "# Build: {}\n"
+            "# Build Detected: {}\n"
             "# Phased: {}\n"
             "# SNPs: {}\n"
             "# Chromosomes: {}\n".format(
                 self._snps.source,
-                self._snps.assembly,
+                self._snps.build,
+                self._snps.build_detected,
                 self._snps.phased,
-                self._snps.snp_count,
+                self._snps.count,
                 self._snps.chromosomes_summary,
             )
         )
@@ -158,11 +167,13 @@ class Writer:
         -------
         str
             path to file in output directory if SNPs were saved, else empty str
+        discrepant_vcf_position : pd.DataFrame
+            SNPs with discrepant positions discovered while saving VCF
         """
         filename = self._filename
         if not filename:
             filename = "{}_{}{}".format(
-                clean_str(self._snps._source), self._snps.assembly, ".vcf"
+                clean_str(self._snps.source), self._snps.assembly, ".vcf"
             )
 
         comment = (
@@ -170,7 +181,7 @@ class Writer:
             "##fileDate={}\n"
             '##source="{}; snps v{}; https://pypi.org/project/snps/"\n'.format(
                 datetime.datetime.utcnow().strftime("%Y%m%d"),
-                self._snps._source,
+                self._snps.source,
                 snps.__version__,
             )
         )
@@ -244,26 +255,32 @@ class Writer:
 
         contigs = []
         vcf = [pd.DataFrame()]
+        discrepant_vcf_position = [pd.DataFrame()]
         for result in list(results):
             contigs.append(result["contig"])
             vcf.append(result["vcf"])
+            discrepant_vcf_position.append(result["discrepant_vcf_position"])
 
         vcf = pd.concat(vcf)
+        discrepant_vcf_position = pd.concat(discrepant_vcf_position)
 
         comment += "".join(contigs)
         comment += '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n'
         comment += "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE\n"
 
-        return save_df_as_csv(
-            vcf,
-            self._snps._output_dir,
-            filename,
-            comment=comment,
-            prepend_info=False,
-            header=False,
-            index=False,
-            na_rep=".",
-            sep="\t",
+        return (
+            save_df_as_csv(
+                vcf,
+                self._snps._output_dir,
+                filename,
+                comment=comment,
+                prepend_info=False,
+                header=False,
+                index=False,
+                na_rep=".",
+                sep="\t",
+            ),
+            discrepant_vcf_position,
         )
 
     def _create_vcf_representation(self, task):
@@ -273,7 +290,11 @@ class Writer:
         snps = task["snps"]
 
         if len(snps.loc[snps["genotype"].notnull()]) == 0:
-            return {"contig": "", "vcf": pd.DataFrame()}
+            return {
+                "contig": "",
+                "vcf": pd.DataFrame(),
+                "discrepant_vcf_position": pd.DataFrame(),
+            }
 
         seqs = resources.get_reference_sequences(assembly, [chrom])
         seq = seqs[chrom]
@@ -301,11 +322,11 @@ class Writer:
         df = df.astype(
             {
                 "CHROM": object,
-                "POS": np.int64,
+                "POS": np.uint32,
                 "ID": object,
                 "REF": object,
                 "ALT": object,
-                "QUAL": np.int64,
+                "QUAL": np.float32,
                 "FILTER": object,
                 "INFO": object,
                 "FORMAT": object,
@@ -317,8 +338,14 @@ class Writer:
         df["POS"] = snps["pos"]
         df["ID"] = snps["rsid"]
 
+        # drop SNPs with discrepant positions (outside reference sequence)
+        discrepant_vcf_position = snps.loc[
+            (snps.pos - seq.start < 0) | (snps.pos - seq.start > seq.length - 1)
+        ]
+        df.drop(discrepant_vcf_position.index, inplace=True)
+
         # https://stackoverflow.com/a/24838429
-        df["REF"] = list(map(chr, seq.sequence[snps.pos - seq.start]))
+        df["REF"] = list(map(chr, seq.sequence[df.POS - seq.start]))
 
         df["FORMAT"] = "GT"
 
@@ -343,7 +370,11 @@ class Writer:
 
         del df["genotype"]
 
-        return {"contig": contig, "vcf": df}
+        return {
+            "contig": contig,
+            "vcf": df,
+            "discrepant_vcf_position": discrepant_vcf_position,
+        }
 
     def _compute_alt(self, ref, genotype):
         genotype_alleles = list(set(genotype))
@@ -355,6 +386,7 @@ class Writer:
                 genotype_alleles.remove(ref)
                 return genotype_alleles.pop(0)
         else:
+            genotype_alleles.sort()
             return ",".join(genotype_alleles)
 
     def _compute_genotype(self, ref, alt, genotype):

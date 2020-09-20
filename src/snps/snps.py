@@ -1477,40 +1477,33 @@ class SNPs:
         return results
 
     def sort_snps(self):
-        """ Deprecated. This method has been renamed to `sort`. """
         warnings.warn("This method has been renamed to `sort`.", DeprecationWarning)
         self.sort()
 
     def remap_snps(self, target_assembly, complement_bases=True):
-        """ Deprecated. This method has been renamed to `remap`. """
         warnings.warn("This method has been renamed to `remap`.", DeprecationWarning)
         return self.remap(target_assembly, complement_bases)
 
     def save_snps(self, filename="", vcf=False, atomic=True, **kwargs):
-        """ Deprecated. This method has been renamed to `save`. """
         warnings.warn("This method has been renamed to `save`.", DeprecationWarning)
         return self.save(filename, vcf, atomic, **kwargs)
 
     @property
     def snp_count(self):
-        """ Deprecated. This property has been renamed to `count`. """
         warnings.warn("This property has been renamed to `count`.", DeprecationWarning)
         return self.count
 
     def get_snp_count(self, chrom=""):
-        """ Deprecated. This method has been renamed to `get_count`. """
         warnings.warn(
             "This method has been renamed to `get_count`.", DeprecationWarning
         )
         return self.get_count(chrom)
 
     def not_null_snps(self, chrom=""):
-        """ Deprecated. This method has been renamed to `notnull`. """
         warnings.warn("This method has been renamed to `notnull`.", DeprecationWarning)
         return self.notnull(chrom)
 
     def get_summary(self):
-        """ Deprecated. This method has been renamed to `summary` and is now a property. """
         warnings.warn(
             "This method has been renamed to `summary` and is now a property.",
             DeprecationWarning,
@@ -1518,23 +1511,19 @@ class SNPs:
         return self.summary
 
     def get_assembly(self):
-        """ Deprecated. See the `assembly` property. """
         warnings.warn("See the `assembly` property.", DeprecationWarning)
         return self.assembly
 
     def get_chromosomes(self):
-        """ Deprecated. See the `chromosomes` property. """
         warnings.warn("See the `chromosomes` property.", DeprecationWarning)
         return self.chromosomes
 
     def get_chromosomes_summary(self):
-        """ Deprecated. See the `chromosomes_summary` property. """
         warnings.warn("See the `chromosomes_summary` property.", DeprecationWarning)
         return self.chromosomes_summary
 
     @property
     def duplicate_snps(self):
-        """ Deprecated. This property has been renamed to `duplicate`. """
         warnings.warn(
             "This property has been renamed to `duplicate`.", DeprecationWarning
         )
@@ -1542,7 +1531,6 @@ class SNPs:
 
     @property
     def discrepant_XY_snps(self):
-        """ Deprecated. This property has been renamed to `discrepant_XY`. """
         warnings.warn(
             "This property has been renamed to `discrepant_XY`.", DeprecationWarning
         )
@@ -1550,21 +1538,18 @@ class SNPs:
 
     @property
     def heterozygous_MT_snps(self):
-        """ Deprecated. This property has been renamed to `heterozygous_MT`. """
         warnings.warn(
             "This property has been renamed to `heterozygous_MT`.", DeprecationWarning
         )
         return self.heterozygous_MT
 
     def heterozygous_snps(self, chrom=""):
-        """ Deprecated. This method has been renamed to `heterozygous`. """
         warnings.warn(
             "This method has been renamed to `heterozygous`.", DeprecationWarning
         )
         return self.heterozygous(chrom)
 
     def homozygous_snps(self, chrom=""):
-        """ Deprecated. This method has been renamed to `homozygous`. """
         warnings.warn(
             "This method has been renamed to `homozygous`.", DeprecationWarning
         )
@@ -1572,7 +1557,6 @@ class SNPs:
 
     @property
     def discrepant_positions(self):
-        """ Deprecated. This property has been renamed to `discrepant_merge_positions`. """
         warnings.warn(
             "This property has been renamed to `discrepant_merge_positions`.",
             DeprecationWarning,
@@ -1581,7 +1565,6 @@ class SNPs:
 
     @property
     def discrepant_genotypes(self):
-        """ Deprecated. This property has been renamed to `discrepant_merge_genotypes`. """
         warnings.warn(
             "This property has been renamed to `discrepant_merge_genotypes`.",
             DeprecationWarning,
@@ -1590,8 +1573,6 @@ class SNPs:
 
     @property
     def discrepant_snps(self):
-        """ Deprecated. This property has been renamed to
-        `discrepant_merge_positions_genotypes`. """
         warnings.warn(
             "This property has been renamed to `discrepant_merge_positions_genotypes`.",
             DeprecationWarning,

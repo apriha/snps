@@ -100,8 +100,9 @@ Load a `23andMe <https://www.23andme.com>`_ raw data file:
 991786
 
 The ``SNPs`` class accepts a path to a file or a bytes object. A ``Reader`` class attempts to
-infer the data source and load the SNPs. The loaded SNPs are normalized and available via a
-``pandas.DataFrame``:
+infer the data source and load the SNPs. The loaded SNPs are
+`normalized <https://snps.readthedocs.io/en/latest/snps.html#snps.snps.SNPs.snps>`_ and
+available via a ``pandas.DataFrame``:
 
 >>> df = s.snps
 >>> df.columns.values

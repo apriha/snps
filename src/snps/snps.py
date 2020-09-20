@@ -1,4 +1,4 @@
-""" `SNPs` reads, writes, merges, and remaps genotype / raw data files.
+""" ``SNPs`` reads, writes, merges, and remaps genotype / raw data files.
 
 """
 
@@ -83,11 +83,12 @@ class SNPs:
         resources_dir : str
             name / path of resources directory
         deduplicate : bool
-            deduplicate RSIDs and make SNPs available as `duplicate`
+            deduplicate RSIDs and make SNPs available as `SNPs.duplicate`
         deduplicate_XY_chrom : bool
-            deduplicate alleles in the non-PAR regions of X and Y for males; see `discrepant_XY`
+            deduplicate alleles in the non-PAR regions of X and Y for males; see
+            `SNPs.discrepant_XY`
         deduplicate_MT_chrom : bool
-            deduplicate alleles on MT; see `heterozygous_MT`
+            deduplicate alleles on MT; see `SNPs.heterozygous_MT`
         parallelize : bool
             utilize multiprocessing to speedup calculations
         processes : int
@@ -168,29 +169,49 @@ class SNPs:
 
     @property
     def source(self):
-        """ Summary of the SNP data source(s) for ``SNPs``.
+        """ Summary of the SNP data source(s).
 
         Returns
         -------
         str
-            Data source(s) for this `SNPs` object, separated by ", ".
+            Data source(s) for this ``SNPs`` object, separated by ", ".
         """
         return ", ".join(self._source)
 
     @property
     def snps(self):
-        """ Get SNPs.
+        """ Normalized SNPs.
+
+        Notes
+        -----
+        Throughout ``snps``, the "normalized ``snps`` dataframe" is defined as follows:
+
+        =============  ===================================  ===============
+        Column         Description                          `pandas` dtype
+        =============  ===================================  ===============
+        rsid [*]_      SNP ID                               object (string)
+        chrom          Chromosome of SNP                    object (string)
+        pos            Position of SNP (relative to build)  uint32
+        genotype [*]_  Genotype of SNP                      object (string)
+        =============  ===================================  ===============
+
+        .. [*] Dataframe index
+        .. [*] Genotype can be null, length 1, or length 2. Specifically, genotype is null if not
+          called or unavailable. Otherwise, for autosomal chromosomes, genotype is two alleles.
+          For the X and Y chromosomes, male genotypes are one allele in the non-PAR regions
+          (assuming `deduplicate_XY_chrom`). For the MT chromosome, genotypes are one allele
+          (assuming `deduplicate_MT_chrom`).
 
         Returns
         -------
         pandas.DataFrame
-            normalized `snps` dataframe
+            normalized ``snps`` dataframe
         """
         return self._snps
 
     @property
     def duplicate(self):
-        """ Get any duplicate SNPs.
+        """ Duplicate SNPs.
 
         A duplicate SNP has the same RSID as another SNP. The first occurrence
         of the RSID is not considered a duplicate SNP.
@@ -198,13 +219,13 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
-            normalized `snps` dataframe
+            normalized ``snps`` dataframe
         """
         return self._duplicate
 
     @property
     def discrepant_XY(self):
-        """ Get any discrepant XY SNPs.
+        """ Discrepant XY SNPs.
 
         A discrepant XY SNP is a heterozygous SNP in the non-PAR region of the X
         or Y chromosome found during deduplication for a detected male genotype.
@@ -212,20 +233,18 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
-            normalized `snps` dataframe
+            normalized ``snps`` dataframe
         """
         return self._discrepant_XY
 
     @property
     def heterozygous_MT(self):
-        """ Get any heterozygous MT SNPs.
-
-        Heterozygous SNPs on the MT chromosome found during deduplication.
+        """ Heterozygous SNPs on the MT chromosome found during deduplication.
 
         Returns
         -------
         pandas.DataFrame
-            normalized `snps` dataframe
+            normalized ``snps`` dataframe
         """
         return self._heterozygous_MT
 
@@ -236,7 +255,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
-            normalized `snps` dataframe
+            normalized ``snps`` dataframe
         """
         return self._discrepant_vcf_position
 
@@ -324,7 +343,7 @@ class SNPs:
 
     @property
     def build(self):
-        """ Get the build of ``SNPs``.
+        """ Build of SNPs.
 
         Returns
         -------
@@ -334,7 +353,7 @@ class SNPs:
 
     @property
     def build_detected(self):
-        """ Get status indicating if build of ``SNPs`` was detected.
+        """ Status indicating if build of SNPs was detected.
 
         Returns
         -------
@@ -344,7 +363,7 @@ class SNPs:
 
     @property
     def assembly(self):
-        """ Get the assembly of ``SNPs``.
+        """ Assembly of SNPs.
 
         Returns
         -------
@@ -371,7 +390,7 @@ class SNPs:
 
     @property
     def chromosomes(self):
-        """ Chromosomes of ``SNPs``.
+        """ Chromosomes of SNPs.
 
         Returns
         -------
@@ -385,7 +404,7 @@ class SNPs:
 
     @property
     def chromosomes_summary(self):
-        """ Summary of the chromosomes of ``SNPs``.
+        """ Summary of the chromosomes of SNPs.
 
         Returns
         -------
@@ -422,7 +441,7 @@ class SNPs:
 
     @property
     def sex(self):
-        """ Sex derived from ``SNPs``.
+        """ Sex derived from SNPs.
 
         Returns
         -------
@@ -468,7 +487,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
-            normalized `snps` dataframe
+            normalized ``snps`` dataframe
         """
         if chrom:
             return self._snps.loc[
@@ -495,7 +514,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
-            normalized `snps` dataframe
+            normalized ``snps`` dataframe
         """
         if chrom:
             return self._snps.loc[
@@ -522,7 +541,7 @@ class SNPs:
         Returns
         -------
         pandas.DataFrame
-            normalized `snps` dataframe
+            normalized ``snps`` dataframe
         """
 
         if chrom:
@@ -534,7 +553,7 @@ class SNPs:
 
     @property
     def summary(self):
-        """ Summary of ``SNPs``.
+        """ Summary of SNPs.
 
         Returns
         -------
@@ -697,13 +716,13 @@ class SNPs:
 
         Notes
         -----
-        rs3094315 : plus strand in 36, 37, and 38
-        rs11928389 : plus strand in 36, minus strand in 37 and 38
-        rs2500347 : plus strand in 36 and 37, minus strand in 38
-        rs964481 : plus strand in 36, 37, and 38
-        rs2341354 : plus strand in 36, 37, and 38
-        rs3850290 : plus strand in 36, 37, and 38
-        rs1329546 : plus strand in 36, 37, and 38
+        * rs3094315 : plus strand in 36, 37, and 38
+        * rs11928389 : plus strand in 36, minus strand in 37 and 38
+        * rs2500347 : plus strand in 36 and 37, minus strand in 38
+        * rs964481 : plus strand in 36, 37, and 38
+        * rs2341354 : plus strand in 36, 37, and 38
+        * rs3850290 : plus strand in 36, 37, and 38
+        * rs1329546 : plus strand in 36, 37, and 38
 
         Returns
         -------
@@ -1249,12 +1268,12 @@ class SNPs:
         discrepant_genotypes_threshold=500,
         remap=True,
     ):
-        """ Merge other `SNPs` objects into this `SNPs` object.
+        """ Merge other ``SNPs`` objects into this ``SNPs`` object.
 
         Parameters
         ----------
-        snps_objects : list or tuple of `SNPs`
-            other `SNPs` objects to merge into this `SNPs` object
+        snps_objects : list or tuple of ``SNPs``
+            other ``SNPs`` objects to merge into this ``SNPs`` object
         discrepant_positions_threshold : int
             threshold for discrepant SNP positions between existing data and data to be loaded;
             a large value could indicate mismatched genome assemblies
@@ -1262,16 +1281,16 @@ class SNPs:
             threshold for discrepant genotype data between existing data and data to be loaded;
             a large value could indicated mismatched individuals
         remap : bool
-            if necessary, remap other `SNPs` objects to have the same build as this `SNPs` object
+            if necessary, remap other ``SNPs`` objects to have the same build as this ``SNPs`` object
             before merging
 
         Returns
         -------
         list of dict
-            for each `SNPs` object to merge, a dict with the following items:
+            for each ``SNPs`` object to merge, a dict with the following items:
 
             merged (bool)
-                whether `SNPs` object was merged
+                whether ``SNPs`` object was merged
             common_rsids (pandas.Index)
                 SNPs in common
             discrepant_position_rsids (pandas.Index)
@@ -1328,7 +1347,7 @@ class SNPs:
             self._source.extend(s._source)
 
         def merge_dfs(s):
-            # append dataframes created when a `SNPs` object is instantiated
+            # append dataframes created when a ``SNPs`` object is instantiated
             self._duplicate = self.duplicate.append(s.duplicate)
             self._discrepant_XY = self.discrepant_XY.append(s.discrepant_XY)
             self._heterozygous_MT = self.heterozygous_MT.append(s.heterozygous_MT)

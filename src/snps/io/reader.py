@@ -981,22 +981,14 @@ class Reader:
             dtype["Allele1 - Plus"] = object
             dtype["Allele2 - Plus"] = object
             return self._read_gsa_helper(
-                data_or_filename,
-                source,
-                "Plus",
-                dtype,
-                na_values="-",
+                data_or_filename, source, "Plus", dtype, na_values="-",
             )
         elif "Allele1 - Forward" in headers:
             # fall back to FORWARD (relative to dbSNP which might not be forward relative to reference)
             dtype["Allele1 - Forward"] = object
             dtype["Allele2 - Forward"] = object
             return self._read_gsa_helper(
-                data_or_filename,
-                source,
-                "Forward",
-                dtype,
-                na_values="-",
+                data_or_filename, source, "Forward", dtype, na_values="-",
             )
         else:
             raise ValueError("Unable to determine header columns to read")

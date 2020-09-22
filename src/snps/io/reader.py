@@ -133,9 +133,6 @@ class Reader:
         else:
             return d
 
-        print(first_line)
-        print(data)
-
         if "23andMe" in first_line:
             d = self.read_23andme(file, compression)
         elif "Ancestry" in first_line:
@@ -931,7 +928,6 @@ class Reader:
         def peek_headers(f):
             is_header = False
             for line in f:
-                print(line[0:6], "!")
                 if is_header:
                     return line
                 elif line[0:6] == "[Data]":

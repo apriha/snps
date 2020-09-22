@@ -62,7 +62,7 @@ class Reader:
     """ Class for reading and parsing raw data / genotype files. """
 
     def __init__(self, file="", only_detect_source=False, resources=None, rsids=()):
-        """ Initialize a `Reader`.
+        """Initialize a `Reader`.
 
         Parameters
         ----------
@@ -82,7 +82,7 @@ class Reader:
         self._rsids = frozenset(rsids)
 
     def __call__(self):
-        """ Read and parse a raw data / genotype file.
+        """Read and parse a raw data / genotype file.
 
         Returns
         -------
@@ -182,7 +182,7 @@ class Reader:
 
     @classmethod
     def read_file(cls, file, only_detect_source, resources, rsids):
-        """ Read `file`.
+        """Read `file`.
 
         Parameters
         ----------
@@ -325,7 +325,7 @@ class Reader:
             return f.readline()
 
     def read_helper(self, source, parser):
-        """ Generic method to help read files.
+        """Generic method to help read files.
 
         Parameters
         ----------
@@ -368,7 +368,7 @@ class Reader:
         return {"snps": df, "source": source, "phased": phased}
 
     def read_23andme(self, file, compression):
-        """ Read and parse 23andMe file.
+        """Read and parse 23andMe file.
 
         https://www.23andme.com
 
@@ -487,7 +487,7 @@ class Reader:
         return self.read_helper("FTDNA", parser)
 
     def read_ftdna_famfinder(self, file, compression):
-        """ Read and parse Family Tree DNA (FTDNA) "famfinder" file.
+        """Read and parse Family Tree DNA (FTDNA) "famfinder" file.
 
         https://www.familytreedna.com
 
@@ -526,7 +526,7 @@ class Reader:
         return self.read_helper("FTDNA", parser)
 
     def read_ancestry(self, file, compression):
-        """ Read and parse Ancestry.com file.
+        """Read and parse Ancestry.com file.
 
         http://www.ancestry.com
 
@@ -608,7 +608,7 @@ class Reader:
         return self.read_helper("AncestryDNA", parser)
 
     def read_myheritage(self, file, compression):
-        """ Read and parse MyHeritage file.
+        """Read and parse MyHeritage file.
 
         https://www.myheritage.com
 
@@ -668,7 +668,7 @@ class Reader:
         return self.read_helper("MyHeritage", parser)
 
     def read_livingdna(self, file, compression):
-        """ Read and parse LivingDNA file.
+        """Read and parse LivingDNA file.
 
         https://livingdna.com/
 
@@ -700,7 +700,7 @@ class Reader:
         return self.read_helper("LivingDNA", parser)
 
     def read_mapmygenome(self, file, compression):
-        """ Read and parse Mapmygenome file.
+        """Read and parse Mapmygenome file.
 
         https://mapmygenome.in
 
@@ -738,7 +738,7 @@ class Reader:
         return self.read_helper("Mapmygenome", parser)
 
     def read_genes_for_good(self, file, compression):
-        """ Read and parse Genes For Good file.
+        """Read and parse Genes For Good file.
 
         https://genesforgood.sph.umich.edu/readme/readme1.2.txt
 
@@ -867,7 +867,7 @@ class Reader:
         return self.read_helper(source, parser)
 
     def read_tellmegen(self, file, compression):
-        """ Read and parse tellmeGen files.
+        """Read and parse tellmeGen files.
 
         https://www.tellmegen.com/
 
@@ -904,7 +904,7 @@ class Reader:
         return self.read_helper("tellmeGen", parser)
 
     def read_gsa(self, data_or_filename, compresion, comments):
-        """ Read and parse Illumina Global Screening Array files
+        """Read and parse Illumina Global Screening Array files
 
 
         Parameters
@@ -917,7 +917,7 @@ class Reader:
         dict
             result of `read_helper`
         """
-        
+
         # pick the source
         # ideally we want something more specific than GSA
         if "SANO" in comments:
@@ -931,7 +931,7 @@ class Reader:
         def peek_headers(f):
             is_header = False
             for line in f:
-                print(line[0:6],"!")
+                print(line[0:6], "!")
                 if is_header:
                     return line
                 elif line[0:6] == "[Data]":
@@ -984,17 +984,29 @@ class Reader:
             # prefer PLUS strand if possible
             dtype["Allele1 - Plus"] = object
             dtype["Allele2 - Plus"] = object
-            print("Plus")
-            return self._read_gsa_helper(data_or_filename, source, "Plus", dtype, na_values="-",)
+            return self._read_gsa_helper(
+                data_or_filename,
+                source,
+                "Plus",
+                dtype,
+                na_values="-",
+            )
         elif "Allele1 - Forward" in headers:
             # fall back to FORWARD (relative to dbSNP which might not be forward relative to reference)
             dtype["Allele1 - Forward"] = object
             dtype["Allele2 - Forward"] = object
-            print("Forward")
-            return self._read_gsa_helper(data_or_filename, source, "Forward", dtype, na_values="-",)
+            return self._read_gsa_helper(
+                data_or_filename,
+                source,
+                "Forward",
+                dtype,
+                na_values="-",
+            )
+        else:
+            raise ValueError("Unable to determine header columns to read")
 
     def read_dnaland(self, file, compression):
-        """ Read and parse DNA.land files.
+        """Read and parse DNA.land files.
 
         https://dna.land/
 
@@ -1026,7 +1038,7 @@ class Reader:
         return self.read_helper("DNA.Land", parser)
 
     def read_snps_csv(self, file, comments, compression):
-        """ Read and parse CSV file generated by `snps`.
+        """Read and parse CSV file generated by `snps`.
 
         Parameters
         ----------
@@ -1082,7 +1094,7 @@ class Reader:
         return self.read_helper(source, parser)
 
     def read_generic(self, file, compression, skip=1):
-        """ Read and parse generic CSV or TSV file.
+        """Read and parse generic CSV or TSV file.
 
         Notes
         -----
@@ -1148,7 +1160,7 @@ class Reader:
         return self.read_helper("generic", parser)
 
     def read_vcf(self, file, compression, provider, rsids=()):
-        """ Read and parse VCF file.
+        """Read and parse VCF file.
 
         Notes
         -----

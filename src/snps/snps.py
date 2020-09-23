@@ -66,7 +66,7 @@ class SNPs:
         processes=os.cpu_count(),
         rsids=(),
     ):
-        """ Object used to read, write, and remap genotype / raw data files.
+        """Object used to read, write, and remap genotype / raw data files.
 
         Parameters
         ----------
@@ -152,7 +152,7 @@ class SNPs:
 
     @property
     def source(self):
-        """ Summary of the SNP data source for ``SNPs``.
+        """Summary of the SNP data source for ``SNPs``.
 
         Returns
         -------
@@ -162,7 +162,7 @@ class SNPs:
 
     @property
     def snps(self):
-        """ Get a copy of SNPs.
+        """Get a copy of SNPs.
 
         Returns
         -------
@@ -172,7 +172,7 @@ class SNPs:
 
     @property
     def duplicate_snps(self):
-        """ Get any duplicate SNPs.
+        """Get any duplicate SNPs.
 
         A duplicate SNP has the same RSID as another SNP. The first occurrence
         of the RSID is not considered a duplicate SNP.
@@ -185,7 +185,7 @@ class SNPs:
 
     @property
     def discrepant_XY_snps(self):
-        """ Get any discrepant XY SNPs.
+        """Get any discrepant XY SNPs.
 
         A discrepant XY SNP is a heterozygous SNP in the non-PAR region of the X
         or Y chromosome found during deduplication for a detected male genotype.
@@ -198,7 +198,7 @@ class SNPs:
 
     @property
     def build(self):
-        """ Get the build of ``SNPs``.
+        """Get the build of ``SNPs``.
 
         Returns
         -------
@@ -208,7 +208,7 @@ class SNPs:
 
     @property
     def build_detected(self):
-        """ Get status indicating if build of ``SNPs`` was detected.
+        """Get status indicating if build of ``SNPs`` was detected.
 
         Returns
         -------
@@ -218,7 +218,7 @@ class SNPs:
 
     @property
     def assembly(self):
-        """ Get the assembly of ``SNPs``.
+        """Get the assembly of ``SNPs``.
 
         Returns
         -------
@@ -228,7 +228,7 @@ class SNPs:
 
     @property
     def snp_count(self):
-        """ Count of SNPs.
+        """Count of SNPs.
 
         Returns
         -------
@@ -238,7 +238,7 @@ class SNPs:
 
     @property
     def chromosomes(self):
-        """ Chromosomes of ``SNPs``.
+        """Chromosomes of ``SNPs``.
 
         Returns
         -------
@@ -249,7 +249,7 @@ class SNPs:
 
     @property
     def chromosomes_summary(self):
-        """ Summary of the chromosomes of ``SNPs``.
+        """Summary of the chromosomes of ``SNPs``.
 
         Returns
         -------
@@ -260,7 +260,7 @@ class SNPs:
 
     @property
     def sex(self):
-        """ Sex derived from ``SNPs``.
+        """Sex derived from ``SNPs``.
 
         Returns
         -------
@@ -274,7 +274,7 @@ class SNPs:
 
     @property
     def unannotated_vcf(self):
-        """ Indicates if VCF file is unannotated.
+        """Indicates if VCF file is unannotated.
 
         Returns
         -------
@@ -287,7 +287,7 @@ class SNPs:
 
     @property
     def phased(self):
-        """ Indicates if genotype is phased.
+        """Indicates if genotype is phased.
 
         Returns
         -------
@@ -296,7 +296,7 @@ class SNPs:
         return self._phased
 
     def heterozygous_snps(self, chrom=""):
-        """ Get heterozygous SNPs.
+        """Get heterozygous SNPs.
 
         Parameters
         ----------
@@ -322,7 +322,7 @@ class SNPs:
             ]
 
     def not_null_snps(self, chrom=""):
-        """ Get not null SNPs.
+        """Get not null SNPs.
 
         Parameters
         ----------
@@ -342,7 +342,7 @@ class SNPs:
             return self._snps.loc[self._snps.genotype.notnull()]
 
     def get_summary(self):
-        """ Get summary of ``SNPs``.
+        """Get summary of ``SNPs``.
 
         Returns
         -------
@@ -363,7 +363,7 @@ class SNPs:
             }
 
     def is_valid(self):
-        """ Determine if ``SNPs`` is valid.
+        """Determine if ``SNPs`` is valid.
 
         ``SNPs`` is valid when the input file has been successfully parsed.
 
@@ -378,7 +378,7 @@ class SNPs:
             return True
 
     def save_snps(self, filename="", vcf=False, atomic=True, **kwargs):
-        """ Save SNPs to file.
+        """Save SNPs to file.
 
         Parameters
         ----------
@@ -404,7 +404,7 @@ class SNPs:
         return Reader.read_file(file, only_detect_source, self._resources, rsids)
 
     def _assign_par_snps(self):
-        """ Assign PAR SNPs to the X or Y chromosome using SNP position.
+        """Assign PAR SNPs to the X or Y chromosome using SNP position.
 
         References
         -----
@@ -478,7 +478,7 @@ class SNPs:
         return int(assembly_name[-2:])
 
     def detect_build(self):
-        """ Detect build of SNPs.
+        """Detect build of SNPs.
 
         Use the coordinates of common SNPs to identify the build / assembly of a genotype file
         that is being loaded.
@@ -574,7 +574,7 @@ class SNPs:
         return build
 
     def get_assembly(self):
-        """ Get the assembly of a build.
+        """Get the assembly of a build.
 
         Returns
         -------
@@ -591,7 +591,7 @@ class SNPs:
             return ""
 
     def get_snp_count(self, chrom=""):
-        """ Count of SNPs.
+        """Count of SNPs.
 
         Parameters
         ----------
@@ -608,7 +608,7 @@ class SNPs:
             return len(self._snps)
 
     def get_chromosomes(self):
-        """ Get the chromosomes of SNPs.
+        """Get the chromosomes of SNPs.
 
         Returns
         -------
@@ -622,7 +622,7 @@ class SNPs:
             return []
 
     def get_chromosomes_summary(self):
-        """ Summary of the chromosomes of SNPs.
+        """Summary of the chromosomes of SNPs.
 
         Returns
         -------
@@ -664,7 +664,7 @@ class SNPs:
         y_snps_not_null_threshold=0.3,
         chrom="X",
     ):
-        """ Determine sex from SNPs using thresholds.
+        """Determine sex from SNPs using thresholds.
 
         Parameters
         ----------
@@ -778,7 +778,7 @@ class SNPs:
 
     @staticmethod
     def get_par_regions(build):
-        """ Get PAR regions for the X and Y chromosomes.
+        """Get PAR regions for the X and Y chromosomes.
 
         Parameters
         ----------
@@ -859,7 +859,7 @@ class SNPs:
         self._snps = snps
 
     def remap_snps(self, target_assembly, complement_bases=True):
-        """ Remap SNP coordinates from one assembly to another.
+        """Remap SNP coordinates from one assembly to another.
 
         This method uses the assembly map endpoint of the Ensembl REST API service (via
         ``Resources``'s ``EnsemblRestClient``) to convert SNP coordinates / positions from one
@@ -977,7 +977,7 @@ class SNPs:
         return chromosomes_remapped, chromosomes_not_remapped
 
     def _remapper(self, task):
-        """ Remap SNPs for a chromosome.
+        """Remap SNPs for a chromosome.
 
         Parameters
         ----------
@@ -1073,10 +1073,9 @@ class SNPs:
                 complement += base
 
         if reverse:
-            complement = ''.join(reversed(complement))
+            complement = "".join(reversed(complement))
 
         return complement
-
 
     # https://stackoverflow.com/a/16090640
     @staticmethod

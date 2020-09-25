@@ -167,8 +167,8 @@ class Reader:
             d = self.read_myheritage(file, compression)
         elif "Living DNA" in first_line:
             d = self.read_livingdna(file, compression)
-        elif "SNP Name	rsID	Sample.ID	Allele1...Top" in first_line:
-            d = self.read_mapmygenome(file, compression)
+        elif "SNP Name\trsID" in first_line or "SNP.Name\tSample.ID" in first_line:
+            d = self.read_mapmygenome(file, compression, first_line)
         elif "lineage" in first_line or "snps" in first_line:
             d = self.read_snps_csv(file, comments, compression)
         elif "Chromosome" in first_line:
@@ -705,7 +705,7 @@ class Reader:
 
         return self.read_helper("LivingDNA", parser)
 
-    def read_mapmygenome(self, file, compression):
+    def read_mapmygenome(self, file, compression, header):
         """ Read and parse Mapmygenome file.
 
         https://mapmygenome.in
@@ -722,22 +722,28 @@ class Reader:
         """
 
         def parser():
-            df = pd.read_csv(
-                file,
-                comment="#",
-                sep="\t",
-                na_values="--",
-                header=0,
-                index_col=1,
-                dtype={
-                    "rsID": object,
-                    "Chr": object,
-                    "Position": np.uint32,
-                    "Allele1...Top": object,
-                    "Allele2...Top": object,
-                },
-                compression=compression,
-            )
+            def parse(rsid_col_name, rsid_col_idx):
+                return pd.read_csv(
+                    file,
+                    comment="#",
+                    sep="\t",
+                    na_values="--",
+                    header=0,
+                    index_col=rsid_col_idx,
+                    dtype={
+                        rsid_col_name: object,
+                        "Chr": object,
+                        "Position": np.uint32,
+                        "Allele1...Top": object,
+                        "Allele2...Top": object,
+                    },
+                    compression=compression,
+                )
+
+            if "rsID" in header:
+                df = parse("rsID", 1)
+            else:
+                df = parse("SNP.Name", 0)
 
             df["genotype"] = df["Allele1...Top"] + df["Allele2...Top"]
             df.rename(columns={"Chr": "chrom", "Position": "pos"}, inplace=True)

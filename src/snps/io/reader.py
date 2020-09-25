@@ -268,11 +268,7 @@ class Reader:
         # allow more variations for VCF
         if source == "vcf":
             if "https://pypi.org/project/snps/" in comments:  # remove `snps` version
-                comments = "{}{}".format(
-                    comments[: comments.find("snps v")],
-                    comments[comments.find("https://pypi.org/project/snps/") :],
-                )
-
+                comments = f"{comments[: comments.find('snps v')]}{comments[comments.find('https://pypi.org/project/snps/'):]}"
             if "hg19" in comments:
                 return 37
             elif "ncbi36" in comments:
@@ -828,7 +824,7 @@ class Reader:
             df["chrom"] = df["SNP Name"].apply(map_chr)
             df["pos"] = df["SNP Name"].apply(map_pos)
             df["genotype"] = (
-                df["Allele1 - {}".format(strand)] + df["Allele2 - {}".format(strand)]
+                df[f"Allele1 - {strand}"] + df[f"Allele2 - {strand}"]
             )
             df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
 
@@ -1183,7 +1179,7 @@ class Reader:
 
                 record_array = [
                     rsid,
-                    "{}".format(line_split[0]).strip("chr"),
+                    f"{line_split[0]}".strip("chr"),
                     line_split[1],
                     genotype,
                 ]

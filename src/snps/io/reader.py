@@ -823,9 +823,7 @@ class Reader:
             df["rsid"] = df["SNP Name"].apply(map_rsids)
             df["chrom"] = df["SNP Name"].apply(map_chr)
             df["pos"] = df["SNP Name"].apply(map_pos)
-            df["genotype"] = (
-                df[f"Allele1 - {strand}"] + df[f"Allele2 - {strand}"]
-            )
+            df["genotype"] = df[f"Allele1 - {strand}"] + df[f"Allele2 - {strand}"]
             df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
 
             df = df.astype(NORMALIZED_DTYPES)

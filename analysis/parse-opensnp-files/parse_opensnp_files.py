@@ -116,9 +116,7 @@ def main():
                 continue
 
             # create a directory for each message (prefix indicates number of files)
-            path = os.path.join(
-                OUTPUT_DIR, f"{len(files):04}_{clean_str(msg)}"
-            )
+            path = os.path.join(OUTPUT_DIR, f"{len(files):04}_{clean_str(msg)}")
             create_dir(path)
             # save each file with message into created directory
             for filename in files:

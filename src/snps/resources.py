@@ -453,15 +453,14 @@ class Resources(metaclass=Singleton):
             return ("", [], [], [])
 
         filenames = [
-            "Homo_sapiens.{}.{}dna.chromosome.{}.fa.gz".format(assembly, release, chrom)
+            f"Homo_sapiens.{assembly}.{assembly}dna.chromosome.{assembly}.fa.gz"
             for chrom in chroms
         ]
 
-        urls = ["{}{}".format(base, filename) for filename in filenames]
+        urls = [f"{base}{filename}" for filename in filenames]
 
         local_filenames = [
-            "{}{}{}{}{}".format(sub_dir, os.sep, assembly, os.sep, filename)
-            for filename in filenames
+            f"{sub_dir}{os.sep}{assembly}{os.sep}{filename}" for filename in filenames
         ]
 
         return (
@@ -530,7 +529,7 @@ class Resources(metaclass=Singleton):
         )
 
         if not os.path.exists(destination):
-            logger.info("Downloading {}".format(os.path.relpath(destination)))
+            logger.info(f"Downloading {os.path.relpath(destination)}")
 
             self._download_assembly_mapping_data(
                 destination, chroms, source_assembly, target_assembly, retries
@@ -546,8 +545,8 @@ class Resources(metaclass=Singleton):
                 for chrom in chroms:
                     file = chrom + ".json"
 
-                    map_endpoint = "/map/human/{}/{}/{}?".format(
-                        source_assembly, chrom, target_assembly
+                    map_endpoint = (
+                        f"/map/human/{source_assembly}/{chrom}/{target_assembly}?"
                     )
 
                     # get assembly mapping data
@@ -665,7 +664,7 @@ class Resources(metaclass=Singleton):
                         timeout=timeout,
                     )
             except socket.timeout:
-                logger.warning("Timeout downloading {}".format(url))
+                logger.warning(f"Timeout downloading {url}")
                 destination = ""
 
         return destination
@@ -679,7 +678,7 @@ class Resources(metaclass=Singleton):
         path : str
             path to file being downloaded
         """
-        logger.info("Downloading {}".format(os.path.relpath(path)))
+        logger.info(f"Downloading {os.path.relpath(path)}")
 
 
 class ReferenceSequence:
@@ -721,9 +720,7 @@ class ReferenceSequence:
         self._length = 0
 
     def __repr__(self):
-        return "ReferenceSequence(assembly={!r}, ID={!r})".format(
-            self._assembly, self._ID
-        )
+        return f"ReferenceSequence(assembly={self._assembly!r}, ID={self._ID!r})"
 
     @property
     def ID(self):
@@ -784,7 +781,7 @@ class ReferenceSequence:
         str
             e.g., "B37"
         """
-        return "B{}".format(self._assembly[-2:])
+        return f"B{self._assembly[-2:]}"
 
     @property
     def species(self):

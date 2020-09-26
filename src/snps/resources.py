@@ -453,7 +453,7 @@ class Resources(metaclass=Singleton):
             return ("", [], [], [])
 
         filenames = [
-            f"Homo_sapiens.{assembly}.{assembly}dna.chromosome.{assembly}.fa.gz"
+            f"Homo_sapiens.{assembly}.{release}dna.chromosome.{chrom}.fa.gz"
             for chrom in chroms
         ]
 

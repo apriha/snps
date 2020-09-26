@@ -109,14 +109,14 @@ class TestResources(BaseSNPsTestCase):
     def _generate_test_gsa_resources(self):
         s = "Name\tRsID\n"
         for i in range(1, 618541):
-            s += "rs{}\trs{}\n".format(i, i)
+            s += f"rs{i}\trs{i}\n"
         mock = mock_open(read_data=gzip.compress(s.encode()))
         with patch("urllib.request.urlopen", mock):
             self.resource._get_path_gsa_rsid_map()
 
         s = "Name\tChr\tMapInfo\tdeCODE(cM)\n"
         for i in range(1, 665609):
-            s += "rs{}\t1\t{}\t0.0000\n".format(i, i)
+            s += f"rs{i}\t1\t{i}\t0.0000\n"
 
         mock = mock_open(read_data=gzip.compress(s.encode()))
         with patch("urllib.request.urlopen", mock):
@@ -167,7 +167,7 @@ class TestResources(BaseSNPsTestCase):
         if self.downloads_enabled:
             f()
         else:
-            s = ">MT dna:chromosome chromosome:{}:MT:1:16569:1 REF\n".format(assembly)
+            s = f">MT dna:chromosome chromosome:{assembly}:MT:1:16569:1 REF\n"
             for i in range(276):
                 s += "A" * 60
                 s += "\n"
@@ -194,27 +194,20 @@ class TestResources(BaseSNPsTestCase):
             self.assertEqual(len(seqs), 1)
             self.assertEqual(
                 seqs["MT"].__repr__(),
-                "ReferenceSequence(assembly='{}', ID='MT')".format(assembly_expect),
+                f"ReferenceSequence(assembly='{assembly_expect}', ID='MT')",
             )
             self.assertEqual(seqs["MT"].ID, "MT")
             self.assertEqual(seqs["MT"].chrom, "MT")
-            self.assertEqual(seqs["MT"].url, "{}".format(url_expect))
+            self.assertEqual(seqs["MT"].url, f"{url_expect}")
             self.assertEqual(
                 seqs["MT"].path,
                 os.path.relpath(
-                    "{}".format(
-                        os.path.join(
-                            self.resource._resources_dir,
-                            "fasta",
-                            assembly_expect,
-                            os.path.basename(url_expect),
-                        )
-                    )
+                    f'{os.path.join(self.resource._resources_dir,"fasta", assembly_expect,os.path.basename(url_expect))}'
                 ),
             )
             self.assertTrue(os.path.exists(seqs["MT"].path))
             self.assertEqual(seqs["MT"].assembly, assembly_expect)
-            self.assertEqual(seqs["MT"].build, "B{}".format(assembly_expect[-2:]))
+            self.assertEqual(seqs["MT"].build, f"B{assembly_expect[-2:]}")
             self.assertEqual(seqs["MT"].species, "Homo sapiens")
             self.assertEqual(seqs["MT"].taxonomy, "x")
 
@@ -286,14 +279,7 @@ class TestResources(BaseSNPsTestCase):
             self.assertEqual(
                 seqs["MT"].path,
                 os.path.relpath(
-                    "{}".format(
-                        os.path.join(
-                            self.resource._resources_dir,
-                            "fasta",
-                            "GRCh37",
-                            "Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz",
-                        )
-                    )
+                    f'{os.path.join(self.resource._resources_dir,"fasta", "GRCh37","Homo_sapiens.GRCh37.dna.chromosome.MT.fa.gz")}'
                 ),
             )
             self.assertTrue(os.path.exists(seqs["MT"].path))

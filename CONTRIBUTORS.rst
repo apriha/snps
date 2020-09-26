@@ -31,6 +31,7 @@ Alan Moffet      `@amoffet`_
 Anatoli Babenia  `@abitrolly`_
 Castedo Ellerman `@castedo`_
 Gerard Manning   `@GerardManning`_
+Julian Runnels   `@JulianRunnels`_
 Kevin Arvai      `@arvkevi`_
 Phil Palmer      `@PhilPalmer`_
 Yoan Bouzin
@@ -40,5 +41,6 @@ Yoan Bouzin
 .. _@abitrolly: https://github.com/abitrolly
 .. _@castedo: https://github.com/castedo
 .. _@GerardManning: https://github.com/GerardManning
+.. _@JulianRunnels: https://github.com/JulianRunnels
 .. _@arvkevi: https://github.com/arvkevi
 .. _@PhilPalmer: https://github.com/PhilPalmer

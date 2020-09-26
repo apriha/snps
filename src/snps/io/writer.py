@@ -143,7 +143,7 @@ class Writer:
             filename,
             comment=comment,
             atomic=self._atomic,
-            **self._kwargs
+            **self._kwargs,
         )
 
     def _write_vcf(self):

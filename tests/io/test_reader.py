@@ -129,10 +129,10 @@ class TestReader(BaseSNPsTestCase):
         s += "rs1\t1\t101\t\tA\tA\r\n"
         # generate remainder of lines
         for i in range(1, total_snps):
-            s += "rs{}\t1\t{}\tA\tA\r\n".format(1 + i, 101 + i)
+            s += f"rs{1 + i}\t1\t{101 + i}\tA\tA\r\n"
 
         snps_df = self.create_snp_df(
-            rsid=["rs{}".format(1 + i) for i in range(0, total_snps)],
+            rsid=[f"rs{1 + i}" for i in range(0, total_snps)],
             chrom="1",
             pos=[101 + i for i in range(0, total_snps)],
             genotype="AA",
@@ -179,17 +179,14 @@ class TestReader(BaseSNPsTestCase):
         # generate content of first file
         s1 = "RSID,CHROMOSOME,POSITION,RESULT\r\n"
         for i in range(0, total_snps1):
-            s1 += '"rs{}","1","{}","AA"\r\n'.format(1 + i, 101 + i)
+            s1 += f'"rs{1 + i}","1","{101 + i}","AA"\r\n'
 
         # generate content of second file
         s2 = "RSID,CHROMOSOME,POSITION,RESULT\r\n"
         for i in range(0, total_snps2):
-            s2 += '"rs{}","1","{}","AA"\r\n'.format(
-                total_snps1 + 1 + i, total_snps1 + 101 + i
-            )
-
+            s2 += f'"rs{total_snps1 + 1 + i}","1","{ total_snps1 + 101 + i}","AA"\r\n'
         snps_df = self.create_snp_df(
-            rsid=["rs{}".format(1 + i) for i in range(0, total_snps1 + total_snps2)],
+            rsid=[f"rs{1 + i}" for i in range(0, total_snps1 + total_snps2)],
             chrom="1",
             pos=[101 + i for i in range(0, total_snps1 + total_snps2)],
             genotype="AA",
@@ -197,9 +194,9 @@ class TestReader(BaseSNPsTestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             file1 = os.path.join(tmpdir, "ftdna_concat_gzip1.csv")
-            file1_gz = "{}.gz".format(file1)
+            file1_gz = f"{file1}.gz"
             file2 = os.path.join(tmpdir, "ftdna_concat_gzip2.csv")
-            file2_gz = "{}.gz".format(file2)
+            file2_gz = f"{file2}.gz"
             path = os.path.join(tmpdir, "ftdna_concat_gzip.csv.gz")
 
             # write individual files
@@ -244,17 +241,15 @@ class TestReader(BaseSNPsTestCase):
         s = "RSID,CHROMOSOME,POSITION,RESULT\n"
         # generate first chunk of lines
         for i in range(0, total_snps1):
-            s += '"rs{}","1","{}","AA"\n'.format(1 + i, 101 + i)
+            s += f'"rs{1 + i}","1","{101 + i}","AA"\n'
         # add second header
         s += "RSID,CHROMOSOME,POSITION,RESULT\n"
         # generate second chunk of lines
         for i in range(0, total_snps2):
-            s += '"rs{}","1","{}","AA"\n'.format(
-                total_snps1 + 1 + i, total_snps1 + 101 + i
-            )
+            s += f'"rs{total_snps1 + 1 + i}","1","{total_snps1 + 101 + i}","AA"\n'
 
         snps_df = self.create_snp_df(
-            rsid=["rs{}".format(1 + i) for i in range(0, total_snps1 + total_snps2)],
+            rsid=[f"rs{1 + i}" for i in range(0, total_snps1 + total_snps2)],
             chrom="1",
             pos=[101 + i for i in range(0, total_snps1 + total_snps2)],
             genotype="AA",

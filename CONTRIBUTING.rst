@@ -87,7 +87,7 @@ For merging, you should:
 
 1. Ensure tests pass.
 2. Update documentation when there's new API, functionality, etc.
-3. Add yourself to ``CONTRIBUTORS.rst``.
+3. Add yourself to ``CONTRIBUTORS.rst`` if you'd like.
 
 Documentation
 -------------

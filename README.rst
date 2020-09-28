@@ -156,11 +156,11 @@ As the data gets added, it's compared to the existing data, and SNP position and
 discrepancies are identified. (The discrepancy thresholds can be tuned via parameters.) These
 discrepant SNPs are available for inspection after the merge via properties of the ``SNPs`` object.
 
-Additionally, any non-called / null genotypes will be updated during the merge, if the file
-being merged has a called genotype for the SNP.
-
 >>> len(s.discrepant_merge_genotypes)
 151
+
+Additionally, any non-called / null genotypes will be updated during the merge, if the file
+being merged has a called genotype for the SNP.
 
 Finally, ``merge`` returns a list of ``dict``, where each ``dict`` has information corresponding
 to the results of each merge (e.g., SNPs in common).

@@ -120,24 +120,15 @@ class Writer:
             if "sep" in self._kwargs and self._kwargs["sep"] == ",":
                 ext = ".csv"
 
-            filename = "{}_{}{}".format(
-                clean_str(self._snps.source), self._snps.assembly, ext
-            )
+            filename = f"{clean_str(self._snps.source)}_{self._snps.assembly}{ext}"
 
         comment = (
-            "# Source(s): {}\n"
-            "# Build: {}\n"
-            "# Build Detected: {}\n"
-            "# Phased: {}\n"
-            "# SNPs: {}\n"
-            "# Chromosomes: {}\n".format(
-                self._snps.source,
-                self._snps.build,
-                self._snps.build_detected,
-                self._snps.phased,
-                self._snps.count,
-                self._snps.chromosomes_summary,
-            )
+            f"# Source(s): {self._snps.source}\n"
+            f"# Build: {self._snps.build}\n"
+            f"# Build Detected: { self._snps.build_detected}\n"
+            f"# Phased: {self._snps.phased}\n"
+            f"# SNPs: {self._snps.count}\n"
+            f"# Chromosomes: {self._snps.chromosomes_summary}\n"
         )
         if "header" in self._kwargs:
             if isinstance(self._kwargs["header"], bool):
@@ -152,7 +143,7 @@ class Writer:
             filename,
             comment=comment,
             atomic=self._atomic,
-            **self._kwargs
+            **self._kwargs,
         )
 
     def _write_vcf(self):
@@ -172,18 +163,12 @@ class Writer:
         """
         filename = self._filename
         if not filename:
-            filename = "{}_{}{}".format(
-                clean_str(self._snps.source), self._snps.assembly, ".vcf"
-            )
+            filename = f"{clean_str(self._snps.source)}_{self._snps.assembly}{'.vcf'}"
 
         comment = (
-            "##fileformat=VCFv4.2\n"
-            "##fileDate={}\n"
-            '##source="{}; snps v{}; https://pypi.org/project/snps/"\n'.format(
-                datetime.datetime.utcnow().strftime("%Y%m%d"),
-                self._snps.source,
-                snps.__version__,
-            )
+            f"##fileformat=VCFv4.2\n"
+            f'##fileDate={datetime.datetime.utcnow().strftime("%Y%m%d")}\n'
+            f'##source="{self._snps.source}; snps v{snps.__version__}; https://pypi.org/project/snps/"\n'
         )
 
         reference_sequence_chroms = (
@@ -299,9 +284,7 @@ class Writer:
         seqs = resources.get_reference_sequences(assembly, [chrom])
         seq = seqs[chrom]
 
-        contig = '##contig=<ID={},URL={},length={},assembly={},md5={},species="{}">\n'.format(
-            seq.ID, seq.url, seq.length, seq.build, seq.md5, seq.species
-        )
+        contig = f'##contig=<ID={seq.ID},URL={seq.url},length={seq.length},assembly={seq.build},md5={seq.md5},species="{seq.species}">\n'
 
         snps = snps.reset_index()
 
@@ -401,8 +384,8 @@ class Writer:
             alleles.extend(alt.split(","))
 
         if len(genotype) == 2:
-            return "{}{}{}".format(
-                alleles.index(genotype[0]), separator, alleles.index(genotype[1])
+            return (
+                f"{alleles.index(genotype[0])}{separator}{alleles.index(genotype[1])}"
             )
         else:
-            return "{}".format(alleles.index(genotype[0]))
+            return f"{alleles.index(genotype[0])}"

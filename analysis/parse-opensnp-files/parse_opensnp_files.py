@@ -28,7 +28,7 @@ r = Resources(resources_dir="../../resources")
 
 # setup logger to output to file in output directory
 logging.basicConfig(
-    filename="{}".format(os.path.join(OUTPUT_DIR, "parse-opensnp-files.txt")),
+    filename=f'{os.path.join(OUTPUT_DIR, "parse-opensnp-files.txt")}',
     format="%(asctime)s: %(message)s",
     filemode="w",
     level=logging.INFO,
@@ -90,12 +90,10 @@ def main():
 
     # log parsing statistics
     file_count = len(filenames)
-    logger.info("{} files in the openSNP datadump".format(file_count))
-    logger.info("{:.2%} of openSNP datadump files parsed".format(len(df) / file_count))
+    logger.info(f"{file_count} files in the openSNP datadump")
+    logger.info(f"{(len(df) / file_count):.2%} of openSNP datadump files parsed")
     logger.info(
-        "build detected in {:.2%} of files parsed".format(
-            len(df.loc[df.build_detected]) / len(df)
-        )
+        f"build detected in {len(df.loc[df.build_detected]) / len(df):.2%} of files parsed"
     )
 
     # extract files from the datadump where `load_file` returned a message
@@ -118,9 +116,7 @@ def main():
                 continue
 
             # create a directory for each message (prefix indicates number of files)
-            path = os.path.join(
-                OUTPUT_DIR, "{:04}_{}".format(len(files), clean_str(msg))
-            )
+            path = os.path.join(OUTPUT_DIR, f"{len(files):04}_{clean_str(msg)}")
             create_dir(path)
             # save each file with message into created directory
             for filename in files:

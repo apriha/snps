@@ -329,14 +329,14 @@ class BaseSNPsTestCase(TestCase):
                             "strand": strands[0],
                             "start": mappings[0],
                             "end": mappings[0],
-                            "assembly": "{}".format(source),
+                            "assembly": f"{source}",
                         },
                         "mapped": {
                             "seq_region_name": "1",
                             "strand": strands[1],
                             "start": mappings[1],
                             "end": mappings[1],
-                            "assembly": "{}".format(target),
+                            "assembly": f"{target}",
                         },
                     },
                     {
@@ -345,14 +345,14 @@ class BaseSNPsTestCase(TestCase):
                             "strand": strands[2],
                             "start": mappings[2],
                             "end": mappings[2],
-                            "assembly": "{}".format(source),
+                            "assembly": f"{source}",
                         },
                         "mapped": {
                             "seq_region_name": "1",
                             "strand": strands[3],
                             "start": mappings[3],
                             "end": mappings[3],
-                            "assembly": "{}".format(target),
+                            "assembly": f"{target}",
                         },
                     },
                     {
@@ -361,14 +361,14 @@ class BaseSNPsTestCase(TestCase):
                             "strand": strands[4],
                             "start": mappings[4],
                             "end": mappings[4],
-                            "assembly": "{}".format(source),
+                            "assembly": f"{source}",
                         },
                         "mapped": {
                             "seq_region_name": "1",
                             "strand": strands[5],
                             "start": mappings[5],
                             "end": mappings[5],
-                            "assembly": "{}".format(target),
+                            "assembly": f"{target}",
                         },
                     },
                 ]
@@ -381,14 +381,14 @@ class BaseSNPsTestCase(TestCase):
                             "strand": strands[6],
                             "start": mappings[6],
                             "end": mappings[6],
-                            "assembly": "{}".format(source),
+                            "assembly": f"{source}",
                         },
                         "mapped": {
                             "seq_region_name": "3",
                             "strand": strands[7],
                             "start": mappings[7],
                             "end": mappings[7],
-                            "assembly": "{}".format(target),
+                            "assembly": f"{target}",
                         },
                     }
                 ]
@@ -577,7 +577,7 @@ class BaseSNPsTestCase(TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             base = os.path.basename(file)
-            dest = os.path.join(tmpdir, "{}.gz".format(base))
+            dest = os.path.join(tmpdir, f"{base}.gz")
             gzip_file(file, dest)
             self.make_parsing_assertions(
                 self.parse_file(dest), source, phased, build, build_detected, snps_df
@@ -596,7 +596,7 @@ class BaseSNPsTestCase(TestCase):
                 snps_df,
             )
 
-            dest = os.path.join(tmpdir, "{}.zip".format(base))
+            dest = os.path.join(tmpdir, f"{base}.zip")
             zip_file(file, dest, base)
             self.make_parsing_assertions(
                 self.parse_file(dest), source, phased, build, build_detected, snps_df
@@ -652,7 +652,7 @@ class BaseSNPsTestCase(TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             base = os.path.basename(file)
-            dest = os.path.join(tmpdir, "{}.gz".format(base))
+            dest = os.path.join(tmpdir, f"{base}.gz")
             gzip_file(file, dest)
             self.make_parsing_assertions_vcf(
                 self.parse_file(dest, rsids),

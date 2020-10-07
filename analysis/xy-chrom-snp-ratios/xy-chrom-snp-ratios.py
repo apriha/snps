@@ -22,7 +22,7 @@ r = Resources(resources_dir="../../resources")
 
 # setup logger to output to file in output directory
 logging.basicConfig(
-    filename="{}".format(os.path.join(OUTPUT_DIR, "xy-chrom-snp-ratios.txt")),
+    filename=f"{os.path.join(OUTPUT_DIR, 'xy-chrom-snp-ratios.txt')}",
     format="%(asctime)s#%(message)s",
     filemode="w",
     level=logging.INFO,
@@ -35,10 +35,10 @@ def get_xy_chrom_snp_ratios(task):
     file = task["file"]
 
     try:
-        logger.info("loading {}".format(file))
+        logger.info(f"loading {file}")
         s = SNPs(r.load_opensnp_datadump_file(file), assign_par_snps=False)
     except Exception as err:
-        logger.error("{}#{}".format(file, err))
+        logger.error(f"{file}#{err}")
         return None
 
     try:
@@ -72,10 +72,10 @@ def get_xy_chrom_snp_ratios(task):
                 s.count,
             ]
         else:
-            logger.info("{}#{}".format(file, "no SNPs processed"))
+            logger.info(f"{file}#{'no SNPs processed'}")
 
     except Exception as err:
-        logger.error("{}#{}".format(file, err))
+        logger.error(f"{file}#{err}")
         return None
 
 
@@ -99,9 +99,7 @@ def create_analysis_plot(
 
     # start with a rectangular Figure
     fig = plt.figure(figsize=(8, 8))
-    fig.suptitle(
-        "Analysis of openSNP datadump XY chrom SNP ratios; N = {}".format(len(df))
-    )
+    fig.suptitle(f"Analysis of openSNP datadump XY chrom SNP ratios; N = {len(df)}")
 
     ax_scatter = plt.axes(rect_scatter)
     ax_scatter.tick_params(direction="in", top=True, right=True)
@@ -127,12 +125,12 @@ def create_analysis_plot(
     heterozygous_x_snps_threshold_line = ax_scatter.axvline(
         x=heterozygous_x_snps_threshold,
         c="blue",
-        label="Het. X threshold={}".format(heterozygous_x_snps_threshold),
+        label=f"Het. X threshold={heterozygous_x_snps_threshold}",
     )
     y_snps_not_null_threshold_line = ax_scatter.axhline(
         y=y_snps_not_null_threshold,
         c="red",
-        label="Y not null threshold={}".format(y_snps_not_null_threshold),
+        label=f"Y not null threshold={y_snps_not_null_threshold}",
     )
 
     # fill genotype areas
@@ -178,17 +176,7 @@ def create_analysis_plot(
     x_offset = lim_x * 0.01
     y_offset = lim_y * 0.01
     ax_scatter.annotate(
-        "n={}".format(
-            len(
-                df_ratios.loc[
-                    (
-                        df_ratios.heterozygous_x_snps_ratio
-                        < heterozygous_x_snps_threshold
-                    )
-                    & (df_ratios.y_snps_not_null_ratio < y_snps_not_null_threshold)
-                ]
-            )
-        ),
+        f"n={len(df_ratios.loc[(df_ratios.heterozygous_x_snps_ratio < heterozygous_x_snps_threshold) & (df_ratios.y_snps_not_null_ratio < y_snps_not_null_threshold)])}",
         (
             heterozygous_x_snps_threshold - x_offset,
             y_snps_not_null_threshold - y_offset,
@@ -197,17 +185,7 @@ def create_analysis_plot(
         va="top",
     )
     ax_scatter.annotate(
-        "n={}".format(
-            len(
-                df_ratios.loc[
-                    (
-                        df_ratios.heterozygous_x_snps_ratio
-                        < heterozygous_x_snps_threshold
-                    )
-                    & (df_ratios.y_snps_not_null_ratio >= y_snps_not_null_threshold)
-                ]
-            )
-        ),
+        f"n={ len(df_ratios.loc[(df_ratios.heterozygous_x_snps_ratio < heterozygous_x_snps_threshold)& (df_ratios.y_snps_not_null_ratio >= y_snps_not_null_threshold)])}",
         (
             heterozygous_x_snps_threshold - x_offset,
             y_snps_not_null_threshold + y_offset,
@@ -216,17 +194,7 @@ def create_analysis_plot(
         va="bottom",
     )
     ax_scatter.annotate(
-        "n={}".format(
-            len(
-                df_ratios.loc[
-                    (
-                        df_ratios.heterozygous_x_snps_ratio
-                        >= heterozygous_x_snps_threshold
-                    )
-                    & (df_ratios.y_snps_not_null_ratio >= y_snps_not_null_threshold)
-                ]
-            )
-        ),
+        f"n={len(df_ratios.loc[ (df_ratios.heterozygous_x_snps_ratio >= heterozygous_x_snps_threshold) & (df_ratios.y_snps_not_null_ratio >= y_snps_not_null_threshold)])}",
         (
             heterozygous_x_snps_threshold + x_offset,
             y_snps_not_null_threshold + y_offset,
@@ -235,17 +203,7 @@ def create_analysis_plot(
         va="bottom",
     )
     ax_scatter.annotate(
-        "n={}".format(
-            len(
-                df_ratios.loc[
-                    (
-                        df_ratios.heterozygous_x_snps_ratio
-                        >= heterozygous_x_snps_threshold
-                    )
-                    & (df_ratios.y_snps_not_null_ratio < y_snps_not_null_threshold)
-                ]
-            )
-        ),
+        f"n={len(df_ratios.loc[(df_ratios.heterozygous_x_snps_ratio >= heterozygous_x_snps_threshold) & (df_ratios.y_snps_not_null_ratio < y_snps_not_null_threshold)])}",
         (
             heterozygous_x_snps_threshold + x_offset,
             y_snps_not_null_threshold - y_offset,
@@ -307,7 +265,7 @@ if __name__ == "__main__":
 
     # save output
     with atomic_write(
-        "{}".format(os.path.join(OUTPUT_DIR, "xy-chrom-snp-ratios.png")),
+        f"{os.path.join(OUTPUT_DIR, 'xy-chrom-snp-ratios.png')}",
         mode="wb",
         overwrite=True,
     ) as f:

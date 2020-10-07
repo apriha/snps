@@ -116,9 +116,7 @@ class EnsemblRestClient:
                     self.perform_rest_action(endpoint, hdrs, params)
             else:
                 sys.stderr.write(
-                    "Request failed for {0}: Status code: {1.code} Reason: {1.reason}\n".format(
-                        endpoint, e
-                    )
+                    f"Request failed for {endpoint}: Status code: {e.code} Reason: {e.reason}\n"
                 )
 
         return data

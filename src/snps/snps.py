@@ -165,7 +165,7 @@ class SNPs:
                 logger.warning("no SNPs loaded...")
 
     def __repr__(self):
-        return "SNPs({!r})".format(self._file[0:50])
+        return f"SNPs({self._file[0:50]!r})"
 
     @property
     def source(self):
@@ -421,9 +421,9 @@ class SNPs:
             def as_range(iterable):
                 l = list(iterable)
                 if len(l) > 1:
-                    return "{0}-{1}".format(l[0], l[-1])
+                    return f"{l[0]}-{l[-1]}"
                 else:
-                    return "{0}".format(l[0])
+                    return f"{l[0]}"
 
             # create str representations
             int_chroms = ", ".join(
@@ -489,19 +489,13 @@ class SNPs:
         pandas.DataFrame
             normalized ``snps`` dataframe
         """
-        if chrom:
-            return self._snps.loc[
-                (self._snps.chrom == chrom)
-                & (self._snps.genotype.notnull())
-                & (self._snps.genotype.str.len() == 2)
-                & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
-            ]
-        else:
-            return self._snps.loc[
-                (self._snps.genotype.notnull())
-                & (self._snps.genotype.str.len() == 2)
-                & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
-            ]
+        df = self._filter(chrom)
+
+        return df.loc[
+            (df.genotype.notnull())
+            & (df.genotype.str.len() == 2)
+            & (df.genotype.str[0] != df.genotype.str[1])
+        ]
 
     def homozygous(self, chrom=""):
         """ Get homozygous SNPs.
@@ -516,19 +510,13 @@ class SNPs:
         pandas.DataFrame
             normalized ``snps`` dataframe
         """
-        if chrom:
-            return self._snps.loc[
-                (self._snps.chrom == chrom)
-                & (self._snps.genotype.notnull())
-                & (self._snps.genotype.str.len() == 2)
-                & (self._snps.genotype.str[0] == self._snps.genotype.str[1])
-            ]
-        else:
-            return self._snps.loc[
-                (self._snps.genotype.notnull())
-                & (self._snps.genotype.str.len() == 2)
-                & (self._snps.genotype.str[0] == self._snps.genotype.str[1])
-            ]
+        df = self._filter(chrom)
+
+        return df.loc[
+            (df.genotype.notnull())
+            & (df.genotype.str.len() == 2)
+            & (df.genotype.str[0] == df.genotype.str[1])
+        ]
 
     def notnull(self, chrom=""):
         """ Get not null genotype SNPs.
@@ -543,13 +531,9 @@ class SNPs:
         pandas.DataFrame
             normalized ``snps`` dataframe
         """
+        df = self._filter(chrom)
 
-        if chrom:
-            return self._snps.loc[
-                (self._snps.chrom == chrom) & (self._snps.genotype.notnull())
-            ]
-        else:
-            return self._snps.loc[self._snps.genotype.notnull()]
+        return df.loc[df.genotype.notnull()]
 
     @property
     def summary(self):
@@ -624,12 +608,13 @@ class SNPs:
             self._discrepant_vcf_position = extra[0]
             self._discrepant_vcf_position.set_index("rsid", inplace=True)
             logger.warning(
-                "{} SNP positions were found to be discrepant when saving VCF".format(
-                    len(self.discrepant_vcf_position)
-                )
+                f"{len(self.discrepant_vcf_position)} SNP positions were found to be discrepant when saving VCF"
             )
 
         return path
+
+    def _filter(self, chrom=""):
+        return self.snps.loc[self.snps.chrom == chrom] if chrom else self.snps
 
     def _read_raw_data(self, file, only_detect_source, rsids):
         return Reader.read_file(file, only_detect_source, self._resources, rsids)
@@ -683,10 +668,10 @@ class SNPs:
             # this RefSnp id was merged into another
             # we'll pick the first one to decide which chromosome this PAR will be assigned to
             merged_id = "rs" + response["merged_snapshot_data"]["merged_into"][0]
-            logger.info("SNP id {} has been merged into id {}".format(rsid, merged_id))
+            logger.info(f"SNP id {rsid} has been merged into id {merged_id}")
             return self._lookup_refsnp_snapshot(merged_id, rest_client)
         elif "nosnppos_snapshot_data" in response:
-            logger.warning("Unable to look up SNP id {}".format(rsid))
+            logger.warning(f"Unable to look up SNP id {rsid}")
             return None
         else:
             return response
@@ -816,10 +801,7 @@ class SNPs:
         -------
         int
         """
-        if chrom:
-            return len(self._snps.loc[(self._snps.chrom == chrom)])
-        else:
-            return len(self._snps)
+        return len(self._filter(chrom))
 
     def determine_sex(
         self,
@@ -881,26 +863,25 @@ class SNPs:
 
     def _get_non_par_snps(self, chrom, heterozygous=True):
         np_start, np_stop = self._get_non_par_start_stop(chrom)
+        df = self._filter(chrom)
 
         if heterozygous:
             # get heterozygous SNPs in the non-PAR region (i.e., discrepant XY SNPs)
-            return self._snps.loc[
-                (self._snps.chrom == chrom)
-                & (self._snps.genotype.notnull())
-                & (self._snps.genotype.str.len() == 2)
-                & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
-                & (self._snps.pos > np_start)
-                & (self._snps.pos < np_stop)
+            return df.loc[
+                (df.genotype.notnull())
+                & (df.genotype.str.len() == 2)
+                & (df.genotype.str[0] != df.genotype.str[1])
+                & (df.pos > np_start)
+                & (df.pos < np_stop)
             ].index
         else:
             # get homozygous SNPs in the non-PAR region
-            return self._snps.loc[
-                (self._snps.chrom == chrom)
-                & (self._snps.genotype.notnull())
-                & (self._snps.genotype.str.len() == 2)
-                & (self._snps.genotype.str[0] == self._snps.genotype.str[1])
-                & (self._snps.pos > np_start)
-                & (self._snps.pos < np_stop)
+            return df.loc[
+                (df.genotype.notnull())
+                & (df.genotype.str.len() == 2)
+                & (df.genotype.str[0] == df.genotype.str[1])
+                & (df.pos > np_start)
+                & (df.pos < np_stop)
             ].index
 
     def _deduplicate_rsids(self):
@@ -1135,8 +1116,8 @@ class SNPs:
                 )
             else:
                 logger.warning(
-                    "Chromosome {} not remapped; "
-                    "removing chromosome from SNPs for consistency".format(chrom)
+                    f"Chromosome {chrom} not remapped; "
+                    f"removing chromosome from SNPs for consistency"
                 )
                 snps = snps.drop(snps.loc[snps["chrom"] == chrom].index)
 
@@ -1322,16 +1303,12 @@ class SNPs:
             # ensure builds match when merging
             if not s.build_detected:
                 logger.warning(
-                    "Build not detected for {}, assuming Build {}".format(
-                        s.__repr__(), s.build
-                    )
+                    f"Build not detected for {s.__repr__()}, assuming Build {s.build}"
                 )
 
             if self.build != s.build:
                 logger.info(
-                    "{} has Build {}; remapping to Build {}".format(
-                        s.__repr__(), s.build, self.build
-                    )
+                    f"{s.__repr__()} has Build {s.build}; remapping to Build {self.build}"
                 )
                 s.remap(self.build)
 
@@ -1413,16 +1390,12 @@ class SNPs:
 
             if 0 < len(discrepant_positions) < positions_threshold:
                 logger.warning(
-                    "{} SNP positions were discrepant; keeping original positions".format(
-                        str(len(discrepant_positions))
-                    )
+                    f"{str(len(discrepant_positions))} SNP positions were discrepant; keeping original positions"
                 )
 
             if 0 < len(discrepant_genotypes) < genotypes_threshold:
                 logger.warning(
-                    "{} SNP genotypes were discrepant; marking those as null".format(
-                        str(len(discrepant_genotypes))
-                    )
+                    f"{str(len(discrepant_genotypes))} SNP genotypes were discrepant; marking those as null"
                 )
 
             # set discrepant genotypes to null
@@ -1461,21 +1434,19 @@ class SNPs:
                 continue
 
             if not self.valid:
-                logger.info("Loading {}".format(snps_object.__repr__()))
+                logger.info(f"Loading {snps_object.__repr__()}")
 
                 init(snps_object)
                 d.update({"merged": True})
             else:
-                logger.info("Merging {}".format(snps_object.__repr__()))
+                logger.info(f"Merging {snps_object.__repr__()}")
 
                 if remap:
                     ensure_same_build(snps_object)
 
                 if self.build != snps_object.build:
                     logger.warning(
-                        "{} has Build {}; this SNPs object has Build {}".format(
-                            snps_object.__repr__(), snps_object.build, self.build
-                        )
+                        f"{snps_object.__repr__()} has Build {snps_object.build}; this SNPs object has Build {self.build}"
                     )
 
                 merged, *extra = merge_snps(

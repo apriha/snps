@@ -489,19 +489,13 @@ class SNPs:
         pandas.DataFrame
             normalized ``snps`` dataframe
         """
-        if chrom:
-            return self._snps.loc[
-                (self._snps.chrom == chrom)
-                & (self._snps.genotype.notnull())
-                & (self._snps.genotype.str.len() == 2)
-                & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
-            ]
-        else:
-            return self._snps.loc[
-                (self._snps.genotype.notnull())
-                & (self._snps.genotype.str.len() == 2)
-                & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
-            ]
+        df = self._filter(chrom)
+
+        return df.loc[
+            (df.genotype.notnull())
+            & (df.genotype.str.len() == 2)
+            & (df.genotype.str[0] != df.genotype.str[1])
+        ]
 
     def homozygous(self, chrom=""):
         """ Get homozygous SNPs.
@@ -516,19 +510,13 @@ class SNPs:
         pandas.DataFrame
             normalized ``snps`` dataframe
         """
-        if chrom:
-            return self._snps.loc[
-                (self._snps.chrom == chrom)
-                & (self._snps.genotype.notnull())
-                & (self._snps.genotype.str.len() == 2)
-                & (self._snps.genotype.str[0] == self._snps.genotype.str[1])
-            ]
-        else:
-            return self._snps.loc[
-                (self._snps.genotype.notnull())
-                & (self._snps.genotype.str.len() == 2)
-                & (self._snps.genotype.str[0] == self._snps.genotype.str[1])
-            ]
+        df = self._filter(chrom)
+
+        return df.loc[
+            (df.genotype.notnull())
+            & (df.genotype.str.len() == 2)
+            & (df.genotype.str[0] == df.genotype.str[1])
+        ]
 
     def notnull(self, chrom=""):
         """ Get not null genotype SNPs.
@@ -543,13 +531,9 @@ class SNPs:
         pandas.DataFrame
             normalized ``snps`` dataframe
         """
+        df = self._filter(chrom)
 
-        if chrom:
-            return self._snps.loc[
-                (self._snps.chrom == chrom) & (self._snps.genotype.notnull())
-            ]
-        else:
-            return self._snps.loc[self._snps.genotype.notnull()]
+        return df.loc[df.genotype.notnull()]
 
     @property
     def summary(self):
@@ -628,6 +612,9 @@ class SNPs:
             )
 
         return path
+
+    def _filter(self, chrom=""):
+        return self.snps.loc[self.snps.chrom == chrom] if chrom else self.snps
 
     def _read_raw_data(self, file, only_detect_source, rsids):
         return Reader.read_file(file, only_detect_source, self._resources, rsids)
@@ -814,10 +801,7 @@ class SNPs:
         -------
         int
         """
-        if chrom:
-            return len(self._snps.loc[(self._snps.chrom == chrom)])
-        else:
-            return len(self._snps)
+        return len(self._filter(chrom))
 
     def determine_sex(
         self,
@@ -879,26 +863,25 @@ class SNPs:
 
     def _get_non_par_snps(self, chrom, heterozygous=True):
         np_start, np_stop = self._get_non_par_start_stop(chrom)
+        df = self._filter(chrom)
 
         if heterozygous:
             # get heterozygous SNPs in the non-PAR region (i.e., discrepant XY SNPs)
-            return self._snps.loc[
-                (self._snps.chrom == chrom)
-                & (self._snps.genotype.notnull())
-                & (self._snps.genotype.str.len() == 2)
-                & (self._snps.genotype.str[0] != self._snps.genotype.str[1])
-                & (self._snps.pos > np_start)
-                & (self._snps.pos < np_stop)
+            return df.loc[
+                (df.genotype.notnull())
+                & (df.genotype.str.len() == 2)
+                & (df.genotype.str[0] != df.genotype.str[1])
+                & (df.pos > np_start)
+                & (df.pos < np_stop)
             ].index
         else:
             # get homozygous SNPs in the non-PAR region
-            return self._snps.loc[
-                (self._snps.chrom == chrom)
-                & (self._snps.genotype.notnull())
-                & (self._snps.genotype.str.len() == 2)
-                & (self._snps.genotype.str[0] == self._snps.genotype.str[1])
-                & (self._snps.pos > np_start)
-                & (self._snps.pos < np_stop)
+            return df.loc[
+                (df.genotype.notnull())
+                & (df.genotype.str.len() == 2)
+                & (df.genotype.str[0] == df.genotype.str[1])
+                & (df.pos > np_start)
+                & (df.pos < np_stop)
             ].index
 
     def _deduplicate_rsids(self):

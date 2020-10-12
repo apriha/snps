@@ -71,7 +71,7 @@ import urllib.request
 
 
 class EnsemblRestClient:
-    def __init__(self, server="http://rest.ensembl.org", reqs_per_sec=15):
+    def __init__(self, server="https://rest.ensembl.org", reqs_per_sec=15):
         self.server = server
         self.reqs_per_sec = reqs_per_sec
         self.req_count = 0

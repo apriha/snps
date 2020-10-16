@@ -476,7 +476,7 @@ class Reader:
                     na_values="--",
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype={"rsid": object, "chrom": object, "pos": np.int64},
                     compression=None,  # already decompressed
                 )
 
@@ -507,7 +507,7 @@ class Reader:
                 na_values="-",
                 names=["rsid", "chrom", "pos", "allele1", "allele2"],
                 index_col=0,
-                dtype={"chrom": object},
+                dtype={"rsid": object, "chrom": object, "pos": np.int64, "allele1":object, "allele2":object},
                 compression=compression,
             )
 
@@ -549,7 +549,7 @@ class Reader:
                     na_values=0,
                     names=["rsid", "chrom", "pos", "allele1", "allele2"],
                     index_col=0,
-                    dtype={"chrom": object},
+                    dtype={"rsid": object, "chrom": object, "pos": np.int64, "allele1":object, "allele2":object},
                     compression=compression,
                 )
             except pd.errors.DtypeWarning:

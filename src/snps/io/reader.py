@@ -902,13 +902,7 @@ class Reader:
             "Allele1 - Plus": object,
             "Allele2 - Plus": object,
         }
-        return self._read_gsa_helper(
-            file,
-            "Codigo46",
-            "Plus",
-            dtype,
-            na_values="-",
-        )
+        return self._read_gsa_helper(file, "Codigo46", "Plus", dtype, na_values="-",)
 
     def read_sano(self, file):
         """Read and parse Sano Genetics files.
@@ -931,13 +925,7 @@ class Reader:
             "Allele1 - Forward": object,
             "Allele2 - Forward": object,
         }
-        return self._read_gsa_helper(
-            file,
-            "Sano",
-            "Forward",
-            dtype,
-            na_values="-",
-        )
+        return self._read_gsa_helper(file, "Sano", "Forward", dtype, na_values="-",)
 
     def read_dnaland(self, file, compression):
         """Read and parse DNA.land files.

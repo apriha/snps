@@ -82,8 +82,9 @@ class SNPs:
             name / path of resources directory
         deduplicate : bool
             deduplicate RSIDs and make SNPs available as `duplicate_snps`
-        deduplicate_XY_chrom : bool
+        deduplicate_XY_chrom : bool or str
             deduplicate alleles in the non-PAR regions of X and Y for males; see `discrepant_XY_snps`
+            if a `str` then this is the sex determination method to use X Y or XY
         parallelize : bool
             utilize multiprocessing to speedup calculations
         processes : int
@@ -138,7 +139,9 @@ class SNPs:
                         self._build_detected = True
 
                 if deduplicate_XY_chrom:
-                    if self.determine_sex() == "Male":
+                    if (
+                        deduplicate_XY_chrom is True and self.determine_sex() == "Male"
+                    ) or self.determine_sex(chrom=deduplicate_XY_chrom) == "Male":
                         self._deduplicate_XY_chrom()
 
                 if assign_par_snps:

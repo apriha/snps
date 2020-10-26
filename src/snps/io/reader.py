@@ -243,30 +243,67 @@ class Reader:
         return first_line, comments, data
 
     def _detect_build_from_comments(self, comments):
-        if "build 37" in comments.lower():
-            return 37
-        elif "build 36" in comments.lower():
-            return 36
-        elif "b37" in comments.lower():
-            return 37
-        elif "hg19" in comments.lower():
-            return 37
-        elif "hg38" in comments.lower():
-            return 38
-        elif "grch38" in comments.lower():
-            return 38
-        elif "grch37" in comments.lower():
-            return 37
-        elif "build 38" in comments.lower():
-            return 38
-        elif "b38" in comments.lower():
-            return 38
-        elif "249250621" in comments.lower():
-            return 37  # length of chromosome 1
-        elif "248956422" in comments.lower():
-            return 38  # length of chromosome 1
-        else:
+        # if its a VCF parse these properly
+        if "##contig" in comments:
+            for line in comments.split("\n"):
+                line = line.strip()
+                if not line:
+                    # skip blanks
+                    continue
+                assert line.startswith("#"), line
+                if not line.startswith("##"):
+                    # skip comments but not preamble
+                    continue
+                line = line[1:].strip()
+                key = line[: line.index("=")]
+                value = line[line.index("=") + 1 :]
+                if key.lower() == "contig":
+                    assert value.startswith("<"), value
+                    assert value.endswith(">"), value
+                    parts = value[1:-1].split(",")
+                    for part in parts:
+                        part_key = part[: part.index("=")]
+                        part_value = part[part.index("=") + 1 :]
+                        if part_key.lower() == "assembly":
+                            if "36" in part_value:
+                                return 36
+                            elif "37" in part_value:
+                                return 37
+                            elif "38" in part_value:
+                                return 38
+                        elif part_key.lower() == "length":
+                            if "249250621" == part_value:
+                                return 36  # length of chromosome 1
+                            elif "248956422" == part_value:
+                                return 37  # length of chromosome 1
+            # couldn't find anything
             return 0
+        else:
+            # not a vcf
+            if "build 37" in comments.lower():
+                return 37
+            elif "build 36" in comments.lower():
+                return 36
+            elif "b37" in comments.lower():
+                return 37
+            elif "hg19" in comments.lower():
+                return 37
+            elif "hg38" in comments.lower():
+                return 38
+            elif "grch38" in comments.lower():
+                return 38
+            elif "grch37" in comments.lower():
+                return 37
+            elif "build 38" in comments.lower():
+                return 38
+            elif "b38" in comments.lower():
+                return 38
+            elif "249250621" in comments.lower():
+                return 37  # length of chromosome 1
+            elif "248956422" in comments.lower():
+                return 38  # length of chromosome 1
+            else:
+                return 0
 
     def _handle_bytes_data(self, file, include_data=False):
         compression = "infer"

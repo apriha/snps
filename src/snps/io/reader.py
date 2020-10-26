@@ -270,6 +270,9 @@ class Reader:
                 if not line.startswith("##"):
                     # skip comments but not preamble
                     continue
+                if "=" not in line:
+                    # skip lines without key/value in
+                    continue
                 line = line[1:].strip()
                 key = line[: line.index("=")]
                 value = line[line.index("=") + 1 :]

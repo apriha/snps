@@ -57,6 +57,10 @@ class TestReader(BaseSNPsTestCase):
             "tests/resources/gsa_chrpos_map.txt",
             os.path.join(resources_dir, "gsa_chrpos_map.txt.gz"),
         )
+        gzip_file(
+            "tests/resources/dbsnp_151_37_reverse.txt",
+            os.path.join(resources_dir, "dbsnp_151_37_reverse.txt.gz"),
+        )
 
     @staticmethod
     def _teardown_gsa_test():

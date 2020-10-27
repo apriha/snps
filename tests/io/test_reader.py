@@ -87,6 +87,8 @@ class TestReader(BaseSNPsTestCase):
                     if i == insertion_line:
                         s += comment_str.format(build_str)
 
+            print(s)
+
             file_build_comment = os.path.join(tmpdir, os.path.basename(file))
             with atomic_write(file_build_comment, mode="w") as f:
                 f.write(s)
@@ -324,25 +326,31 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")
 
     def test_read_vcf_NCBI36(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "NCBI36", 36)
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "NCBI36", 36, comment_str='##contig=<ID=1,assembly={}>\n')
 
     def test_read_vcf_b37(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "b37", 37)
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "b37", 37, comment_str='##contig=<ID=1,assembly={}>\n')
 
     def test_read_vcf_hg19(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "hg19", 37)
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "hg19", 37, comment_str='##contig=<ID=1,assembly={}>\n')
 
     def test_read_vcf_hg38(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "hg38", 38)
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "hg38", 38, comment_str='##contig=<ID=1,assembly={}>\n')
 
     def test_read_vcf_GRCh38(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "GRCh38", 38)
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "GRCh38", 38, comment_str='##contig=<ID=1,assembly={}>\n')
 
     def test_read_vcf_build38(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "Build 38", 38)
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "Build 38", 38, comment_str='##contig=<ID=1,assembly={}>\n')
 
     def test_read_vcf_b38(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "b38", 38)
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "b38", 38, comment_str='##contig=<ID=1,assembly={}>\n')
+
+    def test_read_vcf_length38(self):
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "", 38, comment_str='##contig=<ID=1,length=248956422>\n')
+
+    def test_read_vcf_length37(self):
+        self.run_build_detection_test(self.run_parsing_tests_vcf, "", 37, comment_str='##contig=<ID=1,length=249250621>\n')
 
     def test_read_vcf_multi_sample(self):
         self.run_parsing_tests_vcf("tests/input/testvcf_multi_sample.vcf")

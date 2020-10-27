@@ -273,7 +273,7 @@ class Reader:
                 if "=" not in line:
                     # skip lines without key/value in
                     continue
-                line = line[1:].strip()
+                line = line[2:].strip()
                 key = line[: line.index("=")]
                 value = line[line.index("=") + 1 :]
                 if key.lower() == "contig":
@@ -286,15 +286,15 @@ class Reader:
                         if part_key.lower() == "assembly":
                             if "36" in part_value:
                                 return 36
-                            elif "37" in part_value:
+                            elif "37" in part_value or "hg19" in part_value:
                                 return 37
                             elif "38" in part_value:
                                 return 38
                         elif part_key.lower() == "length":
                             if "249250621" == part_value:
-                                return 36  # length of chromosome 1
-                            elif "248956422" == part_value:
                                 return 37  # length of chromosome 1
+                            elif "248956422" == part_value:
+                                return 38  # length of chromosome 1
             # couldn't find anything
             return 0
         else:

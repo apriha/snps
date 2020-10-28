@@ -162,6 +162,9 @@ discrepant SNPs are available for inspection after the merge via properties of t
 Additionally, any non-called / null genotypes will be updated during the merge, if the file
 being merged has a called genotype for the SNP.
 
+Moreover, ``merge`` takes a ``chrom`` parameter - this enables merging of only SNPs associated
+with the specified chromosome (e.g., "Y" or "MT").
+
 Finally, ``merge`` returns a list of ``dict``, where each ``dict`` has information corresponding
 to the results of each merge (e.g., SNPs in common).
 

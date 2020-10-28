@@ -299,24 +299,25 @@ class Reader:
             return 0
         else:
             # not a vcf
-            if "build 37" in comments.lower():
-                return 37
-            elif "build 36" in comments.lower():
+            if "build 36" in comments.lower():
                 return 36
-            elif "b37" in comments.lower():
+            elif "build 37" in comments.lower():
                 return 37
-            elif "hg19" in comments.lower():
-                return 37
-            elif "hg38" in comments.lower():
+            elif "build 38" in comments.lower():
                 return 38
+            # these can cause false positives
+            # elif "b37" in comments.lower():
+            #    return 37
+            # elif "b38" in comments.lower():
+            #    return 38
+            # elif "hg19" in comments.lower():
+            #    return 37
+            # elif "hg38" in comments.lower():
+            #    return 38
             elif "grch38" in comments.lower():
                 return 38
             elif "grch37" in comments.lower():
                 return 37
-            elif "build 38" in comments.lower():
-                return 38
-            elif "b38" in comments.lower():
-                return 38
             elif "249250621" in comments.lower():
                 return 37  # length of chromosome 1
             elif "248956422" in comments.lower():

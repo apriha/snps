@@ -47,9 +47,7 @@ class TestWriter(BaseSNPsTestCase):
     def test_save_snps(self):
         snps = SNPs("tests/input/generic.csv")
         self.assertEqual(os.path.relpath(snps.save()), "output/generic_GRCh37.txt")
-        self.run_parsing_tests("output/generic_GRCh37.txt", "generic",
-            build_detected=True,  # build will be detected from comments because save_snps() writes the build into comments
-        )
+        self.run_parsing_tests("output/generic_GRCh37.txt", "generic")
 
     def test_save_snps_false_positive_build(self):
         snps = SNPs("tests/input/generic.csv")
@@ -71,11 +69,10 @@ class TestWriter(BaseSNPsTestCase):
 
     def test_save_snps_csv(self):
         snps = SNPs("tests/input/generic.csv")
-        self.assertEqual(os.path.relpath(snps.save_snps(sep=",")), "output/generic_GRCh37.csv")
+        self.assertEqual(os.path.relpath(snps.save(sep=",")), "output/generic_GRCh37.csv")
         self.run_parsing_tests(
             "output/generic_GRCh37.csv",
             "generic",
-            build_detected=True,  # build will be detected from comments because save_snps() writes the build into comments
         )
 
     def test_save_snps_csv_filename(self):
@@ -84,10 +81,20 @@ class TestWriter(BaseSNPsTestCase):
             os.path.relpath(snps.save("generic.csv", sep=",")), "output/generic.csv"
         )
         self.run_parsing_tests(
+            "output/generic.csv",
+            "generic",
+        )
+
+    def test_save_snps_tsv(self):
+        snps = SNPs("tests/input/generic.csv")
+        self.assertEqual(
+            os.path.relpath(snps.save("generic.tsv", sep="\t")),
+            "output/generic.tsv",
+        )
+        self.run_parsing_tests(
             "output/generic.tsv",
             "generic",
-            build_detected=True,  # build will be detected from comments because save_snps() writes the build into comments
-        )
+        )        
 
     def test_save_snps_vcf(self):
         s = SNPs("tests/input/testvcf.vcf")
@@ -157,6 +164,8 @@ class TestWriter(BaseSNPsTestCase):
 
             self.assertEqual(os.path.relpath(s.save(vcf=True)), "output/vcf_GRCh37.vcf")
 
+
+        print(s.discrepant_vcf_position.info())
         pd.testing.assert_frame_equal(
             s.discrepant_vcf_position,
             self.create_snp_df(
@@ -196,20 +205,15 @@ class TestWriter(BaseSNPsTestCase):
     def test_save_snps_phased(self):
         # read phased data
         s = SNPs("tests/input/testvcf_phased.vcf")
-        # save phased data to CSV
-        self.assertEqual(os.path.relpath(s.save_snps()), "output/vcf_GRCh37.csv")
-        # read saved CSV
-        self.run_parsing_tests_vcf(
-            "output/vcf_GRCh37.csv",
-            phased=True,
-            build_detected=True,  # build will be detected from comments because save_snps() writes the build into comments
-        )
+        # save phased data to TSV
+        self.assertEqual(os.path.relpath(s.save()), "output/vcf_GRCh37.txt")
+        # read saved TSV
+        self.run_parsing_tests_vcf("output/vcf_GRCh37.txt", phased=True)        
 
     def test_save_snps_specify_file(self):
         s = SNPs("tests/input/generic.csv")
-        self.assertEqual(os.path.relpath(s.save_snps("snps.csv")), "output/snps.csv")
+        self.assertEqual(os.path.relpath(s.save("snps.csv")), "output/snps.csv")
         self.run_parsing_tests(
             "output/snps.csv",
-            "generic",
-            build_detected=True,  # build will be detected from comments because save_snps() writes the build into comments
+            "generic"
         )

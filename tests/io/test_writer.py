@@ -162,10 +162,12 @@ class TestWriter(BaseSNPsTestCase):
             s._snps.loc["rs1", "pos"] = 0
             s._snps.loc["rs17", "pos"] = 118
 
+            # esnure this is the right type after manual tweaking
+            s._snps = s._snps.astype({"pos":np.uint32})
+
             self.assertEqual(os.path.relpath(s.save(vcf=True)), "output/vcf_GRCh37.vcf")
 
 
-        print(s.discrepant_vcf_position.info())
         pd.testing.assert_frame_equal(
             s.discrepant_vcf_position,
             self.create_snp_df(

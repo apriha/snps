@@ -28,7 +28,7 @@ r = Resources(resources_dir="../../resources")
 
 # setup logger to output to file in output directory
 logging.basicConfig(
-    filename="{}".format(os.path.join(OUTPUT_DIR, "parse-opensnp-files.txt")),
+    filename=f'{os.path.join(OUTPUT_DIR, "parse-opensnp-files.txt")}',
     format="%(asctime)s: %(message)s",
     filemode="w",
     level=logging.INFO,
@@ -45,8 +45,8 @@ def load_file(task):
     except Exception as err:
         return {"msg": str(err).strip()[:100], "file": file}
 
-    if s.snp_count != 0:
-        d = s.get_summary()
+    if s.count != 0:
+        d = s.summary
         d.update({"file": file})
         return d
     else:
@@ -78,31 +78,22 @@ def main():
     # run tasks; results is a list of dicts
     results = p(load_file, tasks)
 
-    # get results from `load_file` where `snp_count` was non-zero
+    # get results from `load_file` where `count` was non-zero
     rows = [item for item in results if "msg" not in item]
 
     df = pd.DataFrame(
         rows,
-        columns=[
-            "file",
-            "source",
-            "build",
-            "build_detected",
-            "chromosomes",
-            "snp_count",
-        ],
+        columns=["file", "source", "build", "build_detected", "chromosomes", "count"],
     )
 
     save_df_as_csv(df, OUTPUT_DIR, "parse-opensnp-files.csv")
 
     # log parsing statistics
     file_count = len(filenames)
-    logger.info("{} files in the openSNP datadump".format(file_count))
-    logger.info("{:.2%} of openSNP datadump files parsed".format(len(df) / file_count))
+    logger.info(f"{file_count} files in the openSNP datadump")
+    logger.info(f"{(len(df) / file_count):.2%} of openSNP datadump files parsed")
     logger.info(
-        "build detected in {:.2%} of files parsed".format(
-            len(df.loc[df.build_detected]) / len(df)
-        )
+        f"build detected in {len(df.loc[df.build_detected]) / len(df):.2%} of files parsed"
     )
 
     # extract files from the datadump where `load_file` returned a message
@@ -125,9 +116,7 @@ def main():
                 continue
 
             # create a directory for each message (prefix indicates number of files)
-            path = os.path.join(
-                OUTPUT_DIR, "{:04}_{}".format(len(files), clean_str(msg))
-            )
+            path = os.path.join(OUTPUT_DIR, f"{len(files):04}_{clean_str(msg)}")
             create_dir(path)
             # save each file with message into created directory
             for filename in files:

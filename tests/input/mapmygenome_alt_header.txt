@@ -1,0 +1,9 @@
+SNP.Name	Sample.ID	Allele1...Top	Allele2...Top	GC.Score	Sample.Name	Sample.Group	Sample.Index	SNP.Index	SNP.Aux	Allele1...Forward	Allele2...Forward	Allele1...Design	Allele2...Design	Allele1...AB	Allele2...AB	Allele1...Plus	Allele2...Plus	Chr	Position	GT.Score	Cluster.Sep	SNP	ILMN.Strand	Customer.Strand	Top.Genomic.Sequence	Plus.Minus.Strand	Theta	R	X	Y	X.Raw	Y.Raw	B.Allele.Freq	Log.R.Ratio	CNV.Value	CNV.Confidence
+rs1	0	A	A	0	NA	NA	0	0	0	A	A	A	A	A	A	A	A	1	101	0	1	[A/A]	TOP	TOP	NA	+	0	0	0	0	0	0	0	0	NA	NA
+rs2	0	C	C	0	NA	NA	0	0	0	A	A	A	A	A	A	C	C	1	102	0	1	[A/A]	TOP	TOP	NA	+	0	0	0	0	0	0	0	0	NA	NA
+rs3	0	G	G	0	NA	NA	0	0	0	A	A	A	A	A	A	G	G	1	103	0	1	[A/A]	TOP	TOP	NA	+	0	0	0	0	0	0	0	0	NA	NA
+rs4	0	T	T	0	NA	NA	0	0	0	A	A	A	A	A	A	T	T	1	104	0	1	[A/A]	TOP	TOP	NA	+	0	0	0	0	0	0	0	0	NA	NA
+rs5	0	--	--	0	NA	NA	0	0	0	A	A	A	A	A	A	--	--	1	105	0	1	[A/A]	TOP	TOP	NA	+	0	0	0	0	0	0	0	0	NA	NA
+rs6	0	G	C	0	NA	NA	0	0	0	A	A	A	A	A	A	G	C	1	106	0	1	[A/A]	TOP	TOP	NA	+	0	0	0	0	0	0	0	0	NA	NA
+rs7	0	T	C	0	NA	NA	0	0	0	A	A	A	A	A	A	T	C	1	107	0	1	[A/A]	TOP	TOP	NA	+	0	0	0	0	0	0	0	0	NA	NA
+rs8	0	A	T	0	NA	NA	0	0	0	A	A	A	A	A	A	A	T	1	108	0	1	[A/A]	TOP	TOP	NA	+	0	0	0	0	0	0	0	0	NA	NA

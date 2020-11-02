@@ -34,5 +34,5 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 
-from .reader import Reader
+from .reader import Reader, get_empty_snps_dataframe
 from .writer import Writer

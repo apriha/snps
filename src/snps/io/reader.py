@@ -566,17 +566,17 @@ class Reader:
         """
 
         def parser():
-             df = pd.read_csv(
-                 file,
-                 comment="#",
-                 header=0,
-                 delim_whitespace=True,  # https://stackoverflow.com/a/15026839
-                 na_values=0,
-                 names=["rsid", "chrom", "pos", "allele1", "allele2"],
-                 index_col=0,
-                 dtype=TWO_ALLELE_DTYPES,
-                 compression=compression,
-             )
+            df = pd.read_csv(
+                file,
+                comment="#",
+                header=0,
+                delim_whitespace=True,  # https://stackoverflow.com/a/15026839
+                na_values=0,
+                names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                index_col=0,
+                dtype=TWO_ALLELE_DTYPES,
+                compression=compression,
+            )
 
             # create genotype column from allele columns
             df["genotype"] = df["allele1"] + df["allele2"]

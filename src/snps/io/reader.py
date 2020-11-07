@@ -570,7 +570,9 @@ class Reader:
                 file,
                 comment="#",
                 header=0,
-                delim_whitespace=True,  # https://stackoverflow.com/a/15026839
+                engine='c',
+                sep='\s+',
+                #delim_whitespace=True,  # https://stackoverflow.com/a/15026839
                 na_values=0,
                 names=["rsid", "chrom", "pos", "allele1", "allele2"],
                 index_col=0,

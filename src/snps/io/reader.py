@@ -101,7 +101,7 @@ class Reader:
         self._file = file
         self._only_detect_source = only_detect_source
         self._resources = resources
-        self._rsids = rsids
+        self._rsids = frozenset(rsids)
 
     def __call__(self):
         """ Read and parse a raw data / genotype file.
@@ -566,35 +566,19 @@ class Reader:
         """
 
         def parser():
-            try:
-                df = pd.read_csv(
-                    file,
-                    comment="#",
-                    header=0,
-                    sep="\t",
-                    na_values=0,
-                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
-                    index_col=0,
-                    dtype=TWO_ALLELE_DTYPES,
-                    compression=compression,
-                )
-            except ValueError:
-                if isinstance(file, io.BytesIO):
-                    file.seek(0)
-
-                # read files with multiple separators
-                df = pd.read_csv(
-                    file,
-                    comment="#",
-                    header=0,
-                    sep=r"\s+|\t+|\s+\t+|\t+\s+",  # https://stackoverflow.com/a/41320761
-                    engine="python",
-                    na_values=0,
-                    names=["rsid", "chrom", "pos", "allele1", "allele2"],
-                    index_col=0,
-                    dtype=TWO_ALLELE_DTYPES,
-                    compression=compression,
-                )
+            df = pd.read_csv(
+                file,
+                comment="#",
+                header=0,
+                engine="c",
+                sep="\s+",
+                # delim_whitespace=True,  # https://stackoverflow.com/a/15026839
+                na_values=0,
+                names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                index_col=0,
+                dtype=TWO_ALLELE_DTYPES,
+                compression=compression,
+            )
 
             # create genotype column from allele columns
             df["genotype"] = df["allele1"] + df["allele2"]

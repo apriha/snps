@@ -768,6 +768,57 @@ class TestSNPsMerge(TestSnps):
             s.discrepant_vcf_position, get_empty_snps_dataframe(), check_exact=True
         )
 
+    def test_merge_chrom(self):
+        s1 = SNPs("tests/input/generic.csv")
+        df = s1.snps.append(
+            self.create_snp_df(
+                rsid=["rs100", "rs101", "rs102", "rs103"],
+                chrom=["Y", "Y", "Y", "Y"],
+                pos=[100, 101, 102, 103],
+                genotype=["A", np.nan, "A", "A"],
+            )
+        )
+        s1._snps = df.copy()
+        s2 = SNPs()
+        s2._build = 37
+        s2._snps = df.copy()
+
+        # set values for chrom that will be ignored (that would otherwise result in
+        # identification of discrepant SNPs or updating genotype)
+        s2._snps.loc["rs3", "pos"] = 1003  # discrepant position
+        s2._snps.loc["rs4", "genotype"] = "AA"  # discrepant genotype
+        s2._snps.loc["rs5", "genotype"] = "AA"
+
+        # set values for chrom to be merged
+        s2._snps.loc["rs100", "genotype"] = "T"  # discrepant genotype
+        s2._snps.loc["rs101", "genotype"] = "A"
+        s2._snps.loc["rs102", "pos"] = 1002  # discrepant position
+
+        # set expected values for merge result
+        df.loc["rs100", "genotype"] = np.nan  # discrepant genotype sets to np.nan
+        df.loc["rs101", "genotype"] = "A"  # updates np.nan
+
+        results = s1.merge([s2], chrom="Y")
+
+        pd.testing.assert_frame_equal(s1.snps, df, check_exact=True)
+
+        self.assert_results(
+            results,
+            [
+                {
+                    "merged": True,
+                    "common_rsids": pd.Index(
+                        ["rs100", "rs101", "rs102", "rs103"], name="rsid"
+                    ),
+                    "discrepant_position_rsids": pd.Index(["rs102"], name="rsid"),
+                    "discrepant_genotype_rsids": pd.Index(["rs100"], name="rsid"),
+                }
+            ],
+        )
+
+        self.assertEqual(len(s1.discrepant_merge_positions), 1)
+        self.assertEqual(len(s1.discrepant_merge_genotypes), 1)
+
 
 class TestDeprecatedMethods(TestSnps):
     def run_deprecated_test(self, f, msg):

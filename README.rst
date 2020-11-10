@@ -6,6 +6,9 @@ snps
 ====
 tools for reading, writing, merging, and remapping SNPs 🧬
 
+``snps`` *strives to be an easy-to-use and accessible open-source library for working with
+genotype data*
+
 Features
 --------
 Input / Output

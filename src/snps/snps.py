@@ -1250,6 +1250,7 @@ class SNPs:
         discrepant_positions_threshold=100,
         discrepant_genotypes_threshold=500,
         remap=True,
+        chrom="",
     ):
         """ Merge other ``SNPs`` objects into this ``SNPs`` object.
 
@@ -1266,6 +1267,8 @@ class SNPs:
         remap : bool
             if necessary, remap other ``SNPs`` objects to have the same build as this ``SNPs`` object
             before merging
+        chrom : str, optional
+            chromosome to merge (e.g., "1", "Y", "MT")
 
         Returns
         -------
@@ -1334,11 +1337,19 @@ class SNPs:
                 s.discrepant_vcf_position
             )
 
-        def merge_snps(s, positions_threshold, genotypes_threshold):
+        def merge_snps(s, positions_threshold, genotypes_threshold, merge_chrom):
             # merge SNPs, identifying those with discrepant positions and genotypes; update NAs
 
             # identify common SNPs (i.e., any rsids being added that already exist in self.snps)
-            df = self.snps.join(s.snps, how="inner", rsuffix="_added")
+            df = (
+                self.snps.join(s.snps, how="inner", rsuffix="_added")
+                if not merge_chrom
+                else self.snps.loc[self.snps.chrom == merge_chrom].join(
+                    s.snps.loc[s.snps.chrom == merge_chrom],
+                    how="inner",
+                    rsuffix="_added",
+                )
+            )
 
             common_rsids = df.index
 
@@ -1386,7 +1397,11 @@ class SNPs:
                 return (False,)
 
             # add new SNPs
-            self._snps = self.snps.combine_first(s.snps)
+            self._snps = (
+                self.snps.combine_first(s.snps)
+                if not merge_chrom
+                else self.snps.combine_first(s.snps.loc[s.snps.chrom == merge_chrom])
+            )
             # combine_first converts position to float64, so convert it back to uint32
             self._snps["pos"] = self.snps["pos"].astype(np.uint32)
 
@@ -1455,6 +1470,7 @@ class SNPs:
                     snps_object,
                     discrepant_positions_threshold,
                     discrepant_genotypes_threshold,
+                    chrom,
                 )
 
                 if merged:

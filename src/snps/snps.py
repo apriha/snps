@@ -1171,10 +1171,7 @@ class SNPs:
             mapped_region = mapping["mapped"]["seq_region_name"]
 
             # skip if mapping is outside of range of SNP positions
-            if (
-                orig_end < pos_start
-                or orig_start > pos_end
-            ):
+            if orig_end < pos_start or orig_start > pos_end:
                 continue
 
             # find the SNPs that are being remapped for this mapping
@@ -1185,7 +1182,7 @@ class SNPs:
             ].index
 
             # if there are no snp here, skip
-            if not len(snp_indices) :
+            if not len(snp_indices):
                 continue
 
             orig_range_len = orig_end - orig_start
@@ -1193,9 +1190,11 @@ class SNPs:
 
             # if this would change chromosome, skip
             # TODO allow within normal chromosomes
-            # TODO flatten patches 
+            # TODO flatten patches
             if orig_region != mapped_region:
-                logger.warning(f"discrepant chroms for {len(snp_indices)} SNPs from {orig_region} to {mapped_region}")
+                logger.warning(
+                    f"discrepant chroms for {len(snp_indices)} SNPs from {orig_region} to {mapped_region}"
+                )
                 continue
 
             # if there is any stretching or squashing of the region
@@ -1204,18 +1203,14 @@ class SNPs:
             if orig_range_len != mapped_range_len:
                 logger.warning(
                     f"discrepant coords for {len(snp_indices)} SNPs from {orig_region}:{orig_start}-{orig_end} to {mapped_region}:{mapped_start}-{mapped_end}"
-                )  
+                )
                 continue
-            
+
             # remap the SNPs
             if mapping["mapped"]["strand"] == -1:
                 # flip and (optionally) complement since we're mapping to minus strand
-                diff_from_start = (
-                    temp.loc[snp_indices, "pos"] - orig_start
-                )
-                temp.loc[snp_indices, "pos"] = (
-                    mapped_end - diff_from_start
-                )
+                diff_from_start = temp.loc[snp_indices, "pos"] - orig_start
+                temp.loc[snp_indices, "pos"] = mapped_end - diff_from_start
 
                 if complement_bases:
                     temp.loc[snp_indices, "genotype"] = temp.loc[

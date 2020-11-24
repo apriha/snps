@@ -1161,58 +1161,73 @@ class SNPs:
         pos_end = int(temp["pos"].describe()["max"])
 
         for mapping in mappings["mappings"]:
-            # skip if mapping is outside of range of SNP positions
-            if (
-                mapping["original"]["end"] < pos_start
-                or mapping["original"]["start"] > pos_end
-            ):
-                continue
 
-            orig_range_len = mapping["original"]["end"] - mapping["original"]["start"]
-            mapped_range_len = mapping["mapped"]["end"] - mapping["mapped"]["start"]
+            orig_start = mapping["original"]["start"]
+            orig_end = mapping["original"]["end"]
+            mapped_start = mapping["mapped"]["start"]
+            mapped_end = mapping["mapped"]["end"]
 
             orig_region = mapping["original"]["seq_region_name"]
             mapped_region = mapping["mapped"]["seq_region_name"]
 
-            if orig_region != mapped_region:
-                logger.warning("discrepant chroms")
-                continue
-
-            if orig_range_len != mapped_range_len:
-                logger.warning(
-                    "discrepant coords"
-                )  # observed when mapping NCBI36 -> GRCh38
+            # skip if mapping is outside of range of SNP positions
+            if (
+                orig_end < pos_start
+                or orig_start > pos_end
+            ):
                 continue
 
             # find the SNPs that are being remapped for this mapping
             snp_indices = temp.loc[
                 ~temp["remapped"]
-                & (temp["pos"] >= mapping["original"]["start"])
-                & (temp["pos"] <= mapping["original"]["end"])
+                & (temp["pos"] >= orig_start)
+                & (temp["pos"] <= orig_end)
             ].index
 
-            if len(snp_indices) > 0:
-                # remap the SNPs
-                if mapping["mapped"]["strand"] == -1:
-                    # flip and (optionally) complement since we're mapping to minus strand
-                    diff_from_start = (
-                        temp.loc[snp_indices, "pos"] - mapping["original"]["start"]
-                    )
-                    temp.loc[snp_indices, "pos"] = (
-                        mapping["mapped"]["end"] - diff_from_start
-                    )
+            # if there are no snp here, skip
+            if not len(snp_indices) :
+                continue
 
-                    if complement_bases:
-                        temp.loc[snp_indices, "genotype"] = temp.loc[
-                            snp_indices, "genotype"
-                        ].apply(self._complement_bases)
-                else:
-                    # mapping is on same (plus) strand, so just remap based on offset
-                    offset = mapping["mapped"]["start"] - mapping["original"]["start"]
-                    temp.loc[snp_indices, "pos"] = temp["pos"] + offset
+            orig_range_len = orig_end - orig_start
+            mapped_range_len = mapped_end - mapped_start
 
-                # mark these SNPs as remapped
-                temp.loc[snp_indices, "remapped"] = True
+            # if this would change chromosome, skip
+            # TODO allow within normal chromosomes
+            # TODO flatten patches 
+            if orig_region != mapped_region:
+                logger.warning(f"discrepant chroms for {len(snp_indices)} SNPs from {orig_region} to {mapped_region}")
+                continue
+
+            # if there is any stretching or squashing of the region
+            # observed when mapping NCBI36 -> GRCh38
+            # TODO disallow skipping a version when remapping
+            if orig_range_len != mapped_range_len:
+                logger.warning(
+                    f"discrepant coords for {len(snp_indices)} SNPs from {orig_region}:{orig_start}-{orig_end} to {mapped_region}:{mapped_start}-{mapped_end}"
+                )  
+                continue
+            
+            # remap the SNPs
+            if mapping["mapped"]["strand"] == -1:
+                # flip and (optionally) complement since we're mapping to minus strand
+                diff_from_start = (
+                    temp.loc[snp_indices, "pos"] - orig_start
+                )
+                temp.loc[snp_indices, "pos"] = (
+                    mapped_end - diff_from_start
+                )
+
+                if complement_bases:
+                    temp.loc[snp_indices, "genotype"] = temp.loc[
+                        snp_indices, "genotype"
+                    ].apply(self._complement_bases)
+            else:
+                # mapping is on same (plus) strand, so just remap based on offset
+                offset = mapped_start - orig_start
+                temp.loc[snp_indices, "pos"] = temp["pos"] + offset
+
+            # mark these SNPs as remapped
+            temp.loc[snp_indices, "remapped"] = True
 
         return temp
 

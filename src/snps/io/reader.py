@@ -606,12 +606,13 @@ class Reader:
         """
 
         def parser():
-            # read files with multiple separators
             df = pd.read_csv(
                 file,
                 comment="#",
                 header=0,
-                delim_whitespace=True,  # https://stackoverflow.com/a/41320761
+                engine="c",
+                sep="\s+",
+                # delim_whitespace=True,  # https://stackoverflow.com/a/15026839
                 na_values=0,
                 names=["rsid", "chrom", "pos", "allele1", "allele2"],
                 index_col=0,

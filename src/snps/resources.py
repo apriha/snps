@@ -63,12 +63,12 @@ from atomicwrites import atomic_write
 import numpy as np
 
 from snps.ensembl import EnsemblRestClient
-from snps.utils import create_dir, Singleton
+from snps.utils import create_dir
 
 logger = logging.getLogger(__name__)
 
 
-class Resources(metaclass=Singleton):
+class Resources:
     """ Object used to manage resources required by `snps`. """
 
     def __init__(self, resources_dir="resources"):

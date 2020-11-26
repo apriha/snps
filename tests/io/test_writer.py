@@ -82,10 +82,10 @@ class TestWriter(BaseSNPsTestCase):
         self.run_parsing_tests("output/generic.csv", "generic")
 
     def test_save_snps_vcf(self):
-        s = SNPs("tests/input/testvcf.vcf")
-
         r = Resources()
         r._reference_sequences["GRCh37"] = {}
+
+        s = SNPs("tests/input/testvcf.vcf", resources_obj=r)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             dest = os.path.join(tmpdir, "generic.fa.gz")
@@ -100,10 +100,10 @@ class TestWriter(BaseSNPsTestCase):
         self.run_parsing_tests_vcf("output/vcf_GRCh37.vcf")
 
     def test_save_snps_vcf_false_positive_build(self):
-        snps = SNPs("tests/input/testvcf.vcf")
-
         r = Resources()
         r._reference_sequences["GRCh37"] = {}
+
+        snps = SNPs("tests/input/testvcf.vcf", resources_obj=r)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             dest = os.path.join(tmpdir, "generic.fa.gz")
@@ -130,10 +130,10 @@ class TestWriter(BaseSNPsTestCase):
         self.run_parsing_tests_vcf(output)
 
     def test_save_snps_vcf_discrepant_pos(self):
-        s = SNPs("tests/input/testvcf.vcf")
-
         r = Resources()
         r._reference_sequences["GRCh37"] = {}
+
+        s = SNPs("tests/input/testvcf.vcf", resources_obj=r)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             dest = os.path.join(tmpdir, "generic.fa.gz")
@@ -164,12 +164,10 @@ class TestWriter(BaseSNPsTestCase):
         self.run_parsing_tests_vcf("output/vcf_GRCh37.vcf", snps_df=expected)
 
     def test_save_snps_vcf_phased(self):
-        # read phased data
-        s = SNPs("tests/input/testvcf_phased.vcf")
-
-        # setup resource to use test FASTA reference sequence
         r = Resources()
         r._reference_sequences["GRCh37"] = {}
+
+        s = SNPs("tests/input/testvcf_phased.vcf", resources_obj=r)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             dest = os.path.join(tmpdir, "generic.fa.gz")

@@ -60,7 +60,8 @@ class SNPs:
         only_detect_source=False,
         assign_par_snps=False,
         output_dir="output",
-        resources_dir="resources",
+        resources_dir=None,
+        resources_obj=Resources(resources_dir="resources"),
         deduplicate=True,
         deduplicate_XY_chrom=True,
         deduplicate_MT_chrom=True,
@@ -81,7 +82,9 @@ class SNPs:
         output_dir : str
             path to output directory
         resources_dir : str
-            name / path of resources directory
+            name / path of resources directory if resources_obj is None
+        resources_obj : None or Resources
+            resources object to use
         deduplicate : bool
             deduplicate RSIDs and make SNPs available as `SNPs.duplicate`
         deduplicate_XY_chrom : bool
@@ -110,7 +113,12 @@ class SNPs:
         self._build = 0
         self._build_detected = False
         self._output_dir = output_dir
-        self._resources = Resources(resources_dir=resources_dir)
+        if resources_dir:
+            self._resources = Resources(resources_dir=resources_dir)
+        elif resources_obj:
+            self._resources = resources_obj
+        else:
+            raise ValueError("One of resources_dir or resources_obj must be defined")
         self._parallelizer = Parallelizer(parallelize=parallelize, processes=processes)
 
         if file:

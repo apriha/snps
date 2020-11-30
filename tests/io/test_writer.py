@@ -72,14 +72,27 @@ class TestWriter(BaseSNPsTestCase):
         self.assertEqual(
             os.path.relpath(snps.save(sep=",")), "output/generic_GRCh37.csv"
         )
-        self.run_parsing_tests("output/generic_GRCh37.csv", "generic")
+        self.run_parsing_tests(
+            "output/generic_GRCh37.csv", "generic",
+        )
 
     def test_save_snps_csv_filename(self):
         snps = SNPs("tests/input/generic.csv")
         self.assertEqual(
             os.path.relpath(snps.save("generic.csv", sep=",")), "output/generic.csv"
         )
-        self.run_parsing_tests("output/generic.csv", "generic")
+        self.run_parsing_tests(
+            "output/generic.csv", "generic",
+        )
+
+    def test_save_snps_tsv(self):
+        snps = SNPs("tests/input/generic.csv")
+        self.assertEqual(
+            os.path.relpath(snps.save("generic.tsv", sep="\t")), "output/generic.tsv",
+        )
+        self.run_parsing_tests(
+            "output/generic.tsv", "generic",
+        )
 
     def test_save_snps_vcf(self):
         s = SNPs("tests/input/testvcf.vcf")
@@ -146,6 +159,9 @@ class TestWriter(BaseSNPsTestCase):
             # create discrepant SNPs by setting positions outside reference sequence
             s._snps.loc["rs1", "pos"] = 0
             s._snps.loc["rs17", "pos"] = 118
+
+            # esnure this is the right type after manual tweaking
+            s._snps = s._snps.astype({"pos": np.uint32})
 
             self.assertEqual(os.path.relpath(s.save(vcf=True)), "output/vcf_GRCh37.vcf")
 

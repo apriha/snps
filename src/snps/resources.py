@@ -83,6 +83,7 @@ class Resources(metaclass=Singleton):
         self._ensembl_rest_client = EnsemblRestClient()
         self._reference_sequences = {}
         self._gsa_resources = {}
+        self._dbsnp_151_37_reverse = {}
         self._opensnp_datadump_filenames = []
 
     def get_reference_sequences(
@@ -261,6 +262,44 @@ class Resources(metaclass=Singleton):
                 self._get_path_gsa_rsid_map(), self._get_path_gsa_chrpos_map()
             )
         return self._gsa_resources
+
+    def get_dbsnp_151_37_reverse(self):
+        """Get dict of RSIDs and allele population frequencies (when known) that are potentially 
+        on the reference reverse(-) strand in dbSNP 151 and lower
+
+        Returns
+        -------
+        dict
+        """
+        if not self._dbsnp_151_37_reverse:
+            dbsnp_rev_path = self._get_path_dbsnp_151_37_reverse()
+            dbsnp_reverse = {}
+            with gzip.open(dbsnp_rev_path, "rb") as f:
+                for line in f:
+                    line = line.decode("utf-8").strip()
+                    if line.startswith("#"):
+                        continue
+                    line = line.split(" ")
+                    frqs = None
+                    if len(line) == 1:
+                        rsid = line[0]
+                    elif len(line) == 5:
+                        rsid = line[0]
+                        try:
+                            frqs = {}
+                            for frq, base in zip(line[1:5], ("A", "T", "C", "G")):
+                                frqs[base] = frq
+                        except ValueError as e:
+                            # unable to read the line
+                            frqs = None
+                    else:
+                        # unexpected length of line, skip it
+                        continue
+
+                    dbsnp_reverse[rsid] = frqs
+            self._dbsnp_151_37_reverse = dbsnp_reverse
+            logger.debug("Loaded dbsnp 151 37 reverse")
+        return self._dbsnp_151_37_reverse
 
     def get_opensnp_datadump_filenames(self):
         """ Get filenames internal to the `openSNP <https://opensnp.org>`_ datadump zip.
@@ -601,6 +640,12 @@ class Resources(metaclass=Singleton):
         return self._download_file(
             "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_chrpos_map.txt.gz",
             "gsa_chrpos_map.txt.gz",
+        )
+
+    def _get_path_dbsnp_151_37_reverse(self):
+        return self._download_file(
+            "https://sano-public.s3.eu-west-2.amazonaws.com/dbsnp151.b37.snps_reverse.txt.gz",
+            "dbsnp_151_37_reverse.txt.gz",
         )
 
     def _get_path_opensnp_datadump(self):

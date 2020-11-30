@@ -1210,7 +1210,7 @@ class Reader:
                     continue
 
                 rsid = line_strip.split("\t")[2]
-                
+
                 # skip SNPs with missing rsIDs.
                 if rsid == ".":
                     continue

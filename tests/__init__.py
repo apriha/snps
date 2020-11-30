@@ -39,6 +39,7 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_object_dtype, is_unsigned_integer_dtype
 
 from snps import SNPs
 from snps.utils import gzip_file, zip_file
@@ -48,8 +49,8 @@ class BaseSNPsTestCase(TestCase):
     def setUp(self):
         self.del_output_dir_helper()
 
-    def tearDown(self):
-        self.del_output_dir_helper()
+    # def tearDown(self):
+    #    self.del_output_dir_helper()
 
     @staticmethod
     def del_output_dir_helper():
@@ -73,7 +74,7 @@ class BaseSNPsTestCase(TestCase):
 
         s._build = 37
 
-        positions = np.arange(pos_start, pos_max, pos_step, dtype=np.int64)
+        positions = np.arange(pos_start, pos_max, pos_step, dtype=np.uint32)
         snps = pd.DataFrame(
             {"chrom": chrom},
             index=pd.Index(
@@ -154,6 +155,10 @@ class BaseSNPsTestCase(TestCase):
             {"rsid": rsid, "chrom": chrom, "pos": pos, "genotype": genotype},
             columns=["rsid", "chrom", "pos", "genotype"],
         )
+        df.rsid = df.rsid.astype(object)
+        df.chrom = df.chrom.astype(object)
+        df.pos = df.pos.astype(np.uint32)
+        df.genotype = df.genotype.astype(object)
         df = df.set_index("rsid")
         return df
 
@@ -308,11 +313,11 @@ class BaseSNPsTestCase(TestCase):
         ]
 
         if self.downloads_enabled:
-            return SNPs(path, assign_par_snps=True)
+            return SNPs(path, assign_par_snps=True, deduplicate_XY_chrom=False)
         else:
             mock = Mock(side_effect=effects)
             with patch("snps.ensembl.EnsemblRestClient.perform_rest_action", mock):
-                return SNPs(path, assign_par_snps=True)
+                return SNPs(path, assign_par_snps=True, deduplicate_XY_chrom=False)
 
     def _get_test_assembly_mapping_data(self, source, target, strands, mappings):
         return {
@@ -324,14 +329,14 @@ class BaseSNPsTestCase(TestCase):
                             "strand": strands[0],
                             "start": mappings[0],
                             "end": mappings[0],
-                            "assembly": "{}".format(source),
+                            "assembly": f"{source}",
                         },
                         "mapped": {
                             "seq_region_name": "1",
                             "strand": strands[1],
                             "start": mappings[1],
                             "end": mappings[1],
-                            "assembly": "{}".format(target),
+                            "assembly": f"{target}",
                         },
                     },
                     {
@@ -340,14 +345,14 @@ class BaseSNPsTestCase(TestCase):
                             "strand": strands[2],
                             "start": mappings[2],
                             "end": mappings[2],
-                            "assembly": "{}".format(source),
+                            "assembly": f"{source}",
                         },
                         "mapped": {
                             "seq_region_name": "1",
                             "strand": strands[3],
                             "start": mappings[3],
                             "end": mappings[3],
-                            "assembly": "{}".format(target),
+                            "assembly": f"{target}",
                         },
                     },
                     {
@@ -356,14 +361,14 @@ class BaseSNPsTestCase(TestCase):
                             "strand": strands[4],
                             "start": mappings[4],
                             "end": mappings[4],
-                            "assembly": "{}".format(source),
+                            "assembly": f"{source}",
                         },
                         "mapped": {
                             "seq_region_name": "1",
                             "strand": strands[5],
                             "start": mappings[5],
                             "end": mappings[5],
-                            "assembly": "{}".format(target),
+                            "assembly": f"{target}",
                         },
                     },
                 ]
@@ -376,14 +381,14 @@ class BaseSNPsTestCase(TestCase):
                             "strand": strands[6],
                             "start": mappings[6],
                             "end": mappings[6],
-                            "assembly": "{}".format(source),
+                            "assembly": f"{source}",
                         },
                         "mapped": {
                             "seq_region_name": "3",
                             "strand": strands[7],
                             "start": mappings[7],
                             "end": mappings[7],
-                            "assembly": "{}".format(target),
+                            "assembly": f"{target}",
                         },
                     }
                 ]
@@ -572,7 +577,7 @@ class BaseSNPsTestCase(TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             base = os.path.basename(file)
-            dest = os.path.join(tmpdir, "{}.gz".format(base))
+            dest = os.path.join(tmpdir, f"{base}.gz")
             gzip_file(file, dest)
             self.make_parsing_assertions(
                 self.parse_file(dest), source, phased, build, build_detected, snps_df
@@ -591,7 +596,7 @@ class BaseSNPsTestCase(TestCase):
                 snps_df,
             )
 
-            dest = os.path.join(tmpdir, "{}.zip".format(base))
+            dest = os.path.join(tmpdir, f"{base}.zip")
             zip_file(file, dest, base)
             self.make_parsing_assertions(
                 self.parse_file(dest), source, phased, build, build_detected, snps_df
@@ -619,6 +624,7 @@ class BaseSNPsTestCase(TestCase):
         rsids=(),
         build=37,
         build_detected=False,
+        snps_df=None,
     ):
         # https://samtools.github.io/hts-specs/VCFv4.2.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
@@ -631,6 +637,7 @@ class BaseSNPsTestCase(TestCase):
             rsids,
             build,
             build_detected,
+            snps_df,
         )
         self.make_parsing_assertions_vcf(
             self.parse_bytes(file, rsids),
@@ -640,11 +647,12 @@ class BaseSNPsTestCase(TestCase):
             rsids,
             build,
             build_detected,
+            snps_df,
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             base = os.path.basename(file)
-            dest = os.path.join(tmpdir, "{}.gz".format(base))
+            dest = os.path.join(tmpdir, f"{base}.gz")
             gzip_file(file, dest)
             self.make_parsing_assertions_vcf(
                 self.parse_file(dest, rsids),
@@ -654,6 +662,7 @@ class BaseSNPsTestCase(TestCase):
                 rsids,
                 build,
                 build_detected,
+                snps_df,
             )
             self.make_parsing_assertions_vcf(
                 self.parse_bytes(dest, rsids),
@@ -663,6 +672,7 @@ class BaseSNPsTestCase(TestCase):
                 rsids,
                 build,
                 build_detected,
+                snps_df,
             )
             # remove .gz extension
             shutil.move(dest, dest[:-3])
@@ -674,7 +684,15 @@ class BaseSNPsTestCase(TestCase):
                 rsids,
                 build,
                 build_detected,
+                snps_df,
             )
+
+    def make_normalized_dataframe_assertions(self, df):
+        self.assertEqual(df.index.name, "rsid")
+        self.assertTrue(is_object_dtype(df.index.dtype))
+        self.assertTrue(is_object_dtype(df.chrom.dtype))
+        self.assertTrue(is_unsigned_integer_dtype(df.pos.dtype))
+        self.assertTrue(is_object_dtype(df.genotype.dtype))
 
     def parse_file(self, file, rsids=()):
         return SNPs(file, rsids=rsids)
@@ -695,21 +713,25 @@ class BaseSNPsTestCase(TestCase):
         self.assertTrue(snps.build_detected) if build_detected else self.assertFalse(
             snps.build_detected
         )
+        self.make_normalized_dataframe_assertions(snps.snps)
 
     def make_parsing_assertions_vcf(
-        self, snps, source, phased, unannotated, rsids, build, build_detected
+        self, snps, source, phased, unannotated, rsids, build, build_detected, snps_df
     ):
+        if snps_df is None:
+            snps_df = self.generic_snps_vcf()
+
         self.assertEqual(snps.source, source)
 
         if unannotated:
             self.assertTrue(snps.unannotated_vcf)
-            self.assertEqual(0, snps.snp_count)
+            self.assertEqual(0, snps.count)
         else:
             self.assertFalse(snps.unannotated_vcf)
             pd.testing.assert_frame_equal(
-                snps.snps, self.generic_snps_vcf().loc[rsids], check_exact=True
+                snps.snps, snps_df.loc[rsids], check_exact=True
             ) if rsids else pd.testing.assert_frame_equal(
-                snps.snps, self.generic_snps_vcf(), check_exact=True
+                snps.snps, snps_df, check_exact=True
             )
 
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)
@@ -717,3 +739,4 @@ class BaseSNPsTestCase(TestCase):
         self.assertTrue(snps.build_detected) if build_detected else self.assertFalse(
             snps.build_detected
         )
+        self.make_normalized_dataframe_assertions(snps.snps)

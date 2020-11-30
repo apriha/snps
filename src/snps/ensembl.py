@@ -71,7 +71,7 @@ import urllib.request
 
 
 class EnsemblRestClient:
-    def __init__(self, server="http://rest.ensembl.org", reqs_per_sec=15):
+    def __init__(self, server="https://rest.ensembl.org", reqs_per_sec=15):
         self.server = server
         self.reqs_per_sec = reqs_per_sec
         self.req_count = 0
@@ -116,9 +116,7 @@ class EnsemblRestClient:
                     self.perform_rest_action(endpoint, hdrs, params)
             else:
                 sys.stderr.write(
-                    "Request failed for {0}: Status code: {1.code} Reason: {1.reason}\n".format(
-                        endpoint, e
-                    )
+                    f"Request failed for {endpoint}: Status code: {e.code} Reason: {e.reason}\n"
                 )
 
         return data

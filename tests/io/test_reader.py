@@ -33,9 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
 import tempfile
-import warnings
 
-import pandas as pd
+from atomicwrites import atomic_write
 
 from snps.resources import Resources
 from snps.utils import gzip_file
@@ -43,11 +42,6 @@ from tests import BaseSNPsTestCase
 
 
 class TestReader(BaseSNPsTestCase):
-    def setUp(self):
-        # set warnings filter (test runner overrides statement in `io/reader.py`)
-        warnings.filterwarnings("error", category=pd.errors.DtypeWarning)
-        super().setUp()
-
     @staticmethod
     def _setup_gsa_test(resources_dir):
         # reset resource if already loaded
@@ -74,18 +68,57 @@ class TestReader(BaseSNPsTestCase):
         r._resources_dir = "resources"
         r._gsa_resources = {}
 
+    def run_build_detection_test(
+        self,
+        run_parsing_tests_func,
+        build_str,
+        build_int,
+        file="tests/input/testvcf.vcf",
+        source="vcf",
+        comment_str="##{}\n",
+        insertion_line=1,
+    ):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            s = ""
+            with open(file, "r") as f:
+                for i, line in enumerate(f.readlines()):
+                    s += line
+                    # insert comment from which to detect build
+                    if i == insertion_line:
+                        s += comment_str.format(build_str)
+
+            print(s)
+
+            file_build_comment = os.path.join(tmpdir, os.path.basename(file))
+            with atomic_write(file_build_comment, mode="w") as f:
+                f.write(s)
+
+            run_parsing_tests_func(
+                file_build_comment, source, build=build_int, build_detected=True
+            )
+
     def test_read_23andme(self):
         # https://www.23andme.com
         self.run_parsing_tests("tests/input/23andme.txt", "23andMe")
 
     def test_read_23andme_build36(self):
-        self.run_parsing_tests(
-            "tests/input/23andme_build36.txt", "23andMe", build=36, build_detected=True
+        self.run_build_detection_test(
+            self.run_parsing_tests,
+            "build 36",
+            36,
+            file="tests/input/23andme.txt",
+            source="23andMe",
+            comment_str="# {}\n",
         )
 
     def test_read_23andme_build37(self):
-        self.run_parsing_tests(
-            "tests/input/23andme_build37.txt", "23andMe", build=37, build_detected=True
+        self.run_build_detection_test(
+            self.run_parsing_tests,
+            "build 37",
+            37,
+            file="tests/input/23andme.txt",
+            source="23andMe",
+            comment_str="# {}\n",
         )
 
     def test_read_ancestry(self):
@@ -95,18 +128,17 @@ class TestReader(BaseSNPsTestCase):
     def test_read_ancestry_extra_tab(self):
         # https://www.ancestry.com
 
-        # we need a large file to generate the `pd.errors.DtypeWarning`
-        total_snps = 500000
+        total_snps = 100
         s = "#Ancestry\r\n"
         s += "rsid\tchromosome\tposition\tallele1\tallele2\r\n"
         # add extra tab separator in first line
         s += "rs1\t1\t101\t\tA\tA\r\n"
         # generate remainder of lines
         for i in range(1, total_snps):
-            s += "rs{}\t1\t{}\tA\tA\r\n".format(1 + i, 101 + i)
+            s += f"rs{1 + i}\t1\t{101 + i}\tA\tA\r\n"
 
         snps_df = self.create_snp_df(
-            rsid=["rs{}".format(1 + i) for i in range(0, total_snps)],
+            rsid=[f"rs{1 + i}" for i in range(0, total_snps)],
             chrom="1",
             pos=[101 + i for i in range(0, total_snps)],
             genotype="AA",
@@ -153,17 +185,14 @@ class TestReader(BaseSNPsTestCase):
         # generate content of first file
         s1 = "RSID,CHROMOSOME,POSITION,RESULT\r\n"
         for i in range(0, total_snps1):
-            s1 += '"rs{}","1","{}","AA"\r\n'.format(1 + i, 101 + i)
+            s1 += f'"rs{1 + i}","1","{101 + i}","AA"\r\n'
 
         # generate content of second file
         s2 = "RSID,CHROMOSOME,POSITION,RESULT\r\n"
         for i in range(0, total_snps2):
-            s2 += '"rs{}","1","{}","AA"\r\n'.format(
-                total_snps1 + 1 + i, total_snps1 + 101 + i
-            )
-
+            s2 += f'"rs{total_snps1 + 1 + i}","1","{ total_snps1 + 101 + i}","AA"\r\n'
         snps_df = self.create_snp_df(
-            rsid=["rs{}".format(1 + i) for i in range(0, total_snps1 + total_snps2)],
+            rsid=[f"rs{1 + i}" for i in range(0, total_snps1 + total_snps2)],
             chrom="1",
             pos=[101 + i for i in range(0, total_snps1 + total_snps2)],
             genotype="AA",
@@ -171,9 +200,9 @@ class TestReader(BaseSNPsTestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             file1 = os.path.join(tmpdir, "ftdna_concat_gzip1.csv")
-            file1_gz = "{}.gz".format(file1)
+            file1_gz = f"{file1}.gz"
             file2 = os.path.join(tmpdir, "ftdna_concat_gzip2.csv")
-            file2_gz = "{}.gz".format(file2)
+            file2_gz = f"{file2}.gz"
             path = os.path.join(tmpdir, "ftdna_concat_gzip.csv.gz")
 
             # write individual files
@@ -213,23 +242,20 @@ class TestReader(BaseSNPsTestCase):
     def test_read_ftdna_second_header(self):
         # https://www.familytreedna.com
 
-        # we need a large file to generate the `pd.errors.DtypeWarning`
-        total_snps1 = 500000
-        total_snps2 = 10000
+        total_snps1 = 100
+        total_snps2 = 10
         s = "RSID,CHROMOSOME,POSITION,RESULT\n"
         # generate first chunk of lines
         for i in range(0, total_snps1):
-            s += '"rs{}","1","{}","AA"\n'.format(1 + i, 101 + i)
+            s += f'"rs{1 + i}","1","{101 + i}","AA"\n'
         # add second header
         s += "RSID,CHROMOSOME,POSITION,RESULT\n"
         # generate second chunk of lines
         for i in range(0, total_snps2):
-            s += '"rs{}","1","{}","AA"\n'.format(
-                total_snps1 + 1 + i, total_snps1 + 101 + i
-            )
+            s += f'"rs{total_snps1 + 1 + i}","1","{total_snps1 + 101 + i}","AA"\n'
 
         snps_df = self.create_snp_df(
-            rsid=["rs{}".format(1 + i) for i in range(0, total_snps1 + total_snps2)],
+            rsid=[f"rs{1 + i}" for i in range(0, total_snps1 + total_snps2)],
             chrom="1",
             pos=[101 + i for i in range(0, total_snps1 + total_snps2)],
             genotype="AA",
@@ -277,9 +303,17 @@ class TestReader(BaseSNPsTestCase):
         # https://mapmygenome.in
         self.run_parsing_tests("tests/input/mapmygenome.txt", "Mapmygenome")
 
+    def test_read_mapmygenome_alt_header(self):
+        # https://mapmygenome.in
+        self.run_parsing_tests("tests/input/mapmygenome_alt_header.txt", "Mapmygenome")
+
     def test_read_myheritage(self):
         # https://www.myheritage.com
         self.run_parsing_tests("tests/input/myheritage.csv", "MyHeritage")
+
+    def test_read_myheritage_extra_quotes(self):
+        # https://www.myheritage.com
+        self.run_parsing_tests("tests/input/myheritage_extra_quotes.csv", "MyHeritage")
 
     def test_read_sano(self):
         # https://sanogenetics.com
@@ -291,14 +325,76 @@ class TestReader(BaseSNPsTestCase):
     def test_read_vcf(self):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")
 
+    def test_read_vcf_NCBI36(self):
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "NCBI36",
+            36,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
+
     def test_read_vcf_b37(self):
-        self.run_parsing_tests_vcf(
-            "tests/input/testvcf_b37.vcf", build=37, build_detected=True
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "b37",
+            37,
+            comment_str="##contig=<ID=1,assembly={}>\n",
         )
 
     def test_read_vcf_hg19(self):
-        self.run_parsing_tests_vcf(
-            "tests/input/testvcf_hg19.vcf", build=37, build_detected=True
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "hg19",
+            37,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
+
+    def test_read_vcf_hg38(self):
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "hg38",
+            38,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
+
+    def test_read_vcf_GRCh38(self):
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "GRCh38",
+            38,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
+
+    def test_read_vcf_build38(self):
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "Build 38",
+            38,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
+
+    def test_read_vcf_b38(self):
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "b38",
+            38,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
+
+    def test_read_vcf_length38(self):
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "",
+            38,
+            comment_str="##contig=<ID=1,length=248956422>\n",
+        )
+
+    def test_read_vcf_length37(self):
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "",
+            37,
+            comment_str="##contig=<ID=1,length=249250621>\n",
         )
 
     def test_read_vcf_multi_sample(self):
@@ -314,9 +410,3 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests_vcf(
             "tests/input/unannotated_testvcf.vcf", "vcf", unannotated=True, build=0
         )
-
-    # def test_read_vcf_Dante(self):
-    #     self.run_parsing_tests_vcf("tests/input/testvcf_Dante.vcf", "Dante")
-
-    # def test_read_vcf_Nebula(self):
-    #     self.run_parsing_tests_vcf("tests/input/testvcf_Nebula.vcf", "Nebula")

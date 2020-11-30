@@ -14,6 +14,7 @@
 
    README <readme>
    output_files
+   installation
    snps_banner
    changelog
    contributing

@@ -1102,11 +1102,18 @@ class Reader:
         with io.TextIOWrapper(io.BufferedReader(f)) as file:
 
             for line in file:
-
                 line_strip = line.strip("\n")
+
+                # skip blank lines
+                if not line_strip:
+                    continue
+
+                # skip comment lines
                 if line_strip.startswith("#"):
                     continue
+
                 rsid = line_strip.split("\t")[2]
+
                 # skip SNPs with missing rsIDs.
                 if rsid == ".":
                     continue
@@ -1145,7 +1152,7 @@ class Reader:
                         genotype = np.nan
                         break
                     z = int(z)
-                    if z > len(ref_alt):
+                    if z >= len(ref_alt):
                         # invalid genotype number
                         genotype = np.nan
                         break

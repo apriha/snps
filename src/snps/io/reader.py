@@ -1210,6 +1210,7 @@ class Reader:
                     continue
 
                 rsid = line_strip.split("\t")[2]
+
                 # skip SNPs with missing rsIDs.
                 if rsid == ".":
                     continue
@@ -1248,7 +1249,7 @@ class Reader:
                         genotype = np.nan
                         break
                     z = int(z)
-                    if z > len(ref_alt):
+                    if z >= len(ref_alt):
                         # invalid genotype number
                         genotype = np.nan
                         break

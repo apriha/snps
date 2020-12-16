@@ -42,11 +42,12 @@ import pandas as pd
 from pandas.api.types import is_object_dtype, is_unsigned_integer_dtype
 
 from snps import SNPs
-from snps.utils import gzip_file, zip_file
+from snps.utils import gzip_file, zip_file, Singleton
 
 
 class BaseSNPsTestCase(TestCase):
     def setUp(self):
+        Singleton._instances = {}
         self.del_output_dir_helper()
 
     # def tearDown(self):
@@ -706,6 +707,15 @@ class BaseSNPsTestCase(TestCase):
     ):
         if snps_df is None:
             snps_df = self.generic_snps()
+
+        # these are useful for debugging if there is a problem
+        print("Observed:")
+        print(snps.snps)
+        print(snps.snps.info())
+        print("Expected:")
+        print(snps_df)
+        print(snps_df.info())
+
         self.assertEqual(snps.source, source)
         pd.testing.assert_frame_equal(snps.snps, snps_df, check_exact=True)
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)

@@ -87,8 +87,6 @@ class TestReader(BaseSNPsTestCase):
                     if i == insertion_line:
                         s += comment_str.format(build_str)
 
-            print(s)
-
             file_build_comment = os.path.join(tmpdir, os.path.basename(file))
             with atomic_write(file_build_comment, mode="w") as f:
                 f.write(s)

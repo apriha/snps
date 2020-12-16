@@ -61,6 +61,7 @@ import zipfile
 
 from atomicwrites import atomic_write
 import numpy as np
+import pandas as pd
 
 from snps.ensembl import EnsemblRestClient
 from snps.utils import create_dir, Singleton
@@ -82,8 +83,9 @@ class Resources(metaclass=Singleton):
         self._resources_dir = os.path.abspath(resources_dir)
         self._ensembl_rest_client = EnsemblRestClient()
         self._reference_sequences = {}
-        self._gsa_resources = {}
-        self._dbsnp_151_37_reverse = {}
+        self._gsa_rsid_map = None
+        self._gsa_chrpos_map = None
+        self._dbsnp_151_37_reverse = None
         self._opensnp_datadump_filenames = []
 
     def get_reference_sequences(
@@ -257,48 +259,46 @@ class Resources(metaclass=Singleton):
         -------
         dict
         """
-        if not self._gsa_resources:
-            self._gsa_resources = self._load_gsa_resources(
-                self._get_path_gsa_rsid_map(), self._get_path_gsa_chrpos_map()
-            )
-        return self._gsa_resources
+
+        return {
+            "rsid_map": self.get_gsa_rsid(),
+            "chrpos_map": self.get_gsa_chrpos(),
+        }
 
     def get_dbsnp_151_37_reverse(self):
-        """Get dict of RSIDs and allele population frequencies (when known) that are potentially 
-        on the reference reverse(-) strand in dbSNP 151 and lower
+        """Get pandas series of RSIDs that are on the reference reverse (-) strand in dbSNP 151 and lower
 
         Returns
         -------
         dict
         """
-        if not self._dbsnp_151_37_reverse:
-            dbsnp_rev_path = self._get_path_dbsnp_151_37_reverse()
-            dbsnp_reverse = {}
-            with gzip.open(dbsnp_rev_path, "rb") as f:
-                for line in f:
-                    line = line.decode("utf-8").strip()
-                    if line.startswith("#"):
-                        continue
-                    line = line.split(" ")
-                    frqs = None
-                    if len(line) == 1:
-                        rsid = line[0]
-                    elif len(line) == 5:
-                        rsid = line[0]
-                        try:
-                            frqs = {}
-                            for frq, base in zip(line[1:5], ("A", "T", "C", "G")):
-                                frqs[base] = frq
-                        except ValueError as e:
-                            # unable to read the line
-                            frqs = None
-                    else:
-                        # unexpected length of line, skip it
-                        continue
+        if self._dbsnp_151_37_reverse is None:
+            # download the file from the cloud, if not done already
+            dbsnp_rev_path = self._download_file(
+                "https://sano-public.s3.eu-west-2.amazonaws.com/dbsnp151.b37.snps_reverse.txt.gz",
+                "dbsnp_151_37_reverse.txt.gz",
+            )
 
-                    dbsnp_reverse[rsid] = frqs
-            self._dbsnp_151_37_reverse = dbsnp_reverse
-            logger.debug("Loaded dbsnp 151 37 reverse")
+            # load into pandas
+            rsids = pd.read_csv(
+                dbsnp_rev_path,
+                sep=r"\s+",  # whitespace separators
+                header=0,  # dont infer header as there isn't one
+                names=("rsid", "freqa", "freqt", "freqc", "freqg"),
+                dtype={
+                    "rsid": "string",
+                    "freqa": "double",
+                    "freqt": "double",
+                    "freqc": "double",
+                    "freqg": "double",
+                },
+                engine="c",  # force c engine for performance
+                skiprows=0,  # skip the first row
+                usecols=["rsid"],  # keep only the rsids
+                squeeze=True,  # return a series not a df
+            )
+
+            self._dbsnp_151_37_reverse = rsids
         return self._dbsnp_151_37_reverse
 
     def get_opensnp_datadump_filenames(self):
@@ -610,43 +610,50 @@ class Resources(metaclass=Singleton):
                         # remove temp file
                         os.remove(f_tmp.name)
 
-    def _load_gsa_resources(self, rsid_map, chrpos_map):
-        d = {}
+    def get_gsa_rsid(self):
+        if self._gsa_rsid_map is None:
+            # download the file from the cloud, if not done already
+            rsid_path = self._download_file(
+                "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_rsid_map.txt.gz",
+                "gsa_rsid_map.txt.gz",
+            )
+            # load into pandas
+            rsids = pd.read_csv(
+                rsid_path,
+                sep=r"\s+",  # whitespace separators
+                header=0,  # dont infer header as there isn't one
+                names=("gsaname_rsid", "gsarsid"),
+                dtype={"gsaname_rsid": "string", "gsarsid": "string"},
+                engine="c",  # force c engine for performance
+            )
+            self._gsa_rsid_map = rsids
+        return self._gsa_rsid_map
 
-        with gzip.open(rsid_map, "rb") as f:
-            gsa_rsid_map = f.read().decode("utf-8")
+    def get_gsa_chrpos(self):
+        if self._gsa_chrpos_map is None:
+            # download the file from the cloud, if not done already
+            chrpos_path = self._download_file(
+                "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_chrpos_map.txt.gz",
+                "gsa_chrpos_map.txt.gz",
+            )
+            # load into pandas
 
-        d["rsid_map"] = dict(
-            (x.split("\t")[0], x.split("\t")[1]) for x in gsa_rsid_map.split("\n")[:-1]
-        )
+            chrpos = pd.read_csv(
+                chrpos_path,
+                sep=r"\s+",  # whitespace separators
+                header=0,  # dont infer header as there isn't one
+                names=("gsaname_chrpos", "gsachr", "gsapos", "gsacm"),
+                dtype={
+                    "gsaname_chrpos": "string",
+                    "gsachr": "category",
+                    "gsapos": "uint32",
+                    "gsacm": "double",
+                },
+                engine="c",  # force c engine for performance
+            )
 
-        with gzip.open(chrpos_map, "rb") as f:
-            gsa_chrpos_map = f.read().decode("utf-8")
-
-        d["chrpos_map"] = dict(
-            (x.split("\t")[0], x.split("\t")[1] + ":" + x.split("\t")[2])
-            for x in gsa_chrpos_map.split("\n")[:-1]
-        )
-
-        return d
-
-    def _get_path_gsa_rsid_map(self):
-        return self._download_file(
-            "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_rsid_map.txt.gz",
-            "gsa_rsid_map.txt.gz",
-        )
-
-    def _get_path_gsa_chrpos_map(self):
-        return self._download_file(
-            "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_chrpos_map.txt.gz",
-            "gsa_chrpos_map.txt.gz",
-        )
-
-    def _get_path_dbsnp_151_37_reverse(self):
-        return self._download_file(
-            "https://sano-public.s3.eu-west-2.amazonaws.com/dbsnp151.b37.snps_reverse.txt.gz",
-            "dbsnp_151_37_reverse.txt.gz",
-        )
+            self._gsa_chrpos_map = chrpos
+        return self._gsa_chrpos_map
 
     def _get_path_opensnp_datadump(self):
         return self._download_file(

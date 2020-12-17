@@ -846,17 +846,15 @@ class Reader:
             # this uses the gsa names, so needs to be done before rsid
             if "Chr" in df.columns and "Position" in df.columns:
                 # put the chromosome in the right column with the right type
-                df["chrom"] = df[
-                    "Chr"
-                ]  # .apply(str).astype(NORMALIZED_DTYPES["chrom"])
+                df["chrom"] = df["Chr"]
                 # put the position in the right column with the right type
-                df["pos"] = df["Position"]  # .astype(NORMALIZED_DTYPES["pos"])
+                df["pos"] = df["Position"]
 
             else:
                 # use an external source to map snp names to chromosome and position
                 df = df.merge(
                     self._resources.get_gsa_chrpos(),
-                    how="left",  # left-hand join, gsa rsids may be NA
+                    how="inner",  # inner join, everything must have a position
                     left_on="SNP Name",
                     right_on="gsaname_chrpos",
                     suffixes=(None, "_gsa"),
@@ -889,8 +887,6 @@ class Reader:
                 df["genotype"] = (df["Allele1 - Plus"] + df["Allele2 - Plus"]).astype(
                     NORMALIZED_DTYPES["genotype"]
                 )
-                # sort alleles
-                # df["genotype"] = df["genotype"].apply(sorted).apply("".join)
             elif (
                 "Allele1 - Forward" in df.columns and "Allele2 - Forward" in df.columns
             ):
@@ -929,8 +925,6 @@ class Reader:
                 df["genotype"] = (df["Allele1 - Plus"] + df["Allele2 - Plus"]).astype(
                     NORMALIZED_DTYPES["genotype"]
                 )
-                # sort alleles
-                # df["genotype"] = df["genotype"].apply(sorted).apply("".join)
             else:
                 raise ValueError("No supported allele column")
 

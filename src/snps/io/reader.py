@@ -895,29 +895,40 @@ class Reader:
                 # is reverse reference for some RSIDs before dbSNP 151.
 
                 # load list of reversable rsids
-                dbsnp_reverse = set(self._resources.get_dbsnp_151_37_reverse())
+                dbsnp151 = self._resources.get_dbsnp_151_37_reverse()
+                # keep only the rsids
+                dbsnp151 = dbsnp151.filter(items=("dbsnp151revrsid",), axis=1)
+
+                # add it as an extra column
+                df = df.merge(
+                    dbsnp151,
+                    how="left",
+                    left_on="rsid",
+                    right_on="dbsnp151revrsid",
+                    suffixes=(None, "_dbsnp151rev"),
+                )
 
                 # create plus strand columns from the forward alleles and flip them if appropriate
                 for i in (1, 2):
                     df[f"Allele{i} - Plus"] = df[f"Allele{i} - Forward"]
                     df.loc[
                         (df[f"Allele{i} - Forward"] == "A")
-                        & (df["rsid"].isin(dbsnp_reverse)),
+                        & (~pd.isna(df["dbsnp151revrsid"])),
                         f"Allele{i} - Plus",
                     ] = "T"
                     df.loc[
                         (df[f"Allele{i} - Forward"] == "T")
-                        & (df["rsid"].isin(dbsnp_reverse)),
+                        & (~pd.isna(df["dbsnp151revrsid"])),
                         f"Allele{i} - Plus",
                     ] = "A"
                     df.loc[
                         (df[f"Allele{i} - Forward"] == "C")
-                        & (df["rsid"].isin(dbsnp_reverse)),
+                        & (~pd.isna(df["dbsnp151revrsid"])),
                         f"Allele{i} - Plus",
                     ] = "G"
                     df.loc[
                         (df[f"Allele{i} - Forward"] == "G")
-                        & (df["rsid"].isin(dbsnp_reverse)),
+                        & (~pd.isna(df["dbsnp151revrsid"])),
                         f"Allele{i} - Plus",
                     ] = "C"
 

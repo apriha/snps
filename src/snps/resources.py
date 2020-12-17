@@ -284,21 +284,27 @@ class Resources(metaclass=Singleton):
                 dbsnp_rev_path,
                 sep=r"\s+",  # whitespace separators
                 header=0,  # dont infer header as there isn't one
-                names=("rsid", "freqa", "freqt", "freqc", "freqg"),
+                names=(
+                    "dbsnp151revrsid",
+                    "dbsnp151freqa",
+                    "dbsnp151freqt",
+                    "dbsnp151freqc",
+                    "dbsnp151freqg",
+                ),
                 dtype={
-                    "rsid": "string",
-                    "freqa": "double",
-                    "freqt": "double",
-                    "freqc": "double",
-                    "freqg": "double",
+                    "dbsnp151revrsid": "string",
+                    "dbsnp151freqa": "double",
+                    "dbsnp151freqt": "double",
+                    "dbsnp151freqc": "double",
+                    "dbsnp151freqg": "double",
                 },
                 engine="c",  # force c engine for performance
                 skiprows=0,  # skip the first row
-                usecols=["rsid"],  # keep only the rsids
-                squeeze=True,  # return a series not a df
             )
 
+            # store in memory so we don't have to load again
             self._dbsnp_151_37_reverse = rsids
+
         return self._dbsnp_151_37_reverse
 
     def get_opensnp_datadump_filenames(self):

@@ -99,6 +99,12 @@ class SNPs:
             processes to launch if multiprocessing
         rsids : tuple, optional
             rsids to extract if loading a VCF file
+        sex_method : string
+            sex detection method code: "X", "Y", "XY" and "YX supported
+        sex_heterozygous_x_threshold : float
+            proportion of X snps that should be heterozygous to detect female
+        sex_notnull_y_threshold : float
+            proportion of Y snps that should be not null to detect male
         """
         self._file = file
         self._only_detect_source = only_detect_source

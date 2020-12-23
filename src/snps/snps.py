@@ -833,7 +833,7 @@ class SNPs:
             if not self.get_count("X"):
                 # no X so can't determine
                 return ""
-            if len(self.heterozygous("X")) / self.get_count("X") > self._sex_heterozygous_x_threshold:
+            elif len(self.heterozygous("X")) / self.get_count("X") > self._sex_heterozygous_x_threshold:
                 return "Female"
             else:
                 return "Male"
@@ -844,7 +844,7 @@ class SNPs:
             if not self.get_count("Y"):
                 # no Y so can't determine
                 return ""
-            if len(self.notnull("Y")) / self.get_count("Y") > self._sex_notnull_y_threshold:
+            elif len(self.notnull("Y")) / self.get_count("Y") > self._sex_notnull_y_threshold:
                 return "Male"
             else:
                 return "Female"
@@ -853,14 +853,14 @@ class SNPs:
             # safer than just checking one in some cases, will leave sex unassinged if insufficient information
             if self.get_count("X") and len(self.heterozygous("X")) / self.get_count("X") > self._sex_heterozygous_x_threshold:
                 return "Female"
-            if self.get_count("Y") and len(self.notnull("Y")) / self.get_count("Y") > self._sex_notnull_y_threshold:
+            elif self.get_count("Y") and len(self.notnull("Y")) / self.get_count("Y") > self._sex_notnull_y_threshold:
                 return "Male"
         elif self._sex_method == "YX":
             # check for non-null Y, then heterozygous X
             # safer than just checking one in some cases, will leave sex unassinged if insufficient information
             if self.get_count("Y") and len(self.notnull("Y")) / self.get_count("Y") > self._sex_notnull_y_threshold:
                 return "Male"
-            if self.get_count("X") and len(self.heterozygous("X")) / self.get_count("X") > self._sex_heterozygous_x_threshold:
+            elif self.get_count("X") and len(self.heterozygous("X")) / self.get_count("X") > self._sex_heterozygous_x_threshold:
                 return "Female"
         else:
             raise ValueError(f"Unrecognized sex detection method {self._sex_method}")

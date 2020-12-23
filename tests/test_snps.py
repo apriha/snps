@@ -365,33 +365,58 @@ class TestSnps(BaseSNPsTestCase):
         self.assertListEqual(snps._source, ["generic"])
         pd.testing.assert_frame_equal(snps.snps, self.snps_GRCh38(), check_exact=True)
 
-    def test_sex_Female_X_chrom(self):
+    def test_sex_female_X_chrom(self):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AC"
         )
+        s._sex_method="X"
+        self.assertEqual(s.sex, "Female")
+        s._sex_method="Y"
+        self.assertEqual(s.sex, "") # can't detect sex, no Y present
+        s._sex_method="XY"
+        self.assertEqual(s.sex, "Female")
+        s._sex_method="YX"
         self.assertEqual(s.sex, "Female")
 
-    def test_sex_Female_Y_chrom(self):
+    def test_sex_female_Y_chrom(self):
         s = self.simulate_snps(
             chrom="Y", pos_start=1, pos_max=59373566, pos_step=10000, null_snp_step=1
         )
+        s._sex_method="X"
+        self.assertEqual(s.sex, "") # can't detect sex, no X present
+        s._sex_method="Y"
         self.assertEqual(s.sex, "Female")
+        s._sex_method="XY"
+        self.assertEqual(s.sex, "") # can't detect sex, no X present & Y is not male
+        s._sex_method="YX"
+        self.assertEqual(s.sex, "") # can't detect sex, no X present & Y is not male
 
-    def test_sex_Male_X_chrom(self):
+    def test_sex_male_X_chrom(self):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
         )
+        # check that deduplicating doesn't remove anything
         self.assertEqual(s.count, 15528)
         s._deduplicate_XY_chrom()
         self.assertEqual(s.count, 15528)
         self.assertEqual(len(s.discrepant_XY), 0)
-        self.assertEqual(s.sex, "Male")
 
-    def test_sex_Male_X_chrom_discrepant_XY(self):
+        # check that the different sex detection methods work as expected
+        s._sex_method="X"
+        self.assertEqual(s.sex, "Male")
+        s._sex_method="Y"
+        self.assertEqual(s.sex, "") # no Y chromosome
+        s._sex_method="XY"
+        self.assertEqual(s.sex, "") # can't detect sex, no Y present & X is not male
+        s._sex_method="YX"
+        self.assertEqual(s.sex, "") # can't detect sex, no Y present & X is not male
+
+    def test_sex_male_X_chrom_discrepant_XY(self):
         s = self.simulate_snps(
             chrom="X", pos_start=1, pos_max=155270560, pos_step=10000, genotype="AA"
         )
         self.assertEqual(s.count, 15528)
+        # check that deduplicating removes the ambiguous SNP
         s._snps.loc["rs8001", "genotype"] = "AC"
         s._deduplicate_XY_chrom()
         self.assertEqual(s.count, 15527)
@@ -399,21 +424,51 @@ class TestSnps(BaseSNPsTestCase):
             rsid=["rs8001"], chrom=["X"], pos=[80000001], genotype=["AC"]
         )
         pd.testing.assert_frame_equal(s.discrepant_XY, result, check_exact=True)
-        self.assertEqual(s.sex, "Male")
 
-    def test_sex_Male_Y_chrom(self):
+        # check that the different sex detection methods work as expected
+        s._sex_method="X"
+        self.assertEqual(s.sex, "Male")
+        s._sex_method="Y"
+        self.assertEqual(s.sex, "") # no Y chromosome
+        s._sex_method="XY"
+        self.assertEqual(s.sex, "") # can't detect sex, no Y present & X is not male
+        s._sex_method="YX"
+        self.assertEqual(s.sex, "") # can't detect sex, no Y present & X is not male
+
+    def test_sex_male_Y_chrom(self):
         s = self.simulate_snps(chrom="Y", pos_start=1, pos_max=59373566, pos_step=10000)
+        s._sex_method="X"
+        self.assertEqual(s.sex, "") # no X chromosome
+        s._sex_method="Y"
+        self.assertEqual(s.sex, "Male")
+        s._sex_method="XY"
+        self.assertEqual(s.sex, "Male")
+        s._sex_method="YX"
         self.assertEqual(s.sex, "Male")
 
     def test_sex_not_determined(self):
         s = self.simulate_snps(
             chrom="1", pos_start=1, pos_max=249250621, pos_step=10000
         )
-        self.assertEqual(s.sex, "")
+        s._sex_method="X"
+        self.assertEqual(s.sex, "") # no X or Y chromosome
+        s._sex_method="Y"
+        self.assertEqual(s.sex, "") # no X or Y chromosome
+        s._sex_method="XY"
+        self.assertEqual(s.sex, "") # no X or Y chromosome
+        s._sex_method="YX"
+        self.assertEqual(s.sex, "") # no X or Y chromosome
 
     def test_sex_no_snps(self):
-        for snps in self.empty_snps():
-            self.assertFalse(snps.sex)
+        for s in self.empty_snps():
+            s._sex_method="X"
+            self.assertEqual(s.sex, "") # no X or Y chromosome
+            s._sex_method="Y"
+            self.assertEqual(s.sex, "") # no X or Y chromosome
+            s._sex_method="XY"
+            self.assertEqual(s.sex, "") # no X or Y chromosome
+            s._sex_method="YX"
+            self.assertEqual(s.sex, "") # no X or Y chromosome
 
     def test_source(self):
         s = SNPs("tests/input/generic.csv")

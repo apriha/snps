@@ -67,6 +67,10 @@ class SNPs:
         parallelize=False,
         processes=os.cpu_count(),
         rsids=(),
+        sex_method="X",
+        sex_heterozygous_x_threshold=0.03,
+        sex_notnull_y_threshold=0.3,
+        
     ):
         """ Object used to read, write, and remap genotype / raw data files.
 
@@ -84,10 +88,9 @@ class SNPs:
             name / path of resources directory
         deduplicate : bool
             deduplicate RSIDs and make SNPs available as `SNPs.duplicate`
-        deduplicate_XY_chrom : bool or str
+        deduplicate_XY_chrom : bool
             deduplicate alleles in the non-PAR regions of X and Y for males; see
-            `SNPs.discrepant_XY`
-            if a `str` then this is the sex determination method: "X", "Y" or "XY"            
+            `SNPs.discrepant_XY`     
         deduplicate_MT_chrom : bool
             deduplicate alleles on MT; see `SNPs.heterozygous_MT`
         parallelize : bool
@@ -113,6 +116,9 @@ class SNPs:
         self._output_dir = output_dir
         self._resources = Resources(resources_dir=resources_dir)
         self._parallelizer = Parallelizer(parallelize=parallelize, processes=processes)
+        self._sex_method = sex_method
+        self._sex_heterozygous_x_threshold = sex_heterozygous_x_threshold
+        self._sex_notnull_y_threshold = sex_notnull_y_threshold
 
         if file:
 
@@ -157,10 +163,7 @@ class SNPs:
                     self.sort()
 
                 if deduplicate_XY_chrom:
-                    if (
-                        deduplicate_XY_chrom is True and self.determine_sex() == "Male"
-                    ) or self.determine_sex(chrom=deduplicate_XY_chrom) == "Male":
-                        self._deduplicate_XY_chrom()
+                    self._deduplicate_XY_chrom()
 
                 if deduplicate_MT_chrom:
                     self._deduplicate_MT_chrom()
@@ -451,10 +454,7 @@ class SNPs:
         str
             'Male' or 'Female' if detected, else empty str
         """
-        sex = self.determine_sex(chrom="X")
-        if not sex:
-            sex = self.determine_sex(chrom="Y")
-        return sex
+        return self.determine_sex()
 
     @property
     def unannotated_vcf(self):
@@ -807,55 +807,60 @@ class SNPs:
         return len(self._filter(chrom))
 
     def determine_sex(
-        self,
-        heterozygous_x_snps_threshold=0.03,
-        y_snps_not_null_threshold=0.3,
-        chrom="X",
+        self
     ):
-        """ Determine sex from SNPs using thresholds.
-
-        Parameters
-        ----------
-        heterozygous_x_snps_threshold : float
-            percentage heterozygous X SNPs; above this threshold, Female is determined
-        y_snps_not_null_threshold : float
-            percentage Y SNPs that are not null; above this threshold, Male is determined
-        chrom : {"X", "Y"}
-            use X or Y chromosome SNPs to determine sex
+        """ Determine sex from SNPs.
 
         Returns
         -------
         str
             'Male' or 'Female' if detected, else empty str
         """
-        if not self._snps.empty:
-            if chrom == "X":
-                return self._determine_sex_X(heterozygous_x_snps_threshold)
-            elif chrom == "Y":
-                return self._determine_sex_Y(y_snps_not_null_threshold)
+        if not self.get_count():
+            # no snps? no sex detection
+            return ""
+
+        if self._sex_method == "X":
+            # heterozygous X alleles indicates two biological copies
+            # homozygous may be data duplication
+            # does NOT work well when reference alleles ommited e.g. WES or WGS
+            if not self.get_count("X"):
+                # no X so can't determine
+                return ""
+            if len(self.heterozygous("X")) / self.get_count("X") > self._sex_heterozygous_x_threshold:
+                return "Female"
+            else:
+                return "Male"
+        elif self._sex_method == "Y":
+            # null Y snps indicates it couldn't be determined 
+            # and therefore chromomse is missing
+            # Y is very identifiable, so is missing in some providers
+            if not self.get_count("Y"):
+                # no Y so can't determine
+                return ""
+            if len(self.notnull("Y")) / self.get_count("Y") > self._sex_notnull_y_threshold:
+                return "Male"
+            else:
+                return "Female"
+        elif self._sex_method == "XY":
+            # check for heterozygous X, then non-null Y
+            # safer than just checking one in some cases, will leave sex unassinged if insufficient information
+            if self.get_count("X") and len(self.heterozygous("X")) / self.get_count("X") > self._sex_heterozygous_x_threshold:
+                return "Female"
+            if self.get_count("Y") and len(self.notnull("Y")) / self.get_count("Y") > self._sex_notnull_y_threshold:
+                return "Male"
+        elif self._sex_method == "YX":
+            # check for non-null Y, then heterozygous X
+            # safer than just checking one in some cases, will leave sex unassinged if insufficient information
+            if self.get_count("Y") and len(self.notnull("Y")) / self.get_count("Y") > self._sex_notnull_y_threshold:
+                return "Male"
+            if self.get_count("X") and len(self.heterozygous("X")) / self.get_count("X") > self._sex_heterozygous_x_threshold:
+                return "Female"
+        else:
+            raise ValueError(f"Unrecognized sex detection method {self._sex_method}")
+        # if we reach here, we can't determine sex
+        # this might be because no X and/or Y chromosomes present
         return ""
-
-    def _determine_sex_X(self, threshold):
-        x_snps = self.get_count("X")
-
-        if x_snps > 0:
-            if len(self.heterozygous("X")) / x_snps > threshold:
-                return "Female"
-            else:
-                return "Male"
-        else:
-            return ""
-
-    def _determine_sex_Y(self, threshold):
-        y_snps = self.get_count("Y")
-
-        if y_snps > 0:
-            if len(self.notnull("Y")) / y_snps > threshold:
-                return "Male"
-            else:
-                return "Female"
-        else:
-            return ""
 
     def _get_non_par_start_stop(self, chrom):
         # get non-PAR start / stop positions for chrom

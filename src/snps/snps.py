@@ -70,7 +70,6 @@ class SNPs:
         sex_method="X",
         sex_heterozygous_x_threshold=0.03,
         sex_notnull_y_threshold=0.3,
-        
     ):
         """ Object used to read, write, and remap genotype / raw data files.
 
@@ -812,9 +811,7 @@ class SNPs:
         """
         return len(self._filter(chrom))
 
-    def determine_sex(
-        self
-    ):
+    def determine_sex(self):
         """ Determine sex from SNPs.
 
         Returns
@@ -833,34 +830,56 @@ class SNPs:
             if not self.get_count("X"):
                 # no X so can't determine
                 return ""
-            elif len(self.heterozygous("X")) / self.get_count("X") > self._sex_heterozygous_x_threshold:
+            elif (
+                len(self.heterozygous("X")) / self.get_count("X")
+                > self._sex_heterozygous_x_threshold
+            ):
                 return "Female"
             else:
                 return "Male"
         elif self._sex_method == "Y":
-            # null Y snps indicates it couldn't be determined 
+            # null Y snps indicates it couldn't be determined
             # and therefore chromomse is missing
             # Y is very identifiable, so is missing in some providers
             if not self.get_count("Y"):
                 # no Y so can't determine
                 return ""
-            elif len(self.notnull("Y")) / self.get_count("Y") > self._sex_notnull_y_threshold:
+            elif (
+                len(self.notnull("Y")) / self.get_count("Y")
+                > self._sex_notnull_y_threshold
+            ):
                 return "Male"
             else:
                 return "Female"
         elif self._sex_method == "XY":
             # check for heterozygous X, then non-null Y
             # safer than just checking one in some cases, will leave sex unassinged if insufficient information
-            if self.get_count("X") and len(self.heterozygous("X")) / self.get_count("X") > self._sex_heterozygous_x_threshold:
+            if (
+                self.get_count("X")
+                and len(self.heterozygous("X")) / self.get_count("X")
+                > self._sex_heterozygous_x_threshold
+            ):
                 return "Female"
-            elif self.get_count("Y") and len(self.notnull("Y")) / self.get_count("Y") > self._sex_notnull_y_threshold:
+            elif (
+                self.get_count("Y")
+                and len(self.notnull("Y")) / self.get_count("Y")
+                > self._sex_notnull_y_threshold
+            ):
                 return "Male"
         elif self._sex_method == "YX":
             # check for non-null Y, then heterozygous X
             # safer than just checking one in some cases, will leave sex unassinged if insufficient information
-            if self.get_count("Y") and len(self.notnull("Y")) / self.get_count("Y") > self._sex_notnull_y_threshold:
+            if (
+                self.get_count("Y")
+                and len(self.notnull("Y")) / self.get_count("Y")
+                > self._sex_notnull_y_threshold
+            ):
                 return "Male"
-            elif self.get_count("X") and len(self.heterozygous("X")) / self.get_count("X") > self._sex_heterozygous_x_threshold:
+            elif (
+                self.get_count("X")
+                and len(self.heterozygous("X")) / self.get_count("X")
+                > self._sex_heterozygous_x_threshold
+            ):
                 return "Female"
         else:
             raise ValueError(f"Unrecognized sex detection method {self._sex_method}")

@@ -282,8 +282,8 @@ class Resources(metaclass=Singleton):
             # load into pandas
             rsids = pd.read_csv(
                 dbsnp_rev_path,
-                sep=r"\s+",  # whitespace separators
-                header=0,  # dont infer header as there isn't one
+                sep=" ",
+                header=None,  # dont infer header as there isn't one
                 names=(
                     "dbsnp151revrsid",
                     "dbsnp151freqa",
@@ -299,7 +299,7 @@ class Resources(metaclass=Singleton):
                     "dbsnp151freqg": "double",
                 },
                 engine="c",  # force c engine for performance
-                skiprows=0,  # skip the first row
+                comment="#",  # skip the first row
             )
 
             # store in memory so we don't have to load again

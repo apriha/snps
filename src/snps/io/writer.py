@@ -72,7 +72,7 @@ class Writer:
         self._atomic = atomic
         self._kwargs = kwargs
 
-    def __call__(self):
+    def write(self):
         if self._vcf:
             return self._write_vcf()
         else:
@@ -103,7 +103,7 @@ class Writer:
             SNPs with discrepant positions discovered while saving VCF
         """
         w = cls(snps=snps, filename=filename, vcf=vcf, atomic=atomic, **kwargs)
-        return w()
+        return w.write()
 
     def _write_csv(self):
         """ Write SNPs to a CSV file.

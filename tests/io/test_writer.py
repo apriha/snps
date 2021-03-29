@@ -46,13 +46,15 @@ from tests import BaseSNPsTestCase
 class TestWriter(BaseSNPsTestCase):
     def test_save_snps(self):
         snps = SNPs("tests/input/generic.csv")
-        self.assertEqual(os.path.relpath(snps.save()), "output/generic_GRCh37.txt")
+        self.assertEqual(
+            os.path.relpath(snps.save()), f"output{os.sep}generic_GRCh37.txt"
+        )
         self.run_parsing_tests("output/generic_GRCh37.txt", "generic")
 
     def test_save_snps_false_positive_build(self):
         snps = SNPs("tests/input/generic.csv")
         output = "output/generic_GRCh37.txt"
-        self.assertEqual(os.path.relpath(snps.save()), output)
+        self.assertEqual(os.path.relpath(snps.save()), output.replace("/", os.sep))
 
         s = ""
         with open(output, "r") as f:
@@ -70,14 +72,15 @@ class TestWriter(BaseSNPsTestCase):
     def test_save_snps_csv(self):
         snps = SNPs("tests/input/generic.csv")
         self.assertEqual(
-            os.path.relpath(snps.save(sep=",")), "output/generic_GRCh37.csv"
+            os.path.relpath(snps.save(sep=",")), f"output{os.sep}generic_GRCh37.csv"
         )
         self.run_parsing_tests("output/generic_GRCh37.csv", "generic")
 
     def test_save_snps_csv_filename(self):
         snps = SNPs("tests/input/generic.csv")
         self.assertEqual(
-            os.path.relpath(snps.save("generic.csv", sep=",")), "output/generic.csv"
+            os.path.relpath(snps.save("generic.csv", sep=",")),
+            f"output{os.sep}generic.csv",
         )
         self.run_parsing_tests("output/generic.csv", "generic")
 
@@ -95,7 +98,9 @@ class TestWriter(BaseSNPsTestCase):
 
             r._reference_sequences["GRCh37"]["1"] = seq
 
-            self.assertEqual(os.path.relpath(s.save(vcf=True)), "output/vcf_GRCh37.vcf")
+            self.assertEqual(
+                os.path.relpath(s.save(vcf=True)), f"output{os.sep}vcf_GRCh37.vcf"
+            )
 
         self.run_parsing_tests_vcf("output/vcf_GRCh37.vcf")
 
@@ -114,7 +119,9 @@ class TestWriter(BaseSNPsTestCase):
             r._reference_sequences["GRCh37"]["1"] = seq
 
             output = "output/vcf_GRCh37.vcf"
-            self.assertEqual(os.path.relpath(snps.save(vcf=True)), output)
+            self.assertEqual(
+                os.path.relpath(snps.save(vcf=True)), output.replace("/", os.sep)
+            )
 
             s = ""
             with open(output, "r") as f:
@@ -147,7 +154,9 @@ class TestWriter(BaseSNPsTestCase):
             s._snps.loc["rs1", "pos"] = 0
             s._snps.loc["rs17", "pos"] = 118
 
-            self.assertEqual(os.path.relpath(s.save(vcf=True)), "output/vcf_GRCh37.vcf")
+            self.assertEqual(
+                os.path.relpath(s.save(vcf=True)), f"output{os.sep}vcf_GRCh37.vcf"
+            )
 
         pd.testing.assert_frame_equal(
             s.discrepant_vcf_position,
@@ -180,7 +189,9 @@ class TestWriter(BaseSNPsTestCase):
             r._reference_sequences["GRCh37"]["1"] = seq
 
             # save phased data to VCF
-            self.assertEqual(os.path.relpath(s.save(vcf=True)), "output/vcf_GRCh37.vcf")
+            self.assertEqual(
+                os.path.relpath(s.save(vcf=True)), f"output{os.sep}vcf_GRCh37.vcf"
+            )
 
         # read saved VCF
         self.run_parsing_tests_vcf("output/vcf_GRCh37.vcf", phased=True)
@@ -189,11 +200,11 @@ class TestWriter(BaseSNPsTestCase):
         # read phased data
         s = SNPs("tests/input/testvcf_phased.vcf")
         # save phased data to TSV
-        self.assertEqual(os.path.relpath(s.save()), "output/vcf_GRCh37.txt")
+        self.assertEqual(os.path.relpath(s.save()), f"output{os.sep}vcf_GRCh37.txt")
         # read saved TSV
         self.run_parsing_tests_vcf("output/vcf_GRCh37.txt", phased=True)
 
     def test_save_snps_specify_file(self):
         s = SNPs("tests/input/generic.csv")
-        self.assertEqual(os.path.relpath(s.save("snps.csv")), "output/snps.csv")
+        self.assertEqual(os.path.relpath(s.save("snps.csv")), f"output{os.sep}snps.csv")
         self.run_parsing_tests("output/snps.csv", "generic")

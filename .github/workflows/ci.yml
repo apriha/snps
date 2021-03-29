@@ -3,6 +3,7 @@
 # https://stackoverflow.com/a/3237883
 # https://stackoverflow.com/a/5688592
 # https://stackoverflow.com/a/6270803
+# https://github.com/actions/virtual-environments/issues/1341
 
 name: CI
 
@@ -61,6 +62,9 @@ jobs:
           - os: macos-latest
             python-version: 3.9
             job_id: 4
+          - os: windows-latest
+            python-version: 3.9
+            job_id: 5
 
     steps:
     - uses: actions/checkout@v2
@@ -70,13 +74,19 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Ensure Python and source code are on same drive (Windows)
+      if: ${{ matrix.os == 'windows-latest' }}
+      shell: cmd
+      run: |
+        mkdir C:\a
+        xcopy D:\a C:\a /s /e
     - name: Determine if downloads are enabled for this job
       # for testing, limit downloads from the resource servers to only the selected job for
       # PRs and the master branch; note that the master branch is tested weekly via `cron`,
       # so this ensures all Python versions will be periodically integration tested with the
       # resource servers
       env:
-        NUM_JOBS: 5
+        NUM_JOBS: 6
         JOB_ID: ${{ matrix.job_id }}
       if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/master' }}
       shell: bash
@@ -90,7 +100,13 @@ jobs:
       run: |
         pip install pytest-cov
         pip install .
-    - name: Test with pytest
+    - name: Test with pytest (Ubuntu & macOS)
+      if: ${{ matrix.os != 'windows-latest' }}
+      run: |
+        pytest --cov=snps tests
+    - name: Test with pytest (Windows)
+      if: ${{ matrix.os == 'windows-latest' }}
+      working-directory: C:\a\snps\snps
       run: |
         pytest --cov=snps tests
     - name: Upload coverage to Codecov

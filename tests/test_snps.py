@@ -357,7 +357,7 @@ class TestSnps(BaseSNPsTestCase):
 
     def test_save_source(self):
         s = SNPs("tests/input/GRCh38.csv")
-        self.assertEqual(os.path.relpath(s.save()), "output/generic_GRCh38.txt")
+        self.assertEqual(os.path.relpath(s.save()), f"output{os.sep}generic_GRCh38.txt")
         snps = SNPs("output/generic_GRCh38.txt")
         self.assertEqual(snps.build, 38)
         self.assertTrue(snps.build_detected)
@@ -486,7 +486,7 @@ class TestSNPsMerge(TestSnps):
         self.assertEqual(s.source, "generic, 23andMe")
         self.assertListEqual(s._source, ["generic", "23andMe"])
         self.assertEqual(
-            os.path.relpath(s.save()), "output/generic__23andMe_GRCh37.txt"
+            os.path.relpath(s.save()), f"output{os.sep}generic__23andMe_GRCh37.txt"
         )
         s = SNPs("output/generic__23andMe_GRCh37.txt")
         self.assertEqual(s.source, "generic, 23andMe")
@@ -857,7 +857,8 @@ class TestDeprecatedMethods(TestSnps):
         def f():
             snps = SNPs("tests/input/generic.csv")
             self.assertEqual(
-                os.path.relpath(snps.save_snps(sep=",")), "output/generic_GRCh37.csv"
+                os.path.relpath(snps.save_snps(sep=",")),
+                f"output{os.sep}generic_GRCh37.csv",
             )
             self.run_parsing_tests("output/generic_GRCh37.csv", "generic")
 

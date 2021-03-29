@@ -578,7 +578,8 @@ class Resources(metaclass=Singleton):
             gsa_rsid_map = f.read().decode("utf-8")
 
         d["rsid_map"] = dict(
-            (x.split("\t")[0], x.split("\t")[1]) for x in gsa_rsid_map.split("\n")[:-1]
+            (x.split("\t")[0].strip(), x.split("\t")[1].strip())
+            for x in gsa_rsid_map.split("\n")[:-1]
         )
 
         with gzip.open(chrpos_map, "rb") as f:
@@ -635,7 +636,7 @@ class Resources(metaclass=Singleton):
 
         destination = os.path.join(self._resources_dir, filename)
 
-        if not create_dir(os.path.relpath(os.path.dirname(destination))):
+        if not create_dir(os.path.dirname(destination)):
             return ""
 
         if not os.path.exists(destination):
@@ -875,7 +876,7 @@ class ReferenceSequence:
             # convert bytes to str
             data = str(data, encoding="utf-8", errors="strict")
 
-            data = data.split("\n")
+            data = data.splitlines()
 
             self._start, self._end = self._parse_first_line(data[0])
 

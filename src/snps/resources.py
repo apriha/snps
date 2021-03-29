@@ -635,7 +635,7 @@ class Resources(metaclass=Singleton):
 
         destination = os.path.join(self._resources_dir, filename)
 
-        if not create_dir(os.path.relpath(os.path.dirname(destination))):
+        if not create_dir(os.path.dirname(destination)):
             return ""
 
         if not os.path.exists(destination):

@@ -109,7 +109,8 @@ jobs:
       working-directory: C:\a\snps\snps
       run: |
         pytest --cov=snps tests
-    - name: Upload coverage to Codecov
+    - name: Upload coverage to Codecov (Ubuntu & macOS)
+      if: ${{ matrix.os != 'windows-latest' }}
       uses: codecov/codecov-action@v1
       with:
         fail_ci_if_error: true

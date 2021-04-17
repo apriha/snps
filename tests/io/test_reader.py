@@ -36,34 +36,13 @@ import tempfile
 
 from atomicwrites import atomic_write
 
+from snps import SNPs
 from snps.resources import Resources
 from snps.utils import gzip_file
 from tests import BaseSNPsTestCase
 
 
 class TestReader(BaseSNPsTestCase):
-    @staticmethod
-    def _setup_gsa_test(resources_dir):
-        # reset resource if already loaded
-        r = Resources()
-        r._resources_dir = resources_dir
-        r._gsa_resources = {}
-
-        gzip_file(
-            "tests/resources/gsa_rsid_map.txt",
-            os.path.join(resources_dir, "gsa_rsid_map.txt.gz"),
-        )
-        gzip_file(
-            "tests/resources/gsa_chrpos_map.txt",
-            os.path.join(resources_dir, "gsa_chrpos_map.txt.gz"),
-        )
-
-    @staticmethod
-    def _teardown_gsa_test():
-        r = Resources()
-        r._resources_dir = "resources"
-        r._gsa_resources = {}
-
     def run_build_detection_test(
         self,
         run_parsing_tests_func,
@@ -148,20 +127,6 @@ class TestReader(BaseSNPsTestCase):
     def test_read_ancestry_multi_sep(self):
         # https://www.ancestry.com
         self.run_parsing_tests("tests/input/ancestry_multi_sep.txt", "AncestryDNA")
-
-    def test_read_codigo46(self):
-        # https://codigo46.com.mx
-        with tempfile.TemporaryDirectory() as tmpdir:
-            self._setup_gsa_test(tmpdir)
-            self.run_parsing_tests("tests/input/codigo46.txt", "Codigo46")
-            self._teardown_gsa_test()
-
-    def test_read_tellmeGen(self):
-        # https://www.tellmegen.com/
-        with tempfile.TemporaryDirectory() as tmpdir:
-            self._setup_gsa_test(tmpdir)
-            self.run_parsing_tests("tests/input/tellmeGen.txt", "tellmeGen")
-            self._teardown_gsa_test()
 
     def test_read_DNALand(self):
         # https://dna.land/
@@ -309,13 +274,6 @@ class TestReader(BaseSNPsTestCase):
         # https://www.myheritage.com
         self.run_parsing_tests("tests/input/myheritage_extra_quotes.csv", "MyHeritage")
 
-    def test_read_sano(self):
-        # https://sanogenetics.com
-        with tempfile.TemporaryDirectory() as tmpdir:
-            self._setup_gsa_test(tmpdir)
-            self.run_parsing_tests("tests/input/sano.txt", "Sano")
-            self._teardown_gsa_test()
-
     def test_read_vcf(self):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")
 
@@ -353,3 +311,48 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests_vcf(
             "tests/input/unannotated_testvcf.vcf", "vcf", unannotated=True, build=0
         )
+
+
+class TestGSAReader(BaseSNPsTestCase):
+    resources = None
+
+    def _setup_gsa_test(self, resources_dir):
+        self.resources = Resources()
+        self.resources._resources_dir = resources_dir
+        self.resources._gsa_resources = {}
+
+        gzip_file(
+            "tests/resources/gsa_rsid_map.txt",
+            os.path.join(resources_dir, "gsa_rsid_map.txt.gz"),
+        )
+        gzip_file(
+            "tests/resources/gsa_chrpos_map.txt",
+            os.path.join(resources_dir, "gsa_chrpos_map.txt.gz"),
+        )
+
+    def parse_file(self, file, rsids=()):
+        return SNPs(file, rsids=rsids, resources_dir=None, resources_obj=self.resources)
+
+    def parse_bytes(self, file, rsids=()):
+        with open(file, "rb") as f:
+            return SNPs(
+                f.read(), rsids=rsids, resources_dir=None, resources_obj=self.resources
+            )
+
+    def test_read_codigo46(self):
+        # https://codigo46.com.mx
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._setup_gsa_test(tmpdir)
+            self.run_parsing_tests("tests/input/codigo46.txt", "Codigo46")
+
+    def test_read_tellmeGen(self):
+        # https://www.tellmegen.com/
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._setup_gsa_test(tmpdir)
+            self.run_parsing_tests("tests/input/tellmeGen.txt", "tellmeGen")
+
+    def test_read_sano(self):
+        # https://sanogenetics.com
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._setup_gsa_test(tmpdir)
+            self.run_parsing_tests("tests/input/sano.txt", "Sano")

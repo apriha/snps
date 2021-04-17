@@ -201,6 +201,7 @@ class Writer:
 
         df = self._snps.snps
 
+        p = self._snps._parallelizer
         tasks = []
 
         # skip insertions and deletions
@@ -236,7 +237,7 @@ class Writer:
             df = df.drop(df.loc[df["chrom"] == chrom].index)
 
         # create the VCF representation for SNPs
-        results = map(self._create_vcf_representation, tasks)
+        results = p(self._create_vcf_representation, tasks)
 
         contigs = []
         vcf = [pd.DataFrame()]

@@ -14,7 +14,7 @@ Features
 Input / Output
 ``````````````
 - Read raw data (genotype) files from a variety of direct-to-consumer (DTC) DNA testing
-  sources with a `SNPs <https://snps.readthedocs.io/en/latest/snps.html#snps.snps.SNPs>`_
+  sources with a `SNPs <https://snps.readthedocs.io/en/stable/snps.html#snps.snps.SNPs>`_
   object
 - Read and write VCF files (e.g., convert `23andMe <https://www.23andme.com>`_ to VCF)
 - Merge raw data files from different DNA tests, identifying discrepant SNPs in the process
@@ -104,7 +104,7 @@ Load a `23andMe <https://www.23andme.com>`_ raw data file:
 
 The ``SNPs`` class accepts a path to a file or a bytes object. A ``Reader`` class attempts to
 infer the data source and load the SNPs. The loaded SNPs are
-`normalized <https://snps.readthedocs.io/en/latest/snps.html#snps.snps.SNPs.snps>`_ and
+`normalized <https://snps.readthedocs.io/en/stable/snps.html#snps.snps.SNPs.snps>`_ and
 available via a ``pandas.DataFrame``:
 
 >>> df = s.snps
@@ -241,7 +241,7 @@ Saving output/out.vcf
 When saving a VCF, if any SNPs have positions outside of the reference sequence, they are marked
 as discrepant and are available via a property of the ``SNPs`` object.
 
-All `output files <https://snps.readthedocs.io/en/latest/output_files.html>`_ are saved to the
+All `output files <https://snps.readthedocs.io/en/stable/output_files.html>`_ are saved to the
 output directory.
 
 Documentation
@@ -258,7 +258,7 @@ Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org
    :target: https://github.com/apriha/snps/actions/workflows/ci.yml
 .. |codecov| image:: https://codecov.io/gh/apriha/snps/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/apriha/snps
-.. |docs| image:: https://readthedocs.org/projects/snps/badge/?version=latest
+.. |docs| image:: https://readthedocs.org/projects/snps/badge/?version=stable
    :target: https://snps.readthedocs.io/
 .. |pypi| image:: https://img.shields.io/pypi/v/snps.svg
    :target: https://pypi.python.org/pypi/snps

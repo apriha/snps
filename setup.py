@@ -114,6 +114,7 @@ setup(
         "Topic :: Utilities",
     ],
     project_urls={
+        "Documentation": "https://snps.readthedocs.io/",
         "Changelog": "https://github.com/apriha/snps/releases",
         "Issue Tracker": "https://github.com/apriha/snps/issues",
     },

@@ -50,34 +50,6 @@ logger = logging.getLogger(__name__)
 class Writer:
     """ Class for writing SNPs to files. """
 
-    def __init__(self, snps=None, filename="", vcf=False, atomic=True, **kwargs):
-        """ Initialize a `Writer`.
-
-        Parameters
-        ----------
-        snps : SNPs
-            SNPs to save to file or write to buffer
-        filename : str or buffer
-            filename for file to save or buffer to write to
-        vcf : bool
-            flag to save file as VCF
-        atomic : bool
-            atomically write output to a file on local filesystem
-        **kwargs
-            additional parameters to `pandas.DataFrame.to_csv`
-        """
-        self._snps = snps
-        self._filename = filename
-        self._vcf = vcf
-        self._atomic = atomic
-        self._kwargs = kwargs
-
-    def write(self):
-        if self._vcf:
-            return self._write_vcf()
-        else:
-            return (self._write_csv(),)
-
     @classmethod
     def write_file(cls, snps=None, filename="", vcf=False, atomic=True, **kwargs):
         """ Save SNPs to file.
@@ -102,10 +74,14 @@ class Writer:
         discrepant_vcf_position : pd.DataFrame
             SNPs with discrepant positions discovered while saving VCF
         """
-        w = cls(snps=snps, filename=filename, vcf=vcf, atomic=atomic, **kwargs)
-        return w.write()
 
-    def _write_csv(self):
+        if vcf:
+            return cls._write_vcf(snps, filename, atomic)
+        else:
+            return (cls._write_csv(snps, filename, atomic, kwargs),)
+
+    @classmethod
+    def _write_csv(cls, s, filename, atomic, kwargs):
         """ Write SNPs to a CSV file.
 
         Returns
@@ -113,40 +89,35 @@ class Writer:
         str
             path to file in output directory if SNPs were saved, else empty str
         """
-        filename = self._filename
         if not filename:
             ext = ".txt"
 
-            if "sep" in self._kwargs and self._kwargs["sep"] == ",":
+            if "sep" in kwargs and kwargs["sep"] == ",":
                 ext = ".csv"
 
-            filename = f"{clean_str(self._snps.source)}_{self._snps.assembly}{ext}"
+            filename = f"{clean_str(s.source)}_{s.assembly}{ext}"
 
         comment = (
-            f"# Source(s): {self._snps.source}\n"
-            f"# Build: {self._snps.build}\n"
-            f"# Build Detected: { self._snps.build_detected}\n"
-            f"# Phased: {self._snps.phased}\n"
-            f"# SNPs: {self._snps.count}\n"
-            f"# Chromosomes: {self._snps.chromosomes_summary}\n"
+            f"# Source(s): {s.source}\n"
+            f"# Build: {s.build}\n"
+            f"# Build Detected: {s.build_detected}\n"
+            f"# Phased: {s.phased}\n"
+            f"# SNPs: {s.count}\n"
+            f"# Chromosomes: {s.chromosomes_summary}\n"
         )
-        if "header" in self._kwargs:
-            if isinstance(self._kwargs["header"], bool):
-                if self._kwargs["header"]:
-                    self._kwargs["header"] = ["chromosome", "position", "genotype"]
+        if "header" in kwargs:
+            if isinstance(kwargs["header"], bool):
+                if kwargs["header"]:
+                    kwargs["header"] = ["chromosome", "position", "genotype"]
         else:
-            self._kwargs["header"] = ["chromosome", "position", "genotype"]
+            kwargs["header"] = ["chromosome", "position", "genotype"]
 
         return save_df_as_csv(
-            self._snps._snps,
-            self._snps._output_dir,
-            filename,
-            comment=comment,
-            atomic=self._atomic,
-            **self._kwargs,
+            s.snps, s._output_dir, filename, comment=comment, atomic=atomic, **kwargs,
         )
 
-    def _write_vcf(self):
+    @classmethod
+    def _write_vcf(cls, s, filename, atomic):
         """ Write SNPs to a VCF file.
 
         References
@@ -161,14 +132,14 @@ class Writer:
         discrepant_vcf_position : pd.DataFrame
             SNPs with discrepant positions discovered while saving VCF
         """
-        filename = self._filename
         if not filename:
-            filename = f"{clean_str(self._snps.source)}_{self._snps.assembly}{'.vcf'}"
+            filename = f"{clean_str(s.source)}_{s.assembly}{'.vcf'}"
 
         comment = (
             f"##fileformat=VCFv4.2\n"
             f'##fileDate={datetime.datetime.utcnow().strftime("%Y%m%d")}\n'
-            f'##source="{self._snps.source}; snps v{snps.__version__}; https://pypi.org/project/snps/"\n'
+            f'##source="{s.source}; snps v{snps.__version__}; '
+            f'https://pypi.org/project/snps/"\n'
         )
 
         reference_sequence_chroms = (
@@ -199,9 +170,9 @@ class Writer:
             "MT",
         )
 
-        df = self._snps.snps
+        df = s.snps
 
-        p = self._snps._parallelizer
+        p = s._parallelizer
         tasks = []
 
         # skip insertions and deletions
@@ -225,10 +196,11 @@ class Writer:
 
             tasks.append(
                 {
-                    "resources": self._snps._resources,
-                    "assembly": self._snps.assembly,
+                    "resources": s._resources,
+                    "assembly": s.assembly,
                     "chrom": chrom,
-                    "snps": pd.DataFrame(df.loc[(df["chrom"] == chrom)]),
+                    "snps_df": pd.DataFrame(df.loc[(df["chrom"] == chrom)]),
+                    "phased": s.phased,
                 }
             )
 
@@ -237,7 +209,7 @@ class Writer:
             df = df.drop(df.loc[df["chrom"] == chrom].index)
 
         # create the VCF representation for SNPs
-        results = p(self._create_vcf_representation, tasks)
+        results = p(cls._create_vcf_representation, tasks)
 
         contigs = []
         vcf = [pd.DataFrame()]
@@ -257,9 +229,10 @@ class Writer:
         return (
             save_df_as_csv(
                 vcf,
-                self._snps._output_dir,
+                s._output_dir,
                 filename,
                 comment=comment,
+                atomic=atomic,
                 prepend_info=False,
                 header=False,
                 index=False,
@@ -269,13 +242,15 @@ class Writer:
             discrepant_vcf_position,
         )
 
-    def _create_vcf_representation(self, task):
+    @classmethod
+    def _create_vcf_representation(cls, task):
         resources = task["resources"]
         assembly = task["assembly"]
         chrom = task["chrom"]
-        snps = task["snps"]
+        snps_df = task["snps_df"]
+        phased = task["phased"]
 
-        if len(snps.loc[snps["genotype"].notnull()]) == 0:
+        if len(snps_df.loc[snps_df["genotype"].notnull()]) == 0:
             return {
                 "contig": "",
                 "vcf": pd.DataFrame(),
@@ -287,7 +262,7 @@ class Writer:
 
         contig = f'##contig=<ID={seq.ID},URL={seq.url},length={seq.length},assembly={seq.build},md5={seq.md5},species="{seq.species}">\n'
 
-        snps = snps.reset_index()
+        snps_df = snps_df.reset_index()
 
         df = pd.DataFrame(
             columns=[
@@ -318,13 +293,13 @@ class Writer:
             }
         )
 
-        df["CHROM"] = snps["chrom"]
-        df["POS"] = snps["pos"]
-        df["ID"] = snps["rsid"]
+        df["CHROM"] = snps_df["chrom"]
+        df["POS"] = snps_df["pos"]
+        df["ID"] = snps_df["rsid"]
 
         # drop SNPs with discrepant positions (outside reference sequence)
-        discrepant_vcf_position = snps.loc[
-            (snps.pos - seq.start < 0) | (snps.pos - seq.start > seq.length - 1)
+        discrepant_vcf_position = snps_df.loc[
+            (snps_df.pos - seq.start < 0) | (snps_df.pos - seq.start > seq.length - 1)
         ]
         df.drop(discrepant_vcf_position.index, inplace=True)
 
@@ -335,20 +310,20 @@ class Writer:
 
         seq.clear()
 
-        df["genotype"] = snps["genotype"]
+        df["genotype"] = snps_df["genotype"]
 
         temp = df.loc[df["genotype"].notnull()]
 
         # https://stackoverflow.com/a/19976286
-        df.loc[df["genotype"].notnull(), "ALT"] = np.vectorize(self._compute_alt)(
+        df.loc[df["genotype"].notnull(), "ALT"] = np.vectorize(cls._compute_alt)(
             temp["REF"], temp["genotype"]
         )
 
         temp = df.loc[df["genotype"].notnull()]
 
         df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
-            self._compute_genotype
-        )(temp["REF"], temp["ALT"], temp["genotype"])
+            cls._compute_genotype
+        )(temp["REF"], temp["ALT"], temp["genotype"], phased)
 
         df.loc[df["SAMPLE"].isnull(), "SAMPLE"] = "./."
 
@@ -360,7 +335,8 @@ class Writer:
             "discrepant_vcf_position": discrepant_vcf_position,
         }
 
-    def _compute_alt(self, ref, genotype):
+    @staticmethod
+    def _compute_alt(ref, genotype):
         genotype_alleles = list(set(genotype))
 
         if ref in genotype_alleles:
@@ -373,10 +349,11 @@ class Writer:
             genotype_alleles.sort()
             return ",".join(genotype_alleles)
 
-    def _compute_genotype(self, ref, alt, genotype):
+    @staticmethod
+    def _compute_genotype(ref, alt, genotype, phased):
         alleles = [ref]
 
-        if self._snps.phased:
+        if phased:
             separator = "|"
         else:
             separator = "/"

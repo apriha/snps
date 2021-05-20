@@ -113,7 +113,7 @@ class EnsemblRestClient:
                 if "Retry-After" in e.headers:
                     retry = e.headers["Retry-After"]
                     time.sleep(float(retry))
-                    self.perform_rest_action(endpoint, hdrs, params)
+                    return self.perform_rest_action(endpoint, hdrs, params)
             else:
                 sys.stderr.write(
                     f"Request failed for {endpoint}: Status code: {e.code} Reason: {e.reason}\n"

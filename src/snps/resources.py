@@ -702,7 +702,9 @@ class Resources(metaclass=Singleton):
                 # http://stackoverflow.com/a/7244263
                 with urllib.request.urlopen(
                     url, timeout=timeout
-                ) as response, atomic_write(destination, mode="wb") as f:
+                ) as response, atomic_write(
+                    destination, mode="wb", overwrite=True
+                ) as f:
                     self._print_download_msg(destination)
                     data = response.read()  # a `bytes` object
 
@@ -724,6 +726,11 @@ class Resources(metaclass=Singleton):
             except socket.timeout:
                 logger.warning(f"Timeout downloading {url}")
                 destination = ""
+            except FileExistsError:
+                # if the file exists, another process has created it while it was
+                # being downloaded
+                # in such a case, the other copy is identical, so ignore this error
+                pass
 
         return destination
 

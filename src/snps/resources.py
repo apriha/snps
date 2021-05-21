@@ -702,7 +702,9 @@ class Resources(metaclass=Singleton):
                 # http://stackoverflow.com/a/7244263
                 with urllib.request.urlopen(
                     url, timeout=timeout
-                ) as response, atomic_write(destination, mode="wb", overwrite=True) as f:
+                ) as response, atomic_write(
+                    destination, mode="wb", overwrite=True
+                ) as f:
                     self._print_download_msg(destination)
                     data = response.read()  # a `bytes` object
 

@@ -83,120 +83,28 @@ def get_empty_snps_dataframe():
 class Reader:
     """ Class for reading and parsing raw data / genotype files. """
 
-    def __init__(self, file="", only_detect_source=False, resources=None, rsids=()):
-        """ Initialize a `Reader`.
-
-        Parameters
-        ----------
-        file : str or bytes
-            path to file to load or bytes to load
-        only_detect_source : bool
-            only detect the source of the data
-        resources : Resources
-            instance of Resources
-        rsids : tuple, optional
-            rsids to extract if loading a VCF file
-
-        """
-        self._file = file
-        self._only_detect_source = only_detect_source
-        self._resources = resources
-        self._rsids = frozenset(rsids)
-
-    def read(self):
+    @classmethod
+    def read_file(cls, file, only_detect_source=False, resources=None, rsids=()):
         """ Read and parse a raw data / genotype file.
 
-        Returns
-        -------
-        dict
-            dict with the following items:
+        Notes
+        -----
+        This method is called when instantiating a ``SNPs`` object, and calling it directly is
+        not normally required.
 
-            snps (pandas.DataFrame)
-                dataframe of parsed SNPs
-            source (str)
-                detected source of SNPs
-            phased (bool)
-                flag indicating if SNPs are phased
-        """
-        file = self._file
-        compression = "infer"
-        d = {
-            "snps": get_empty_snps_dataframe(),
-            "source": "",
-            "phased": False,
-            "build": 0,
-        }
+        If `file` is on the file system, it can optionally include an extension. Also, `file`
+        can optionally be compressed with zip or gzip.
 
-        # peek into files to determine the data format
-        if isinstance(file, str) and os.path.exists(file):
+        If `file` is a VCF file or buffer, some assumptions are made:
 
-            if ".zip" in file:
-                with zipfile.ZipFile(file) as z:
-                    with z.open(z.namelist()[0], "r") as f:
-                        first_line, comments, data = self._extract_comments(
-                            f, decode=True
-                        )
-                    compression = "zip"
-            elif ".gz" in file:
-                with gzip.open(file, "rt") as f:
-                    first_line, comments, data = self._extract_comments(f)
-                compression = "gzip"
-            else:
-                with open(file, "rb") as f:
-                    first_line, comments, data, compression = self._handle_bytes_data(
-                        f.read()
-                    )
-
-        elif isinstance(file, bytes):
-
-            first_line, comments, data, compression = self._handle_bytes_data(file)
-            file = io.BytesIO(file)
-
-        else:
-            return d
-
-        if "23andMe" in first_line:
-            d = self.read_23andme(file, compression)
-        elif "Ancestry" in first_line:
-            d = self.read_ancestry(file, compression)
-        elif first_line.startswith("RSID"):
-            d = self.read_ftdna(file, compression)
-        elif "famfinder" in first_line:
-            d = self.read_ftdna_famfinder(file, compression)
-        elif "MyHeritage" in first_line:
-            d = self.read_myheritage(file, compression)
-        elif "Living DNA" in first_line:
-            d = self.read_livingdna(file, compression)
-        elif "SNP Name\trsID" in first_line or "SNP.Name\tSample.ID" in first_line:
-            d = self.read_mapmygenome(file, compression, first_line)
-        elif "lineage" in first_line or "snps" in first_line:
-            d = self.read_snps_csv(file, comments, compression)
-        elif "Chromosome" in first_line:
-            d = self.read_tellmegen(file, compression)
-        elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
-            d = self.read_generic(file, compression)
-        elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
-            d = self.read_generic(file, compression, skip=0)
-        elif "vcf" in comments.lower() or "##contig" in comments.lower():
-            d = self.read_vcf(file, compression, "vcf", self._rsids)
-        elif ("Genes for Good" in comments) | ("PLINK" in comments):
-            d = self.read_genes_for_good(file, compression)
-        elif "DNA.Land" in comments:
-            d = self.read_dnaland(file, compression)
-        elif "CODIGO46" in comments:
-            d = self.read_codigo46(file)
-        elif "SANO" in comments:
-            d = self.read_sano(file)
-
-        # detect build from comments if build was not already detected from `read` method
-        if not d["build"]:
-            d.update({"build": self._detect_build_from_comments(comments, d["source"])})
-
-        return d
-
-    @classmethod
-    def read_file(cls, file, only_detect_source, resources, rsids):
-        """ Read `file`.
+            * VCF is uncompressed, or compressed with gzip
+            * SNPs that are not annotated with an RSID are skipped
+            * If the VCF contains multiple samples, only the first sample is used to
+              lookup the genotype
+            * Insertions and deletions are skipped
+            * If a sample allele is not specified, the genotype is reported as NaN
+            * If a sample allele refers to a REF or ALT allele that is not specified,
+              the genotype is reported as NaN
 
         Parameters
         ----------
@@ -220,12 +128,94 @@ class Reader:
                 detected source of SNPs
             phased (bool)
                 flag indicating if SNPs are phased
+            build (int)
+                detected build of SNPs from parser or comments
         """
-        r = cls(file, only_detect_source, resources, rsids)
-        return r.read()
+        rsids = frozenset(rsids)
 
-    def _extract_comments(self, f, decode=False, include_data=False):
-        line = self._read_line(f, decode)
+        d = {
+            "snps": get_empty_snps_dataframe(),
+            "source": "",
+            "phased": False,
+            "build": 0,
+        }
+
+        # peek into files to determine the data format
+        if isinstance(file, str) and os.path.exists(file):
+
+            if ".zip" in file:
+                with zipfile.ZipFile(file) as z:
+                    with z.open(z.namelist()[0], "r") as f:
+                        first_line, comments, data = cls._extract_comments(
+                            f, decode=True
+                        )
+                    compression = "zip"
+            elif ".gz" in file:
+                with gzip.open(file, "rt") as f:
+                    first_line, comments, data = cls._extract_comments(f)
+                compression = "gzip"
+            else:
+                with open(file, "rb") as f:
+                    first_line, comments, data, compression = cls._handle_bytes_data(
+                        f.read()
+                    )
+
+        elif isinstance(file, bytes):
+
+            first_line, comments, data, compression = cls._handle_bytes_data(file)
+            file = io.BytesIO(file)
+
+        else:
+            return d
+
+        parse_kwargs = {
+            "file": file,
+            "compression": compression,
+            "only_detect_source": only_detect_source,
+        }
+
+        if "23andMe" in first_line:
+            d.update(_23andMe.parse(**parse_kwargs))
+        elif "Ancestry" in first_line:
+            d.update(_AncestryDNA.parse(**parse_kwargs))
+        elif first_line.startswith("RSID"):
+            d.update(_FTDNA.parse(**parse_kwargs))
+        elif "famfinder" in first_line:
+            d.update(_FTDNAFamFinder.parse(**parse_kwargs))
+        elif "MyHeritage" in first_line:
+            d.update(_MyHeritage.parse(**parse_kwargs))
+        elif "Living DNA" in first_line:
+            d.update(_LivingDNA.parse(**parse_kwargs))
+        elif "SNP Name\trsID" in first_line or "SNP.Name\tSample.ID" in first_line:
+            d.update(_Mapmygenome.parse(header=first_line, **parse_kwargs))
+        elif "lineage" in first_line or "snps" in first_line:
+            d.update(_snps.parse(comments=comments, **parse_kwargs))
+        elif "Chromosome" in first_line:
+            d.update(_tellmeGen.parse(resources=resources, **parse_kwargs))
+        elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
+            d.update(_Generic.parse(**parse_kwargs))
+        elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
+            d.update(_Generic.parse(skip=0, **parse_kwargs))
+        elif "vcf" in comments.lower() or "##contig" in comments.lower():
+            d.update(_VCF.parse(provider="vcf", rsids=rsids, **parse_kwargs))
+        elif ("Genes for Good" in comments) | ("PLINK" in comments):
+            d.update(_GenesForGood.parse(**parse_kwargs))
+        elif "DNA.Land" in comments:
+            d.update(_DNALand.parse(**parse_kwargs))
+        elif "CODIGO46" in comments:
+            d.update(_Codigo46.parse(resources=resources, **parse_kwargs))
+        elif "SANO" in comments:
+            d.update(_Sano.parse(resources=resources, **parse_kwargs))
+
+        # detect build from comments if build was not already detected by parser
+        if not d["build"]:
+            d.update({"build": cls._detect_build_from_comments(comments, d["source"])})
+
+        return d
+
+    @classmethod
+    def _extract_comments(cls, f, decode=False, include_data=False):
+        line = cls._read_line(f, decode)
 
         first_line = line
         comments = ""
@@ -234,22 +224,22 @@ class Reader:
         if first_line.startswith("#"):
             while line.startswith("#"):
                 comments += line
-                line = self._read_line(f, decode)
+                line = cls._read_line(f, decode)
             if include_data:
                 while line:
                     data += line
-                    line = self._read_line(f, decode)
+                    line = cls._read_line(f, decode)
 
         elif first_line.startswith("[Header]"):
             while not line.startswith("[Data]"):
                 comments += line
-                line = self._read_line(f, decode)
+                line = cls._read_line(f, decode)
             # Ignore the [Data] row
-            line = self._read_line(f, decode)
+            line = cls._read_line(f, decode)
             if include_data:
                 while line:
                     data += line
-                    line = self._read_line(f, decode)
+                    line = cls._read_line(f, decode)
         if not data and include_data:
             data = f.read()
             if decode:
@@ -258,7 +248,8 @@ class Reader:
             f.seek(0)
         return first_line, comments, data
 
-    def _detect_build_from_comments(self, comments, source):
+    @staticmethod
+    def _detect_build_from_comments(comments, source):
         comments = comments.lower()
         if "build 37" in comments:
             return 37
@@ -285,9 +276,9 @@ class Reader:
                 return 38
         return 0
 
-    def _handle_bytes_data(self, file, include_data=False):
-        compression = "infer"
-        if self.is_zip(file):
+    @classmethod
+    def _handle_bytes_data(cls, file, include_data=False):
+        if cls.is_zip(file):
             compression = "zip"
             with zipfile.ZipFile(io.BytesIO(file)) as z:
                 namelist = z.namelist()
@@ -300,22 +291,22 @@ class Reader:
                     filename = namelist[0]
 
                 with z.open(filename, "r") as f:
-                    first_line, comments, data = self._extract_comments(
+                    first_line, comments, data = cls._extract_comments(
                         f, decode=True, include_data=include_data
                     )
 
-        elif self.is_gzip(file):
+        elif cls.is_gzip(file):
             compression = "gzip"
 
             with gzip.open(io.BytesIO(file), "rb") as f:
-                first_line, comments, data = self._extract_comments(
+                first_line, comments, data = cls._extract_comments(
                     f, decode=True, include_data=include_data
                 )
 
         else:
             compression = None
             file = io.BytesIO(file)
-            first_line, comments, data = self._extract_comments(
+            first_line, comments, data = cls._extract_comments(
                 deepcopy(file), decode=True, include_data=include_data
             )
             file.seek(0)
@@ -339,7 +330,8 @@ class Reader:
         else:
             return f.readline()
 
-    def read_helper(self, source, parser):
+    @classmethod
+    def _read_helper(cls, source, parser, only_detect_source):
         """ Generic method to help read files.
 
         Parameters
@@ -347,19 +339,7 @@ class Reader:
         source : str
             name of data source
         parser : func
-            parsing function, which returns a tuple with the following items:
-
-            0 (pandas.DataFrame)
-                dataframe of parsed SNPs (empty if only detecting source)
-            1 (bool), optional
-                flag indicating if SNPs are phased
-            2 (int), optional
-                detected build of SNPs
-
-        Returns
-        -------
-        dict
-            dict with the following items:
+            parsing function, which returns a dict with any of the the following items:
 
             snps (pandas.DataFrame)
                 dataframe of parsed SNPs
@@ -368,111 +348,101 @@ class Reader:
             phased (bool)
                 flag indicating if SNPs are phased
             build (int)
-                detected build of SNPs
+                detected build of SNPs from parser
 
-        References
-        ----------
-        1. Fluent Python by Luciano Ramalho (O'Reilly). Copyright 2015 Luciano Ramalho,
-           978-1-491-94600-8.
+        Returns
+        -------
+        dict
+            dict with any of the following items:
+
+            snps (pandas.DataFrame)
+                dataframe of parsed SNPs
+            source (str)
+                detected source of SNPs
+            phased (bool)
+                flag indicating if SNPs are phased
+            build (int)
+                detected build of SNPs from parser
+
         """
-        phased = False
-        build = 0
+        d = {"source": source}
 
-        if self._only_detect_source:
-            df = get_empty_snps_dataframe()
-        else:
-            df, *extra = parser()
+        if not only_detect_source:
+            d.update(parser())
 
-            if len(extra) == 1:
-                phased = extra[0]
-            elif len(extra) == 2:
-                phased = extra[0]
-                build = extra[1]
+        return d
 
-        return {"snps": df, "source": source, "phased": phased, "build": build}
+    @staticmethod
+    def _parse_4_cols(
+        file, compression, **kwargs,
+    ):
+        return pd.read_csv(
+            file,
+            names=["rsid", "chrom", "pos", "genotype"],
+            index_col=0,
+            dtype=NORMALIZED_DTYPES,
+            na_values="--",
+            compression=compression,
+            comment="#",
+            **kwargs,
+        )
 
-    def read_23andme(self, file, compression):
+    @staticmethod
+    def _parse_5_cols(file, compression, **kwargs):
+        return pd.read_csv(
+            file,
+            names=["rsid", "chrom", "pos", "allele1", "allele2"],
+            index_col=0,
+            dtype=TWO_ALLELE_DTYPES,
+            engine="c",
+            compression=compression,
+            comment="#",
+            **kwargs,
+        )
+
+
+class _23andMe(Reader):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source):
         """ Read and parse 23andMe file.
 
         https://www.23andme.com
-
-        Parameters
-        ----------
-        file : str
-            path to file
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
 
-        def parser():
-            return (
-                pd.read_csv(
-                    file,
-                    comment="#",
-                    sep="\t",
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype=NORMALIZED_DTYPES,
-                    compression=compression,
-                ),
-            )
+        def f():
+            return {"snps": cls._parse_4_cols(file, compression, sep="\t")}
 
-        return self.read_helper("23andMe", parser)
+        return cls._read_helper("23andMe", f, only_detect_source)
 
-    def read_ftdna(self, file, compression):
+
+class _FTDNA(Reader):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source):
         """Read and parse Family Tree DNA (FTDNA) file.
 
         https://www.familytreedna.com
-
-        Parameters
-        ----------
-        file : str
-            path to file
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
 
-        def parser():
+        def f():
             try:
-                df = pd.read_csv(
-                    file,
-                    skiprows=1,
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype=NORMALIZED_DTYPES,
-                    compression=compression,
-                )
+                df = cls._parse_4_cols(file, compression, sep=",", skiprows=1)
             except ValueError:
                 # read files with second header for concatenated data
                 if isinstance(file, io.BytesIO):
                     file.seek(0)
-                    (*data,) = self._handle_bytes_data(file.read(), include_data=True)
+                    (*data,) = cls._handle_bytes_data(file.read(), include_data=True)
                     file.seek(0)
                 else:
                     with open(file, "rb") as f:
-                        (*data,) = self._handle_bytes_data(f.read(), include_data=True)
+                        (*data,) = cls._handle_bytes_data(f.read(), include_data=True)
                 # reconstruct file content from `_handle_bytes_data` results
                 lines = data[0] + data[2]
                 lines = [line.strip() for line in lines.split("\n")]
                 # find index of second header
                 second_header_idx = lines.index("RSID,CHROMOSOME,POSITION,RESULT", 1)
 
-                df = pd.read_csv(
-                    file,
-                    skiprows=[0, second_header_idx],
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype=NORMALIZED_DTYPES,
-                    compression=compression,
+                df = cls._parse_4_cols(
+                    file, compression, sep=",", skiprows=[0, second_header_idx]
                 )
             except OSError:
                 # read concatenated gzip files with extra data
@@ -496,45 +466,24 @@ class Reader:
 
                 new_file = io.BytesIO(data)
 
-                df = pd.read_csv(
-                    new_file,
-                    skiprows=1,
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype=NORMALIZED_DTYPES,
-                    compression=None,  # already decompressed
-                )
+                df = cls._parse_4_cols(new_file, compression=None, sep=",", skiprows=1)
 
-            return (df,)
+            return {"snps": df}
 
-        return self.read_helper("FTDNA", parser)
+        return cls._read_helper("FTDNA", f, only_detect_source)
 
-    def read_ftdna_famfinder(self, file, compression):
+
+class _FTDNAFamFinder(Reader):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source):
         """ Read and parse Family Tree DNA (FTDNA) "famfinder" file.
 
         https://www.familytreedna.com
-
-        Parameters
-        ----------
-        file : str
-            path to file
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
 
-        def parser():
-            df = pd.read_csv(
-                file,
-                comment="#",
-                na_values="-",
-                names=["rsid", "chrom", "pos", "allele1", "allele2"],
-                index_col=0,
-                dtype=TWO_ALLELE_DTYPES,
-                compression=compression,
+        def f():
+            df = cls._parse_5_cols(
+                file, compression, sep=",", na_values="-", header=None
             )
 
             # create genotype column from allele columns
@@ -545,40 +494,21 @@ class Reader:
             del df["allele1"]
             del df["allele2"]
 
-            return (df,)
+            return {"snps": df}
 
-        return self.read_helper("FTDNA", parser)
+        return cls._read_helper("FTDNA", f, only_detect_source)
 
-    def read_ancestry(self, file, compression):
+
+class _AncestryDNA(Reader):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source):
         """ Read and parse Ancestry.com file.
 
         http://www.ancestry.com
-
-        Parameters
-        ----------
-        file : str
-            path to file
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
 
-        def parser():
-            df = pd.read_csv(
-                file,
-                comment="#",
-                header=0,
-                engine="c",
-                sep="\s+",
-                # delim_whitespace=True,  # https://stackoverflow.com/a/15026839
-                na_values=0,
-                names=["rsid", "chrom", "pos", "allele1", "allele2"],
-                index_col=0,
-                dtype=TWO_ALLELE_DTYPES,
-                compression=compression,
-            )
+        def f():
+            df = cls._parse_5_cols(file, compression, sep=r"\s+", na_values=0, header=0)
 
             # create genotype column from allele columns
             df["genotype"] = df["allele1"] + df["allele2"]
@@ -594,35 +524,27 @@ class Reader:
             df.iloc[np.where(df["chrom"] == "25")[0], 0] = "PAR"
             df.iloc[np.where(df["chrom"] == "26")[0], 0] = "MT"
 
-            return (df,)
+            return {"snps": df}
 
-        return self.read_helper("AncestryDNA", parser)
+        return cls._read_helper("AncestryDNA", f, only_detect_source)
 
-    def read_myheritage(self, file, compression):
+
+class _MyHeritage(Reader):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source):
         """ Read and parse MyHeritage file.
 
         https://www.myheritage.com
-
-        Parameters
-        ----------
-        file : str
-            path to file
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
 
-        def parser():
-
+        def f():
             if isinstance(file, str):
                 with open(file, "rb") as f:
-                    first_line, comments, data, comrpession = self._handle_bytes_data(
+                    first_line, comments, data, compression = cls._handle_bytes_data(
                         f.read(), include_data=True
                     )
             else:
-                first_line, comments, data, compression = self._handle_bytes_data(
+                first_line, comments, data, compression = cls._handle_bytes_data(
                     file.read(), include_data=True
                 )
 
@@ -639,69 +561,41 @@ class Reader:
                     line = '"' + '","'.join(line.strip().split(",")) + '"\n'
                 file_string_out.write(line)
 
-            return (
-                pd.read_csv(
+            return {
+                "snps": cls._parse_4_cols(
                     io.StringIO(file_string_out.getvalue()),
-                    comment="#",
+                    compression=None,
                     header=0,
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype=NORMALIZED_DTYPES,
-                ),
-            )
+                    sep=",",
+                )
+            }
 
-        return self.read_helper("MyHeritage", parser)
+        return cls._read_helper("MyHeritage", f, only_detect_source)
 
-    def read_livingdna(self, file, compression):
+
+class _LivingDNA(Reader):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source):
         """ Read and parse LivingDNA file.
 
         https://livingdna.com/
-
-        Parameters
-        ----------
-        file : str
-            path to file
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
 
-        def parser():
-            return (
-                pd.read_csv(
-                    file,
-                    comment="#",
-                    sep="\t",
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype=NORMALIZED_DTYPES,
-                    compression=compression,
-                ),
-            )
+        def f():
+            return {"snps": cls._parse_4_cols(file, compression, sep="\t")}
 
-        return self.read_helper("LivingDNA", parser)
+        return cls._read_helper("LivingDNA", f, only_detect_source)
 
-    def read_mapmygenome(self, file, compression, header):
+
+class _Mapmygenome(Reader):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source, header):
         """ Read and parse Mapmygenome file.
 
         https://mapmygenome.in
-
-        Parameters
-        ----------
-        file : str
-            path to file
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
 
-        def parser():
+        def f():
             def parse(rsid_col_name, rsid_col_idx):
                 return pd.read_csv(
                     file,
@@ -730,50 +624,37 @@ class Reader:
             df.index.name = "rsid"
             df = df[["chrom", "pos", "genotype"]]
 
-            return (df,)
+            return {"snps": df}
 
-        return self.read_helper("Mapmygenome", parser)
+        return cls._read_helper("Mapmygenome", f, only_detect_source)
 
-    def read_genes_for_good(self, file, compression):
+
+class _GenesForGood(Reader):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source):
         """ Read and parse Genes For Good file.
 
         https://genesforgood.sph.umich.edu/readme/readme1.2.txt
-
-        Parameters
-        ----------
-        file : str
-            path to file
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
 
-        def parser():
-            return (
-                pd.read_csv(
-                    file,
-                    comment="#",
-                    sep="\t",
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype=NORMALIZED_DTYPES,
-                    compression=compression,
-                ),
-            )
+        def f():
+            return {"snps": cls._parse_4_cols(file, compression, sep="\t")}
 
-        return self.read_helper("GenesForGood", parser)
+        return cls._read_helper("GenesForGood", f, only_detect_source)
 
-    def _read_gsa_helper(self, file, source, strand, dtypes, na_values="--"):
-        def parser():
-            gsa_resources = self._resources.get_gsa_resources()
+
+class _GSA(Reader):
+    @classmethod
+    def _read_gsa_helper(
+        cls, file, source, strand, dtypes, resources, only_detect_source, na_values="--"
+    ):
+        def f():
+            gsa_resources = resources.get_gsa_resources()
 
             if isinstance(file, str):
                 try:
                     with open(file, "rb") as f:
-                        first_line, comments, data = self._extract_comments(
+                        first_line, comments, data = cls._extract_comments(
                             f, decode=True, include_data=True
                         )
                 except UnicodeDecodeError:
@@ -784,9 +665,9 @@ class Reader:
                             comments,
                             data,
                             compression,
-                        ) = self._handle_bytes_data(f.read(), include_data=True)
+                        ) = cls._handle_bytes_data(f.read(), include_data=True)
             else:
-                first_line, comments, data, compression = self._handle_bytes_data(
+                first_line, comments, data, compression = cls._handle_bytes_data(
                     file.read(), include_data=True
                 )
 
@@ -814,127 +695,80 @@ class Reader:
             df = df[["rsid", "chrom", "pos", "genotype"]]
             df.set_index(["rsid"], inplace=True)
 
-            return (df,)
+            return {"snps": df}
 
-        return self.read_helper(source, parser)
+        return cls._read_helper(source, f, only_detect_source)
 
-    def read_tellmegen(self, file, compression):
+
+class _tellmeGen(Reader):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source, resources):
         """ Read and parse tellmeGen files.
 
         https://www.tellmegen.com/
-
-        Parameters
-        ----------
-        data : str
-            data string
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
 
-        def parser():
-            gsa_resources = self._resources.get_gsa_resources()
+        def f():
+            gsa_resources = resources.get_gsa_resources()
 
-            df = pd.read_csv(
-                file,
-                sep="\t",
-                skiprows=1,
-                na_values="--",
-                names=["rsid", "chrom", "pos", "genotype"],
-                index_col=0,
-                dtype=NORMALIZED_DTYPES,
-                compression=compression,
-            )
+            df = cls._parse_4_cols(file, compression, sep="\t", skiprows=1)
             df.rename(index=gsa_resources["rsid_map"], inplace=True)
-            return (df,)
+            return {"snps": df}
 
-        return self.read_helper("tellmeGen", parser)
+        return cls._read_helper("tellmeGen", f, only_detect_source)
 
-    def read_codigo46(self, file):
+
+class _Codigo46(_GSA):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source, resources):
         """ Read and parse Codigo46 files.
 
         https://codigo46.com.mx
-
-        Parameters
-        ----------
-        data : str
-            data string
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
-        return self._read_gsa_helper(file, "Codigo46", "Plus", {})
+        return cls._read_gsa_helper(
+            file, "Codigo46", "Plus", {}, resources, only_detect_source
+        )
 
-    def read_sano(self, file):
+
+class _Sano(_GSA):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source, resources):
         """ Read and parse Sano Genetics files.
 
         https://sanogenetics.com
-
-        Parameters
-        ----------
-        data : str
-            data string
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
         dtype = {"Chr": object, "Position": np.uint32}
-        return self._read_gsa_helper(file, "Sano", "Forward", dtype, na_values="-")
+        return cls._read_gsa_helper(
+            file,
+            "Sano",
+            "Forward",
+            dtype,
+            resources,
+            only_detect_source,
+            na_values="-",
+        )
 
-    def read_dnaland(self, file, compression):
+
+class _DNALand(Reader):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source):
         """ Read and parse DNA.land files.
 
         https://dna.land/
-
-        Parameters
-        ----------
-        data : str
-            data string
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
 
-        def parser():
-            return (
-                pd.read_csv(
-                    file,
-                    comment="#",
-                    sep="\t",
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype=NORMALIZED_DTYPES,
-                    compression=compression,
-                ),
-            )
+        def f():
+            return {"snps": cls._parse_4_cols(file, compression, sep="\t")}
 
-        return self.read_helper("DNA.Land", parser)
+        return cls._read_helper("DNA.Land", f, only_detect_source)
 
-    def read_snps_csv(self, file, comments, compression):
+
+class _snps(Reader):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source, comments):
         """ Read and parse CSV file generated by ``snps``.
 
         https://pypi.org/project/snps/
-
-        Parameters
-        ----------
-        file : str or buffer
-            path to file or buffer to read
-        comments : str
-            comments at beginning of file
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
         source = ""
         phased = False
@@ -956,31 +790,24 @@ class Reader:
                             build = temp
                         break
 
-        def parser():
+        def f():
             def parse_csv(sep):
-                return pd.read_csv(
-                    file,
-                    sep=sep,
-                    comment="#",
-                    header=0,
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype=NORMALIZED_DTYPES,
-                    compression=compression,
-                )
+                return cls._parse_4_cols(file, compression, sep=sep, header=0)
 
             try:
-                return (parse_csv(","), phased)
+                return {"snps": parse_csv(","), "phased": phased, "build": build}
             except pd.errors.ParserError:
                 if isinstance(file, io.BufferedIOBase):
                     file.seek(0)
 
-                return (parse_csv("\t"), phased, build)
+                return {"snps": parse_csv("\t"), "phased": phased, "build": build}
 
-        return self.read_helper(source, parser)
+        return cls._read_helper(source, f, only_detect_source)
 
-    def read_generic(self, file, compression, skip=1):
+
+class _Generic(Reader):
+    @classmethod
+    def parse(cls, file, compression, only_detect_source, skip=1):
         """ Read and parse generic CSV or TSV file.
 
         Notes
@@ -993,30 +820,11 @@ class Reader:
             rs1,1,1,AA
             rs2,1,2,CC
             rs3,1,3,--
-
-        Parameters
-        ----------
-        file : str
-            path to file
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
         """
 
-        def parser():
+        def f():
             def parse(sep):
-                return pd.read_csv(
-                    file,
-                    sep=sep,
-                    skiprows=skip,
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype=NORMALIZED_DTYPES,
-                    compression=compression,
-                )
+                return cls._parse_4_cols(file, compression, sep=sep, skiprows=skip)
 
             try:
                 df = parse(",")
@@ -1030,69 +838,46 @@ class Reader:
                     if isinstance(file, io.BufferedIOBase):
                         file.seek(0)
 
-                    df = pd.read_csv(
+                    df = cls._parse_4_cols(
                         file,
+                        compression,
                         sep=None,
-                        na_values="--",
                         skiprows=skip,
                         engine="python",
-                        names=["rsid", "chrom", "pos", "genotype"],
                         usecols=[0, 1, 2, 3],
-                        index_col=0,
-                        dtype=NORMALIZED_DTYPES,
-                        compression=compression,
                     )
-            return (df,)
+            return {"snps": df}
 
-        return self.read_helper("generic", parser)
+        return cls._read_helper("generic", f, only_detect_source)
 
-    def read_vcf(self, file, compression, provider, rsids=()):
+
+class _VCF(Reader):
+    @classmethod
+    def parse(cls, file, compression, provider, only_detect_source, rsids=()):
         """ Read and parse VCF file.
 
-        Notes
-        -----
-        This method attempts to read and parse a VCF file or buffer, optionally
-        compressed with gzip. Some assumptions are made throughout this process:
-
-            * SNPs that are not annotated with an RSID are skipped
-            * If the VCF contains multiple samples, only the first sample is used to
-              lookup the genotype
-            * Insertions and deletions are skipped
-            * If a sample allele is not specified, the genotype is reported as NaN
-            * If a sample allele refers to a REF or ALT allele that is not specified,
-              the genotype is reported as NaN
-
-        Parameters
-        ----------
-        file : str or bytes
-            path to file or bytes to load
-        rsids : tuple, optional
-            rsids to extract if loading a VCF file
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
+        See ``Reader`` notes for more details on VCF parsing capability.
         """
 
-        def parser():
+        def f():
             if not isinstance(file, io.BytesIO):
                 with open(file, "rb") as f:
-                    df, phased = self._parse_vcf(f, rsids)
+                    df, phased = cls._parse_vcf(f, rsids)
             else:
-                df, phased = self._parse_vcf(file, rsids)
+                df, phased = cls._parse_vcf(file, rsids)
 
-            return (df, phased)
+            return {"snps": df, "phased": phased}
 
-        return self.read_helper(provider, parser)
+        return cls._read_helper(provider, f, only_detect_source)
 
-    def _parse_vcf(self, buffer, rsids):
+    @classmethod
+    def _parse_vcf(cls, buffer, rsids):
         rows = []
         phased = True
         first_four_bytes = buffer.read(4)
         buffer.seek(0)
 
-        if self.is_gzip(first_four_bytes):
+        if cls.is_gzip(first_four_bytes):
             f = gzip.open(buffer)
         else:
             f = buffer

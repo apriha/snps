@@ -86,6 +86,15 @@ class TestWriter(BaseSNPsTestCase):
             )
             self.run_parsing_tests(dest, "generic")
 
+    def test_save_snps_tsv_filename(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            snps = SNPs("tests/input/generic.tsv", output_dir=tmpdir)
+            dest = os.path.join(tmpdir, "generic.tsv")
+            self.assertEqual(
+                snps.save("generic.tsv", sep="\t"), dest,
+            )
+            self.run_parsing_tests(dest, "generic")
+
     def test_save_snps_vcf(self):
         with tempfile.TemporaryDirectory() as tmpdir1:
             s = SNPs("tests/input/testvcf.vcf", output_dir=tmpdir1)
@@ -156,6 +165,9 @@ class TestWriter(BaseSNPsTestCase):
                 # create discrepant SNPs by setting positions outside reference sequence
                 s._snps.loc["rs1", "pos"] = 0
                 s._snps.loc["rs17", "pos"] = 118
+
+                # esnure this is the right type after manual tweaking
+                s._snps = s._snps.astype({"pos": np.uint32})
 
                 self.assertEqual(s.save(vcf=True), output)
 

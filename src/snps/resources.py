@@ -61,6 +61,7 @@ import zipfile
 
 from atomicwrites import atomic_write
 import numpy as np
+import pandas as pd
 
 from snps.ensembl import EnsemblRestClient
 from snps.utils import create_dir, Singleton
@@ -82,7 +83,9 @@ class Resources(metaclass=Singleton):
         self._resources_dir = os.path.abspath(resources_dir)
         self._ensembl_rest_client = EnsemblRestClient()
         self._reference_sequences = {}
-        self._gsa_resources = {}
+        self._gsa_rsid_map = None
+        self._gsa_chrpos_map = None
+        self._dbsnp_151_37_reverse = None
         self._opensnp_datadump_filenames = []
 
     def get_reference_sequences(
@@ -256,11 +259,53 @@ class Resources(metaclass=Singleton):
         -------
         dict
         """
-        if not self._gsa_resources:
-            self._gsa_resources = self._load_gsa_resources(
-                self._get_path_gsa_rsid_map(), self._get_path_gsa_chrpos_map()
+
+        return {
+            "rsid_map": self.get_gsa_rsid(),
+            "chrpos_map": self.get_gsa_chrpos(),
+        }
+
+    def get_dbsnp_151_37_reverse(self):
+        """Get pandas series of RSIDs that are on the reference reverse (-) strand in dbSNP 151 and lower
+
+        Returns
+        -------
+        dict
+        """
+        if self._dbsnp_151_37_reverse is None:
+            # download the file from the cloud, if not done already
+            dbsnp_rev_path = self._download_file(
+                "https://sano-public.s3.eu-west-2.amazonaws.com/dbsnp151.b37.snps_reverse.txt.gz",
+                "dbsnp_151_37_reverse.txt.gz",
             )
-        return self._gsa_resources
+
+            # load into pandas
+            rsids = pd.read_csv(
+                dbsnp_rev_path,
+                sep=" ",
+                header=None,  # dont infer header as there isn't one
+                names=(
+                    "dbsnp151revrsid",
+                    "dbsnp151freqa",
+                    "dbsnp151freqt",
+                    "dbsnp151freqc",
+                    "dbsnp151freqg",
+                ),
+                dtype={
+                    "dbsnp151revrsid": "string",
+                    "dbsnp151freqa": "double",
+                    "dbsnp151freqt": "double",
+                    "dbsnp151freqc": "double",
+                    "dbsnp151freqg": "double",
+                },
+                engine="c",  # force c engine for performance
+                comment="#",  # skip the first row
+            )
+
+            # store in memory so we don't have to load again
+            self._dbsnp_151_37_reverse = rsids
+
+        return self._dbsnp_151_37_reverse
 
     def get_opensnp_datadump_filenames(self):
         """ Get filenames internal to the `openSNP <https://opensnp.org>`_ datadump zip.
@@ -571,38 +616,50 @@ class Resources(metaclass=Singleton):
                         # remove temp file
                         os.remove(f_tmp.name)
 
-    def _load_gsa_resources(self, rsid_map, chrpos_map):
-        d = {}
+    def get_gsa_rsid(self):
+        if self._gsa_rsid_map is None:
+            # download the file from the cloud, if not done already
+            rsid_path = self._download_file(
+                "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_rsid_map.txt.gz",
+                "gsa_rsid_map.txt.gz",
+            )
+            # load into pandas
+            rsids = pd.read_csv(
+                rsid_path,
+                sep=r"\s+",  # whitespace separators
+                header=0,  # dont infer header as there isn't one
+                names=("gsaname_rsid", "gsarsid"),
+                dtype={"gsaname_rsid": "string", "gsarsid": "string"},
+                engine="c",  # force c engine for performance
+            )
+            self._gsa_rsid_map = rsids
+        return self._gsa_rsid_map
 
-        with gzip.open(rsid_map, "rb") as f:
-            gsa_rsid_map = f.read().decode("utf-8")
+    def get_gsa_chrpos(self):
+        if self._gsa_chrpos_map is None:
+            # download the file from the cloud, if not done already
+            chrpos_path = self._download_file(
+                "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_chrpos_map.txt.gz",
+                "gsa_chrpos_map.txt.gz",
+            )
+            # load into pandas
 
-        d["rsid_map"] = dict(
-            (x.split("\t")[0].strip(), x.split("\t")[1].strip())
-            for x in gsa_rsid_map.split("\n")[:-1]
-        )
+            chrpos = pd.read_csv(
+                chrpos_path,
+                sep=r"\s+",  # whitespace separators
+                header=0,  # dont infer header as there isn't one
+                names=("gsaname_chrpos", "gsachr", "gsapos", "gsacm"),
+                dtype={
+                    "gsaname_chrpos": "string",
+                    "gsachr": "category",
+                    "gsapos": "uint32",
+                    "gsacm": "double",
+                },
+                engine="c",  # force c engine for performance
+            )
 
-        with gzip.open(chrpos_map, "rb") as f:
-            gsa_chrpos_map = f.read().decode("utf-8")
-
-        d["chrpos_map"] = dict(
-            (x.split("\t")[0], x.split("\t")[1] + ":" + x.split("\t")[2])
-            for x in gsa_chrpos_map.split("\n")[:-1]
-        )
-
-        return d
-
-    def _get_path_gsa_rsid_map(self):
-        return self._download_file(
-            "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_rsid_map.txt.gz",
-            "gsa_rsid_map.txt.gz",
-        )
-
-    def _get_path_gsa_chrpos_map(self):
-        return self._download_file(
-            "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_chrpos_map.txt.gz",
-            "gsa_chrpos_map.txt.gz",
-        )
+            self._gsa_chrpos_map = chrpos
+        return self._gsa_chrpos_map
 
     def _get_path_opensnp_datadump(self):
         return self._download_file(
@@ -645,7 +702,9 @@ class Resources(metaclass=Singleton):
                 # http://stackoverflow.com/a/7244263
                 with urllib.request.urlopen(
                     url, timeout=timeout
-                ) as response, atomic_write(destination, mode="wb") as f:
+                ) as response, atomic_write(
+                    destination, mode="wb", overwrite=True
+                ) as f:
                     self._print_download_msg(destination)
                     data = response.read()  # a `bytes` object
 
@@ -667,6 +726,11 @@ class Resources(metaclass=Singleton):
             except socket.timeout:
                 logger.warning(f"Timeout downloading {url}")
                 destination = ""
+            except FileExistsError:
+                # if the file exists, another process has created it while it was
+                # being downloaded
+                # in such a case, the other copy is identical, so ignore this error
+                pass
 
         return destination
 

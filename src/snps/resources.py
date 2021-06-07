@@ -693,7 +693,7 @@ class Resources(metaclass=Singleton):
 
         destination = os.path.join(self._resources_dir, filename)
 
-        if not create_dir(os.path.relpath(os.path.dirname(destination))):
+        if not create_dir(os.path.dirname(destination)):
             return ""
 
         if not os.path.exists(destination):
@@ -940,7 +940,7 @@ class ReferenceSequence:
             # convert bytes to str
             data = str(data, encoding="utf-8", errors="strict")
 
-            data = data.split("\n")
+            data = data.splitlines()
 
             self._start, self._end = self._parse_first_line(data[0])
 

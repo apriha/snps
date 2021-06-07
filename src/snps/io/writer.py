@@ -72,7 +72,7 @@ class Writer:
         self._atomic = atomic
         self._kwargs = kwargs
 
-    def __call__(self):
+    def write(self):
         if self._vcf:
             return self._write_vcf()
         else:
@@ -103,7 +103,7 @@ class Writer:
             SNPs with discrepant positions discovered while saving VCF
         """
         w = cls(snps=snps, filename=filename, vcf=vcf, atomic=atomic, **kwargs)
-        return w()
+        return w.write()
 
     def _write_csv(self):
         """ Write SNPs to a CSV file.
@@ -201,6 +201,7 @@ class Writer:
 
         df = self._snps.snps
 
+        p = self._snps._parallelizer
         tasks = []
 
         # skip insertions and deletions
@@ -236,7 +237,7 @@ class Writer:
             df = df.drop(df.loc[df["chrom"] == chrom].index)
 
         # create the VCF representation for SNPs
-        results = map(self._create_vcf_representation, tasks)
+        results = p(self._create_vcf_representation, tasks)
 
         contigs = []
         vcf = [pd.DataFrame()]

@@ -52,9 +52,6 @@ from tests import BaseSNPsTestCase
 
 
 class TestResources(BaseSNPsTestCase):
-    def setUp(self):
-        self.del_output_dir_helper()
-
     def _reset_resource(self):
         self.resource._reference_sequences = {}
         self.resource._gsa_resources = {}

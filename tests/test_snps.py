@@ -356,14 +356,18 @@ class TestSnps(BaseSNPsTestCase):
         self.assertFalse(s.save(vcf=True))
 
     def test_save_source(self):
-        s = SNPs("tests/input/GRCh38.csv")
-        self.assertEqual(os.path.relpath(s.save()), "output/generic_GRCh38.txt")
-        snps = SNPs("output/generic_GRCh38.txt")
-        self.assertEqual(snps.build, 38)
-        self.assertTrue(snps.build_detected)
-        self.assertEqual(snps.source, "generic")
-        self.assertListEqual(snps._source, ["generic"])
-        pd.testing.assert_frame_equal(snps.snps, self.snps_GRCh38(), check_exact=True)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            s = SNPs("tests/input/GRCh38.csv", output_dir=tmpdir)
+            dest = os.path.join(tmpdir, "generic_GRCh38.txt")
+            self.assertEqual(s.save(), dest)
+            snps = SNPs(dest)
+            self.assertEqual(snps.build, 38)
+            self.assertTrue(snps.build_detected)
+            self.assertEqual(snps.source, "generic")
+            self.assertListEqual(snps._source, ["generic"])
+            pd.testing.assert_frame_equal(
+                snps.snps, self.snps_GRCh38(), check_exact=True
+            )
 
     def test_sex_Female_X_chrom(self):
         s = self.simulate_snps(
@@ -480,19 +484,19 @@ class TestSNPsMerge(TestSnps):
                     )
 
     def test_source_snps(self):
-        s = SNPs("tests/input/GRCh37.csv")
-        self.assertEqual(s.source, "generic")
-        results = s.merge((SNPs("tests/input/23andme.txt"),))
-        self.assertEqual(s.source, "generic, 23andMe")
-        self.assertListEqual(s._source, ["generic", "23andMe"])
-        self.assertEqual(
-            os.path.relpath(s.save()), "output/generic__23andMe_GRCh37.txt"
-        )
-        s = SNPs("output/generic__23andMe_GRCh37.txt")
-        self.assertEqual(s.source, "generic, 23andMe")
-        self.assertListEqual(s._source, ["generic", "23andMe"])
-        pd.testing.assert_frame_equal(s.snps, s.snps, check_exact=True)
-        self.assert_results(results, [{"merged": True}])
+        with tempfile.TemporaryDirectory() as tmpdir:
+            s = SNPs("tests/input/GRCh37.csv", output_dir=tmpdir)
+            self.assertEqual(s.source, "generic")
+            results = s.merge((SNPs("tests/input/23andme.txt"),))
+            self.assertEqual(s.source, "generic, 23andMe")
+            self.assertListEqual(s._source, ["generic", "23andMe"])
+            dest = os.path.join(tmpdir, "generic__23andMe_GRCh37.txt")
+            self.assertEqual(s.save(), dest)
+            s = SNPs(dest)
+            self.assertEqual(s.source, "generic, 23andMe")
+            self.assertListEqual(s._source, ["generic", "23andMe"])
+            pd.testing.assert_frame_equal(s.snps, s.snps, check_exact=True)
+            self.assert_results(results, [{"merged": True}])
 
     def test_merge_list(self):
         s = SNPs()
@@ -855,11 +859,13 @@ class TestDeprecatedMethods(TestSnps):
 
     def test_save_snps(self):
         def f():
-            snps = SNPs("tests/input/generic.csv")
-            self.assertEqual(
-                os.path.relpath(snps.save_snps(sep=",")), "output/generic_GRCh37.csv"
-            )
-            self.run_parsing_tests("output/generic_GRCh37.csv", "generic")
+            with tempfile.TemporaryDirectory() as tmpdir:
+                snps = SNPs("tests/input/generic.csv", output_dir=tmpdir)
+                dest = os.path.join(tmpdir, "generic_GRCh37.csv")
+                self.assertEqual(
+                    snps.save_snps(sep=","), dest,
+                )
+                self.run_parsing_tests(dest, "generic")
 
         self.run_deprecated_test(f, "This method has been renamed to `save`.")
 

@@ -103,8 +103,8 @@ class Reader:
         self._resources = resources
         self._rsids = frozenset(rsids)
 
-    def __call__(self):
-        """Read and parse a raw data / genotype file.
+    def read(self):
+        """ Read and parse a raw data / genotype file.
 
         Returns
         -------
@@ -221,7 +221,7 @@ class Reader:
                 flag indicating if SNPs are phased
         """
         r = cls(file, only_detect_source, resources, rsids)
-        return r()
+        return r.read()
 
     def _extract_comments(self, f, decode=False, include_data=False):
         line = self._read_line(f, decode)

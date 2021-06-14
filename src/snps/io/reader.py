@@ -171,7 +171,7 @@ class Reader:
             d = self.read_mapmygenome(file, compression, first_line)
         elif "lineage" in first_line or "snps" in first_line:
             d = self.read_snps_csv(file, comments, compression)
-        elif "Chromosome" in first_line:
+        elif "rsid\tChromosome\tposition\tgenotype" == first_line.strip():
             d = self.read_tellmegen(file, compression)
         elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
             d = self.read_generic(file, compression)

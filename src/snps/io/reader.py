@@ -455,7 +455,7 @@ class Reader:
                 names=["rsid", "chrom", "pos", "genotype"],
                 compression=compression,
             )
-            df = df.dropna()
+            df = df.dropna(subset=["rsid", "chrom", "pos"])
             # turn number numbers into string numbers
             df["chrom"] = df["chrom"].map(
                 {

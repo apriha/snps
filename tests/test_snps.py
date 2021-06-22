@@ -52,7 +52,14 @@ class TestSnps(BaseSNPsTestCase):
 
     def test___repr__snps(self):
         s = SNPs("tests/input/GRCh37.csv")
-        self.assertEqual("SNPs('tests/input/GRCh37.csv')", s.__repr__())
+        self.assertEqual("SNPs('GRCh37.csv')", s.__repr__())
+
+    def test___repr__snps_bytes(self):
+        with open("tests/input/GRCh37.csv", "rb") as f:
+            data = f.read()
+
+        s = SNPs(data)
+        self.assertEqual("SNPs(<bytes>)", s.__repr__())
 
     def test__lookup_build_with_snp_pos_None(self):
         snps = SNPs()

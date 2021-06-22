@@ -165,7 +165,10 @@ class SNPs:
                 logger.warning("no SNPs loaded...")
 
     def __repr__(self):
-        return f"SNPs({self._file[0:50]!r})"
+        if isinstance(self._file, str):
+            return f"SNPs('{os.path.basename(self._file)}')"
+        else:
+            return "SNPs(<bytes>)"
 
     @property
     def source(self):

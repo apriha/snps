@@ -48,10 +48,10 @@ logger = logging.getLogger(__name__)
 
 
 class Writer:
-    """Class for writing SNPs to files."""
+    """ Class for writing SNPs to files. """
 
     def __init__(self, snps=None, filename="", vcf=False, atomic=True, **kwargs):
-        """Initialize a `Writer`.
+        """ Initialize a `Writer`.
 
         Parameters
         ----------
@@ -80,7 +80,7 @@ class Writer:
 
     @classmethod
     def write_file(cls, snps=None, filename="", vcf=False, atomic=True, **kwargs):
-        """Save SNPs to file.
+        """ Save SNPs to file.
 
         Parameters
         ----------
@@ -106,7 +106,7 @@ class Writer:
         return w.write()
 
     def _write_csv(self):
-        """Write SNPs to a CSV file.
+        """ Write SNPs to a CSV file.
 
         Returns
         -------
@@ -147,7 +147,7 @@ class Writer:
         )
 
     def _write_vcf(self):
-        """Write SNPs to a VCF file.
+        """ Write SNPs to a VCF file.
 
         References
         ----------

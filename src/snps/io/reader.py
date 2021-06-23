@@ -408,18 +408,70 @@ class Reader:
         """
 
         def parser():
-            return (
-                pd.read_csv(
-                    file,
-                    comment="#",
-                    sep="\t",
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype=NORMALIZED_DTYPES,
-                    compression=compression,
-                ),
+            df = pd.read_csv(
+                file,
+                comment="#",
+                sep="\t",
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                compression=compression,
             )
+            df = df.dropna(subset=["rsid", "chrom", "pos"])
+            # turn number numbers into string numbers
+            df["chrom"] = df["chrom"].map(
+                {
+                    "1": "1",
+                    "2": "2",
+                    "3": "3",
+                    "4": "4",
+                    "5": "5",
+                    "6": "6",
+                    "7": "7",
+                    "8": "8",
+                    "9": "9",
+                    "10": "10",
+                    "11": "11",
+                    "12": "12",
+                    "13": "13",
+                    "14": "14",
+                    "15": "15",
+                    "16": "16",
+                    "17": "17",
+                    "18": "18",
+                    "19": "19",
+                    "20": "20",
+                    "21": "21",
+                    "22": "22",
+                    1: "1",
+                    2: "2",
+                    3: "3",
+                    4: "4",
+                    5: "5",
+                    6: "6",
+                    7: "7",
+                    8: "8",
+                    9: "9",
+                    10: "10",
+                    11: "11",
+                    12: "12",
+                    13: "13",
+                    14: "14",
+                    15: "15",
+                    16: "16",
+                    17: "17",
+                    18: "18",
+                    19: "19",
+                    20: "20",
+                    21: "21",
+                    22: "22",
+                    "X": "X",
+                    "Y": "Y",
+                    "MT": "MT",
+                }
+            )
+            df = df.astype(dtype=NORMALIZED_DTYPES)
+            df = df.set_index("rsid")
+            return (df,)
 
         return self.read_helper("23andMe", parser)
 

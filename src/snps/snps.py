@@ -994,8 +994,9 @@ class SNPs:
 
     def sort(self):
         """ Sort SNPs based on ordered chromosome list and position. """
-
-        sorted_list = sorted(self._snps["chrom"].unique(), key=self._natural_sort_key)
+        sorted_list = sorted(
+            (str(x) for x in self._snps["chrom"].unique()), key=self._natural_sort_key
+        )
 
         # move PAR and MT to the end of the dataframe
         if "PAR" in sorted_list:

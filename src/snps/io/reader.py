@@ -84,7 +84,7 @@ class Reader:
     """ Class for reading and parsing raw data / genotype files. """
 
     def __init__(self, file="", only_detect_source=False, resources=None, rsids=()):
-        """ Initialize a `Reader`.
+        """Initialize a `Reader`.
 
         Parameters
         ----------
@@ -171,7 +171,7 @@ class Reader:
             d = self.read_mapmygenome(file, compression, first_line)
         elif "lineage" in first_line or "snps" in first_line:
             d = self.read_snps_csv(file, comments, compression)
-        elif "Chromosome" in first_line:
+        elif "rsid\tChromosome\tposition\tgenotype" == first_line.strip():
             d = self.read_tellmegen(file, compression)
         elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
             d = self.read_generic(file, compression)
@@ -183,10 +183,9 @@ class Reader:
             d = self.read_genes_for_good(file, compression)
         elif "DNA.Land" in comments:
             d = self.read_dnaland(file, compression)
-        elif "CODIGO46" in comments:
-            d = self.read_codigo46(file)
-        elif "SANO" in comments:
-            d = self.read_sano(file)
+        elif first_line.startswith("[Header]"):
+            # Global Screening Array, includes SANO and CODIGO46
+            d = self.read_gsa(file, compression, comments)
 
         # detect build from comments if build was not already detected from `read` method
         if not d["build"]:
@@ -196,7 +195,7 @@ class Reader:
 
     @classmethod
     def read_file(cls, file, only_detect_source, resources, rsids):
-        """ Read `file`.
+        """Read `file`.
 
         Parameters
         ----------
@@ -259,31 +258,71 @@ class Reader:
         return first_line, comments, data
 
     def _detect_build_from_comments(self, comments, source):
-        comments = comments.lower()
-        if "build 37" in comments:
-            return 37
-        elif "build 36" in comments:
-            return 36
-
-        # allow more variations for VCF
+        # if its a VCF parse these properly
         if source == "vcf":
-            if "https://pypi.org/project/snps/" in comments:  # remove `snps` version
-                comments = f"{comments[: comments.find('snps v')]}{comments[comments.find('https://pypi.org/project/snps/'):]}"
-            if "hg19" in comments:
-                return 37
-            elif "ncbi36" in comments:
+            for line in comments.split("\n"):
+                line = line.strip()
+                if not line:
+                    # skip blanks
+                    continue
+                assert line.startswith("#"), line
+                if not line.startswith("##"):
+                    # skip comments but not preamble
+                    continue
+                if "=" not in line:
+                    # skip lines without key/value in
+                    continue
+                line = line[2:].strip()
+                key = line[: line.index("=")]
+                value = line[line.index("=") + 1 :]
+                if key.lower() == "contig":
+                    assert value.startswith("<"), value
+                    assert value.endswith(">"), value
+                    parts = value[1:-1].split(",")
+                    for part in parts:
+                        part_key = part[: part.index("=")]
+                        part_value = part[part.index("=") + 1 :]
+                        if part_key.lower() == "assembly":
+                            if "36" in part_value:
+                                return 36
+                            elif "37" in part_value or "hg19" in part_value:
+                                return 37
+                            elif "38" in part_value:
+                                return 38
+                        elif part_key.lower() == "length":
+                            if "249250621" == part_value:
+                                return 37  # length of chromosome 1
+                            elif "248956422" == part_value:
+                                return 38  # length of chromosome 1
+            # couldn't find anything
+            return 0
+        else:
+            # not a vcf
+            if "build 36" in comments.lower():
                 return 36
-            elif "grch38" in comments:
-                return 38
-            elif "build 38" in comments:
-                return 38
-            elif "b37" in comments:
+            elif "build 37" in comments.lower():
                 return 37
-            elif "hg38" in comments:
+            elif "build 38" in comments.lower():
                 return 38
-            elif "b38" in comments:
+            # these can cause false positives
+            # elif "b37" in comments.lower():
+            #    return 37
+            # elif "b38" in comments.lower():
+            #    return 38
+            # elif "hg19" in comments.lower():
+            #    return 37
+            # elif "hg38" in comments.lower():
+            #    return 38
+            elif "grch38" in comments.lower():
                 return 38
-        return 0
+            elif "grch37" in comments.lower():
+                return 37
+            elif "249250621" in comments.lower():
+                return 37  # length of chromosome 1
+            elif "248956422" in comments.lower():
+                return 38  # length of chromosome 1
+            else:
+                return 0
 
     def _handle_bytes_data(self, file, include_data=False):
         compression = "infer"
@@ -340,7 +379,7 @@ class Reader:
             return f.readline()
 
     def read_helper(self, source, parser):
-        """ Generic method to help read files.
+        """Generic method to help read files.
 
         Parameters
         ----------
@@ -392,7 +431,7 @@ class Reader:
         return {"snps": df, "source": source, "phased": phased, "build": build}
 
     def read_23andme(self, file, compression):
-        """ Read and parse 23andMe file.
+        """Read and parse 23andMe file.
 
         https://www.23andme.com
 
@@ -511,7 +550,7 @@ class Reader:
         return self.read_helper("FTDNA", parser)
 
     def read_ftdna_famfinder(self, file, compression):
-        """ Read and parse Family Tree DNA (FTDNA) "famfinder" file.
+        """Read and parse Family Tree DNA (FTDNA) "famfinder" file.
 
         https://www.familytreedna.com
 
@@ -550,7 +589,7 @@ class Reader:
         return self.read_helper("FTDNA", parser)
 
     def read_ancestry(self, file, compression):
-        """ Read and parse Ancestry.com file.
+        """Read and parse Ancestry.com file.
 
         http://www.ancestry.com
 
@@ -571,7 +610,7 @@ class Reader:
                 comment="#",
                 header=0,
                 engine="c",
-                sep="\s+",
+                sep=r"\s+",
                 # delim_whitespace=True,  # https://stackoverflow.com/a/15026839
                 na_values=0,
                 names=["rsid", "chrom", "pos", "allele1", "allele2"],
@@ -599,7 +638,7 @@ class Reader:
         return self.read_helper("AncestryDNA", parser)
 
     def read_myheritage(self, file, compression):
-        """ Read and parse MyHeritage file.
+        """Read and parse MyHeritage file.
 
         https://www.myheritage.com
 
@@ -654,7 +693,7 @@ class Reader:
         return self.read_helper("MyHeritage", parser)
 
     def read_livingdna(self, file, compression):
-        """ Read and parse LivingDNA file.
+        """Read and parse LivingDNA file.
 
         https://livingdna.com/
 
@@ -725,7 +764,8 @@ class Reader:
             else:
                 df = parse("SNP.Name", 0)
 
-            df["genotype"] = df["Allele1...Top"] + df["Allele2...Top"]
+            # uses Illumina definition of "Plus" from https://emea.support.illumina.com/bulletins/2017/06/how-to-interpret-dna-strand-and-allele-information-for-infinium-.html
+            df["genotype"] = df["Allele1...Plus"] + df["Allele2...Plus"]
             df.rename(columns={"Chr": "chrom", "Position": "pos"}, inplace=True)
             df.index.name = "rsid"
             df = df[["chrom", "pos", "genotype"]]
@@ -735,7 +775,7 @@ class Reader:
         return self.read_helper("Mapmygenome", parser)
 
     def read_genes_for_good(self, file, compression):
-        """ Read and parse Genes For Good file.
+        """Read and parse Genes For Good file.
 
         https://genesforgood.sph.umich.edu/readme/readme1.2.txt
 
@@ -766,52 +806,149 @@ class Reader:
 
         return self.read_helper("GenesForGood", parser)
 
-    def _read_gsa_helper(self, file, source, strand, dtypes, na_values="--"):
+    def _read_gsa_helper(self, file, source):
         def parser():
-            gsa_resources = self._resources.get_gsa_resources()
 
+            # read the comments so we get to the actual data
             if isinstance(file, str):
                 try:
                     with open(file, "rb") as f:
-                        first_line, comments, data = self._extract_comments(
+                        _, _, data = self._extract_comments(
                             f, decode=True, include_data=True
                         )
                 except UnicodeDecodeError:
                     # compressed file on filesystem
                     with open(file, "rb") as f:
-                        (
-                            first_line,
-                            comments,
-                            data,
-                            compression,
-                        ) = self._handle_bytes_data(f.read(), include_data=True)
+                        _, _, data, _ = self._handle_bytes_data(
+                            f.read(), include_data=True
+                        )
             else:
-                first_line, comments, data, compression = self._handle_bytes_data(
-                    file.read(), include_data=True
+                _, _, data, _ = self._handle_bytes_data(file.read(), include_data=True)
+
+            # turn the data into a pandas dataframe for manipulation
+            df = pd.read_csv(
+                io.StringIO(data),
+                sep="\t",
+                engine="c",
+                dtype={
+                    "Position": NORMALIZED_DTYPES["pos"],
+                    "Chr": NORMALIZED_DTYPES["chrom"],
+                },
+            )
+
+            # reserve columns we want out
+            assert "rsid" not in df.columns
+            assert "chrom" not in df.columns
+            assert "pos" not in df.columns
+            assert "genotype" not in df.columns
+
+            # prefer the specified chromosome and position, in prsent
+            # this uses the gsa names, so needs to be done before rsid
+            if "Chr" in df.columns and "Position" in df.columns:
+                # put the chromosome in the right column with the right type
+                df["chrom"] = df["Chr"]
+                # put the position in the right column with the right type
+                df["pos"] = df["Position"]
+
+            else:
+                # use an external source to map snp names to chromosome and position
+                df = df.merge(
+                    self._resources.get_gsa_chrpos(),
+                    how="inner",  # inner join, everything must have a position
+                    left_on="SNP Name",
+                    right_on="gsaname_chrpos",
+                    suffixes=(None, "_gsa"),
+                )
+                # make sure its the right types
+                df["chrom"] = df["gsachr"].apply(str).astype(NORMALIZED_DTYPES["chrom"])
+                df["pos"] = df["gsapos"].astype(NORMALIZED_DTYPES["pos"])
+
+            # use the given rsid when avaliable, SNP Name when unavaliable
+            df["rsid"] = df["SNP Name"].astype(NORMALIZED_DTYPES["rsid"])
+            if "RsID" in df.columns:
+                df.loc[df["RsID"] != ".", "rsid"] = df.loc[df["rsid"] != ".", "RsID"]
+            else:
+                # if given RSIDs are not avaliable, then use the external mapping to turn
+                # SNP names into rsids where possible
+                df = df.merge(
+                    self._resources.get_gsa_rsid(),
+                    how="left",  # left-hand join, gsa rsids may be NA
+                    left_on="SNP Name",
+                    right_on="gsaname_rsid",
+                    suffixes=(None, "_gsa_rsid"),
+                )
+                df.loc[~pd.isna(df["gsaname_rsid"]), "rsid"] = df.loc[
+                    ~pd.isna(df["gsaname_rsid"]), "gsarsid"
+                ]
+
+            # combine the alleles into genotype
+            # prefer Plus strand as that is forward reference
+            if "Allele1 - Plus" in df.columns and "Allele2 - Plus" in df.columns:
+                df["genotype"] = (df["Allele1 - Plus"] + df["Allele2 - Plus"]).astype(
+                    NORMALIZED_DTYPES["genotype"]
+                )
+            elif (
+                "Allele1 - Forward" in df.columns and "Allele2 - Forward" in df.columns
+            ):
+                # if strand is forward, need to take reverse complement of *some* rsids
+                # this is because it is Illumina forward, which is dbSNP strand, which
+                # is reverse reference for some RSIDs before dbSNP 151.
+
+                # load list of reversable rsids
+                dbsnp151 = self._resources.get_dbsnp_151_37_reverse()
+                # keep only the rsids
+                dbsnp151 = dbsnp151.filter(items=("dbsnp151revrsid",), axis=1)
+
+                # add it as an extra column
+                df = df.merge(
+                    dbsnp151,
+                    how="left",
+                    left_on="rsid",
+                    right_on="dbsnp151revrsid",
+                    suffixes=(None, "_dbsnp151rev"),
                 )
 
-            data_io = io.StringIO(data)
-            df = pd.read_csv(data_io, sep="\t", dtype=dtypes, na_values=na_values)
+                # create plus strand columns from the forward alleles and flip them if appropriate
+                for i in (1, 2):
+                    df[f"Allele{i} - Plus"] = df[f"Allele{i} - Forward"]
+                    df.loc[
+                        (df[f"Allele{i} - Forward"] == "A")
+                        & (~pd.isna(df["dbsnp151revrsid"])),
+                        f"Allele{i} - Plus",
+                    ] = "T"
+                    df.loc[
+                        (df[f"Allele{i} - Forward"] == "T")
+                        & (~pd.isna(df["dbsnp151revrsid"])),
+                        f"Allele{i} - Plus",
+                    ] = "A"
+                    df.loc[
+                        (df[f"Allele{i} - Forward"] == "C")
+                        & (~pd.isna(df["dbsnp151revrsid"])),
+                        f"Allele{i} - Plus",
+                    ] = "G"
+                    df.loc[
+                        (df[f"Allele{i} - Forward"] == "G")
+                        & (~pd.isna(df["dbsnp151revrsid"])),
+                        f"Allele{i} - Plus",
+                    ] = "C"
 
-            def map_rsids(x):
-                return gsa_resources["rsid_map"].get(x)
+                # create a genotype by combining the new plus columns
+                df["genotype"] = (df["Allele1 - Plus"] + df["Allele2 - Plus"]).astype(
+                    NORMALIZED_DTYPES["genotype"]
+                )
+            else:
+                raise ValueError("No supported allele column")
 
-            def map_chr(x):
-                chrpos = gsa_resources["chrpos_map"].get(x)
-                return chrpos.split(":")[0] if chrpos else None
+            # mark -- genotype as na
+            df.loc[df["genotype"] == "--", "genotype"] = np.nan
 
-            def map_pos(x):
-                chrpos = gsa_resources["chrpos_map"].get(x)
-                return chrpos.split(":")[1] if chrpos else None
+            # keep only the columns we want
+            df = df.filter(items=("rsid", "chrom", "pos", "genotype"), axis=1)
 
-            df["rsid"] = df["SNP Name"].apply(map_rsids)
-            df["chrom"] = df["SNP Name"].apply(map_chr)
-            df["pos"] = df["SNP Name"].apply(map_pos)
-            df["genotype"] = df[f"Allele1 - {strand}"] + df[f"Allele2 - {strand}"]
+            # discard rows without values
             df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
 
-            df = df.astype(NORMALIZED_DTYPES)
-            df = df[["rsid", "chrom", "pos", "genotype"]]
+            # reindex for the new identifiers
             df.set_index(["rsid"], inplace=True)
 
             return (df,)
@@ -819,7 +956,7 @@ class Reader:
         return self.read_helper(source, parser)
 
     def read_tellmegen(self, file, compression):
-        """ Read and parse tellmeGen files.
+        """Read and parse tellmeGen files.
 
         https://www.tellmegen.com/
 
@@ -835,60 +972,68 @@ class Reader:
         """
 
         def parser():
-            gsa_resources = self._resources.get_gsa_resources()
-
             df = pd.read_csv(
                 file,
                 sep="\t",
                 skiprows=1,
                 na_values="--",
                 names=["rsid", "chrom", "pos", "genotype"],
-                index_col=0,
                 dtype=NORMALIZED_DTYPES,
                 compression=compression,
             )
-            df.rename(index=gsa_resources["rsid_map"], inplace=True)
+
+            # use the external mapping to turn
+            # SNP names into rsids where possible
+            df = df.merge(
+                self._resources.get_gsa_rsid(),
+                how="left",  # left-hand join, gsa rsids may be NA
+                left_on="rsid",
+                right_on="gsaname_rsid",
+                suffixes=(None, "_gsa_rsid"),
+            )
+            df.loc[~pd.isna(df["gsaname_rsid"]), "rsid"] = df.loc[
+                ~pd.isna(df["gsaname_rsid"]), "gsarsid"
+            ]
+
+            # keep only the columns we want
+            df = df.filter(items=("rsid", "chrom", "pos", "genotype"), axis=1)
+
+            # reindex for the new identifiers
+            df.set_index(["rsid"], inplace=True)
+
             return (df,)
 
         return self.read_helper("tellmeGen", parser)
 
-    def read_codigo46(self, file):
-        """ Read and parse Codigo46 files.
+    def read_gsa(self, data_or_filename, compresion, comments):
+        """Read and parse Illumina Global Screening Array files
 
-        https://codigo46.com.mx
 
         Parameters
         ----------
-        data : str
-            data string
+        data_or_filename : str or bytes
+            either the filename to read from or the bytes data itself
 
         Returns
         -------
         dict
             result of `read_helper`
         """
-        return self._read_gsa_helper(file, "Codigo46", "Plus", {})
 
-    def read_sano(self, file):
-        """ Read and parse Sano Genetics files.
+        # pick the source
+        # ideally we want something more specific than GSA
+        if "SANO" in comments:
+            source = "Sano"
+        elif "CODIGO46" in comments:
+            source = "Codigo46"
+        else:
+            # default to generic global screening array
+            source = "GSA"
 
-        https://sanogenetics.com
-
-        Parameters
-        ----------
-        data : str
-            data string
-
-        Returns
-        -------
-        dict
-            result of `read_helper`
-        """
-        dtype = {"Chr": object, "Position": np.uint32}
-        return self._read_gsa_helper(file, "Sano", "Forward", dtype, na_values="-")
+        return self._read_gsa_helper(data_or_filename, source)
 
     def read_dnaland(self, file, compression):
-        """ Read and parse DNA.land files.
+        """Read and parse DNA.land files.
 
         https://dna.land/
 
@@ -981,7 +1126,7 @@ class Reader:
         return self.read_helper(source, parser)
 
     def read_generic(self, file, compression, skip=1):
-        """ Read and parse generic CSV or TSV file.
+        """Read and parse generic CSV or TSV file.
 
         Notes
         -----
@@ -1047,7 +1192,7 @@ class Reader:
         return self.read_helper("generic", parser)
 
     def read_vcf(self, file, compression, provider, rsids=()):
-        """ Read and parse VCF file.
+        """Read and parse VCF file.
 
         Notes
         -----

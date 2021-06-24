@@ -61,6 +61,7 @@ import zipfile
 
 from atomicwrites import atomic_write
 import numpy as np
+import pandas as pd
 
 from snps.ensembl import EnsemblRestClient
 from snps.utils import create_dir, Singleton
@@ -69,10 +70,10 @@ logger = logging.getLogger(__name__)
 
 
 class Resources(metaclass=Singleton):
-    """ Object used to manage resources required by `snps`. """
+    """Object used to manage resources required by `snps`."""
 
     def __init__(self, resources_dir="resources"):
-        """ Initialize a ``Resources`` object.
+        """Initialize a ``Resources`` object.
 
         Parameters
         ----------
@@ -82,7 +83,9 @@ class Resources(metaclass=Singleton):
         self._resources_dir = os.path.abspath(resources_dir)
         self._ensembl_rest_client = EnsemblRestClient()
         self._reference_sequences = {}
-        self._gsa_resources = {}
+        self._gsa_rsid_map = None
+        self._gsa_chrpos_map = None
+        self._dbsnp_151_37_reverse = None
         self._opensnp_datadump_filenames = []
 
     def get_reference_sequences(
@@ -116,7 +119,7 @@ class Resources(metaclass=Singleton):
             "MT",
         ),
     ):
-        """ Get Homo sapiens reference sequences for `chroms` of `assembly`.
+        """Get Homo sapiens reference sequences for `chroms` of `assembly`.
 
         Notes
         -----
@@ -157,7 +160,7 @@ class Resources(metaclass=Singleton):
             return False
 
     def get_assembly_mapping_data(self, source_assembly, target_assembly):
-        """ Get assembly mapping data.
+        """Get assembly mapping data.
 
         Parameters
         ----------
@@ -176,7 +179,7 @@ class Resources(metaclass=Singleton):
         )
 
     def download_example_datasets(self):
-        """ Download example datasets from `openSNP <https://opensnp.org>`_.
+        """Download example datasets from `openSNP <https://opensnp.org>`_.
 
         Per openSNP, "the data is donated into the public domain using `CC0 1.0
         <http://creativecommons.org/publicdomain/zero/1.0/>`_."
@@ -211,7 +214,7 @@ class Resources(metaclass=Singleton):
         return paths
 
     def get_all_resources(self):
-        """ Get / download all resources used throughout `snps`.
+        """Get / download all resources used throughout `snps`.
 
         Notes
         -----
@@ -232,7 +235,7 @@ class Resources(metaclass=Singleton):
         return resources
 
     def get_all_reference_sequences(self, **kwargs):
-        """ Get Homo sapiens reference sequences for Builds 36, 37, and 38 from Ensembl.
+        """Get Homo sapiens reference sequences for Builds 36, 37, and 38 from Ensembl.
 
         Notes
         -----
@@ -248,7 +251,7 @@ class Resources(metaclass=Singleton):
         return self._reference_sequences
 
     def get_gsa_resources(self):
-        """ Get resources for reading Global Screening Array files.
+        """Get resources for reading Global Screening Array files.
 
         https://support.illumina.com/downloads/infinium-global-screening-array-v2-0-product-files.html
 
@@ -256,14 +259,56 @@ class Resources(metaclass=Singleton):
         -------
         dict
         """
-        if not self._gsa_resources:
-            self._gsa_resources = self._load_gsa_resources(
-                self._get_path_gsa_rsid_map(), self._get_path_gsa_chrpos_map()
+
+        return {
+            "rsid_map": self.get_gsa_rsid(),
+            "chrpos_map": self.get_gsa_chrpos(),
+        }
+
+    def get_dbsnp_151_37_reverse(self):
+        """Get pandas series of RSIDs that are on the reference reverse (-) strand in dbSNP 151 and lower
+
+        Returns
+        -------
+        dict
+        """
+        if self._dbsnp_151_37_reverse is None:
+            # download the file from the cloud, if not done already
+            dbsnp_rev_path = self._download_file(
+                "https://sano-public.s3.eu-west-2.amazonaws.com/dbsnp151.b37.snps_reverse.txt.gz",
+                "dbsnp_151_37_reverse.txt.gz",
             )
-        return self._gsa_resources
+
+            # load into pandas
+            rsids = pd.read_csv(
+                dbsnp_rev_path,
+                sep=" ",
+                header=None,  # dont infer header as there isn't one
+                names=(
+                    "dbsnp151revrsid",
+                    "dbsnp151freqa",
+                    "dbsnp151freqt",
+                    "dbsnp151freqc",
+                    "dbsnp151freqg",
+                ),
+                dtype={
+                    "dbsnp151revrsid": "string",
+                    "dbsnp151freqa": "double",
+                    "dbsnp151freqt": "double",
+                    "dbsnp151freqc": "double",
+                    "dbsnp151freqg": "double",
+                },
+                engine="c",  # force c engine for performance
+                comment="#",  # skip the first row
+            )
+
+            # store in memory so we don't have to load again
+            self._dbsnp_151_37_reverse = rsids
+
+        return self._dbsnp_151_37_reverse
 
     def get_opensnp_datadump_filenames(self):
-        """ Get filenames internal to the `openSNP <https://opensnp.org>`_ datadump zip.
+        """Get filenames internal to the `openSNP <https://opensnp.org>`_ datadump zip.
 
         Per openSNP, "the data is donated into the public domain using `CC0 1.0
         <http://creativecommons.org/publicdomain/zero/1.0/>`_."
@@ -292,7 +337,7 @@ class Resources(metaclass=Singleton):
         return self._opensnp_datadump_filenames
 
     def load_opensnp_datadump_file(self, filename):
-        """ Load the specified file from the openSNP datadump.
+        """Load the specified file from the openSNP datadump.
 
         Per openSNP, "the data is donated into the public domain using `CC0 1.0
         <http://creativecommons.org/publicdomain/zero/1.0/>`_."
@@ -322,7 +367,7 @@ class Resources(metaclass=Singleton):
 
     @staticmethod
     def _get_opensnp_datadump_filenames(filename):
-        """ Get list of filenames internal to the openSNP datadump zip.
+        """Get list of filenames internal to the openSNP datadump zip.
 
         Parameters
         ----------
@@ -342,7 +387,7 @@ class Resources(metaclass=Singleton):
 
     @staticmethod
     def _write_data_to_gzip(f, data):
-        """ Write `data` to `f` in `gzip` format.
+        """Write `data` to `f` in `gzip` format.
 
         Parameters
         ----------
@@ -354,7 +399,7 @@ class Resources(metaclass=Singleton):
 
     @staticmethod
     def _load_assembly_mapping_data(filename):
-        """ Load assembly mapping data.
+        """Load assembly mapping data.
 
         Parameters
         ----------
@@ -388,7 +433,7 @@ class Resources(metaclass=Singleton):
     def _get_paths_reference_sequences(
         self, sub_dir="fasta", assembly="GRCh37", chroms=()
     ):
-        """ Get local paths to Homo sapiens reference sequences from Ensembl.
+        """Get local paths to Homo sapiens reference sequences from Ensembl.
 
         Notes
         -----
@@ -492,7 +537,7 @@ class Resources(metaclass=Singleton):
     def _get_path_assembly_mapping_data(
         self, source_assembly, target_assembly, retries=10
     ):
-        """ Get local path to assembly mapping data, downloading if necessary.
+        """Get local path to assembly mapping data, downloading if necessary.
 
         Parameters
         ----------
@@ -571,38 +616,50 @@ class Resources(metaclass=Singleton):
                         # remove temp file
                         os.remove(f_tmp.name)
 
-    def _load_gsa_resources(self, rsid_map, chrpos_map):
-        d = {}
+    def get_gsa_rsid(self):
+        if self._gsa_rsid_map is None:
+            # download the file from the cloud, if not done already
+            rsid_path = self._download_file(
+                "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_rsid_map.txt.gz",
+                "gsa_rsid_map.txt.gz",
+            )
+            # load into pandas
+            rsids = pd.read_csv(
+                rsid_path,
+                sep=r"\s+",  # whitespace separators
+                header=0,  # dont infer header as there isn't one
+                names=("gsaname_rsid", "gsarsid"),
+                dtype={"gsaname_rsid": "string", "gsarsid": "string"},
+                engine="c",  # force c engine for performance
+            )
+            self._gsa_rsid_map = rsids
+        return self._gsa_rsid_map
 
-        with gzip.open(rsid_map, "rb") as f:
-            gsa_rsid_map = f.read().decode("utf-8")
+    def get_gsa_chrpos(self):
+        if self._gsa_chrpos_map is None:
+            # download the file from the cloud, if not done already
+            chrpos_path = self._download_file(
+                "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_chrpos_map.txt.gz",
+                "gsa_chrpos_map.txt.gz",
+            )
+            # load into pandas
 
-        d["rsid_map"] = dict(
-            (x.split("\t")[0].strip(), x.split("\t")[1].strip())
-            for x in gsa_rsid_map.split("\n")[:-1]
-        )
+            chrpos = pd.read_csv(
+                chrpos_path,
+                sep=r"\s+",  # whitespace separators
+                header=0,  # dont infer header as there isn't one
+                names=("gsaname_chrpos", "gsachr", "gsapos", "gsacm"),
+                dtype={
+                    "gsaname_chrpos": "string",
+                    "gsachr": "category",
+                    "gsapos": "uint32",
+                    "gsacm": "double",
+                },
+                engine="c",  # force c engine for performance
+            )
 
-        with gzip.open(chrpos_map, "rb") as f:
-            gsa_chrpos_map = f.read().decode("utf-8")
-
-        d["chrpos_map"] = dict(
-            (x.split("\t")[0], x.split("\t")[1] + ":" + x.split("\t")[2])
-            for x in gsa_chrpos_map.split("\n")[:-1]
-        )
-
-        return d
-
-    def _get_path_gsa_rsid_map(self):
-        return self._download_file(
-            "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_rsid_map.txt.gz",
-            "gsa_rsid_map.txt.gz",
-        )
-
-    def _get_path_gsa_chrpos_map(self):
-        return self._download_file(
-            "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_chrpos_map.txt.gz",
-            "gsa_chrpos_map.txt.gz",
-        )
+            self._gsa_chrpos_map = chrpos
+        return self._gsa_chrpos_map
 
     def _get_path_opensnp_datadump(self):
         return self._download_file(
@@ -611,7 +668,7 @@ class Resources(metaclass=Singleton):
         )
 
     def _download_file(self, url, filename, compress=False, timeout=30):
-        """ Download a file to the resources folder.
+        """Download a file to the resources folder.
 
         Download data from `url`, save as `filename`, and optionally compress with gzip.
 
@@ -645,7 +702,9 @@ class Resources(metaclass=Singleton):
                 # http://stackoverflow.com/a/7244263
                 with urllib.request.urlopen(
                     url, timeout=timeout
-                ) as response, atomic_write(destination, mode="wb") as f:
+                ) as response, atomic_write(
+                    destination, mode="wb", overwrite=True
+                ) as f:
                     self._print_download_msg(destination)
                     data = response.read()  # a `bytes` object
 
@@ -667,12 +726,17 @@ class Resources(metaclass=Singleton):
             except socket.timeout:
                 logger.warning(f"Timeout downloading {url}")
                 destination = ""
+            except FileExistsError:
+                # if the file exists, another process has created it while it was
+                # being downloaded
+                # in such a case, the other copy is identical, so ignore this error
+                pass
 
         return destination
 
     @staticmethod
     def _print_download_msg(path):
-        """ Print download message.
+        """Print download message.
 
         Parameters
         ----------
@@ -683,10 +747,10 @@ class Resources(metaclass=Singleton):
 
 
 class ReferenceSequence:
-    """ Object used to represent and interact with a reference sequence. """
+    """Object used to represent and interact with a reference sequence."""
 
     def __init__(self, ID="", url="", path="", assembly="", species="", taxonomy=""):
-        """ Initialize a ``ReferenceSequence`` object.
+        """Initialize a ``ReferenceSequence`` object.
 
         Parameters
         ----------
@@ -725,7 +789,7 @@ class ReferenceSequence:
 
     @property
     def ID(self):
-        """ Get reference sequence chromosome.
+        """Get reference sequence chromosome.
 
         Returns
         -------
@@ -735,7 +799,7 @@ class ReferenceSequence:
 
     @property
     def chrom(self):
-        """ Get reference sequence chromosome.
+        """Get reference sequence chromosome.
 
         Returns
         -------
@@ -745,7 +809,7 @@ class ReferenceSequence:
 
     @property
     def url(self):
-        """ Get URL to Ensembl reference sequence.
+        """Get URL to Ensembl reference sequence.
 
         Returns
         -------
@@ -755,7 +819,7 @@ class ReferenceSequence:
 
     @property
     def path(self):
-        """ Get path to local reference sequence.
+        """Get path to local reference sequence.
 
         Returns
         -------
@@ -765,7 +829,7 @@ class ReferenceSequence:
 
     @property
     def assembly(self):
-        """ Get reference sequence assembly.
+        """Get reference sequence assembly.
 
         Returns
         -------
@@ -775,7 +839,7 @@ class ReferenceSequence:
 
     @property
     def build(self):
-        """ Get reference sequence build.
+        """Get reference sequence build.
 
         Returns
         -------
@@ -786,7 +850,7 @@ class ReferenceSequence:
 
     @property
     def species(self):
-        """ Get reference sequence species.
+        """Get reference sequence species.
 
         Returns
         -------
@@ -796,7 +860,7 @@ class ReferenceSequence:
 
     @property
     def taxonomy(self):
-        """ Get reference sequence taxonomy.
+        """Get reference sequence taxonomy.
 
         Returns
         -------
@@ -806,7 +870,7 @@ class ReferenceSequence:
 
     @property
     def sequence(self):
-        """ Get reference sequence.
+        """Get reference sequence.
 
         Returns
         -------
@@ -817,7 +881,7 @@ class ReferenceSequence:
 
     @property
     def md5(self):
-        """ Get reference sequence MD5 hash.
+        """Get reference sequence MD5 hash.
 
         Returns
         -------
@@ -828,7 +892,7 @@ class ReferenceSequence:
 
     @property
     def start(self):
-        """ Get reference sequence start position (1-based).
+        """Get reference sequence start position (1-based).
 
         Returns
         -------
@@ -839,7 +903,7 @@ class ReferenceSequence:
 
     @property
     def end(self):
-        """ Get reference sequence end position (1-based).
+        """Get reference sequence end position (1-based).
 
         Returns
         -------
@@ -850,7 +914,7 @@ class ReferenceSequence:
 
     @property
     def length(self):
-        """ Get reference sequence length.
+        """Get reference sequence length.
 
         Returns
         -------
@@ -860,7 +924,7 @@ class ReferenceSequence:
         return self._sequence.size
 
     def clear(self):
-        """ Clear reference sequence. """
+        """Clear reference sequence."""
         self._sequence = np.array([], dtype=np.uint8)
         self._md5 = ""
         self._start = 0

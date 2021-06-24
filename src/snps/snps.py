@@ -68,7 +68,7 @@ class SNPs:
         processes=os.cpu_count(),
         rsids=(),
     ):
-        """ Object used to read, write, and remap genotype / raw data files.
+        """Object used to read, write, and remap genotype / raw data files.
 
         Parameters
         ----------
@@ -84,11 +84,11 @@ class SNPs:
             name / path of resources directory
         deduplicate : bool
             deduplicate RSIDs and make SNPs available as `SNPs.duplicate`
-        deduplicate_XY_chrom : bool
-            deduplicate alleles in the non-PAR regions of X and Y for males; see
-            `SNPs.discrepant_XY`
         deduplicate_MT_chrom : bool
             deduplicate alleles on MT; see `SNPs.heterozygous_MT`
+        deduplicate_XY_chrom : bool or str
+            deduplicate alleles in the non-PAR regions of X and Y for males; see `SNPs.discrepant_XY`
+            if a `str` then this is the sex determination method to use X Y or XY
         parallelize : bool
             utilize multiprocessing to speedup calculations
         processes : int
@@ -131,6 +131,8 @@ class SNPs:
                 d["source"].split(", ") if ", " in d["source"] else [d["source"]]
             )
             self._phased = d["phased"]
+            self._build = d["build"]
+            self._build_detected = True if d["build"] else False
 
             if not self._snps.empty:
                 self.sort()
@@ -138,13 +140,11 @@ class SNPs:
                 if deduplicate:
                     self._deduplicate_rsids()
 
-                # prefer to use SNP positions to detect build
-                self._build = self.detect_build()
-                self._build_detected = True if self._build else False
-
+                # use build detected from `read` method or comments, if any
+                # otherwise use SNP positions to detect build
                 if not self._build_detected:
-                    # use build detected from `read` method or comments, if any
-                    self._build = d["build"]
+                    self._build = self.detect_build()
+                    self._build_detected = True if self._build else False
 
                     if not self._build:
                         self._build = 37  # assume Build 37 / GRCh37 if not detected
@@ -156,7 +156,9 @@ class SNPs:
                     self.sort()
 
                 if deduplicate_XY_chrom:
-                    if self.determine_sex() == "Male":
+                    if (
+                        deduplicate_XY_chrom is True and self.determine_sex() == "Male"
+                    ) or self.determine_sex(chrom=deduplicate_XY_chrom) == "Male":
                         self._deduplicate_XY_chrom()
 
                 if deduplicate_MT_chrom:
@@ -172,7 +174,7 @@ class SNPs:
 
     @property
     def source(self):
-        """ Summary of the SNP data source(s).
+        """Summary of the SNP data source(s).
 
         Returns
         -------
@@ -183,7 +185,7 @@ class SNPs:
 
     @property
     def snps(self):
-        """ Normalized SNPs.
+        """Normalized SNPs.
 
         Notes
         -----
@@ -214,7 +216,7 @@ class SNPs:
 
     @property
     def duplicate(self):
-        """ Duplicate SNPs.
+        """Duplicate SNPs.
 
         A duplicate SNP has the same RSID as another SNP. The first occurrence
         of the RSID is not considered a duplicate SNP.
@@ -228,7 +230,7 @@ class SNPs:
 
     @property
     def discrepant_XY(self):
-        """ Discrepant XY SNPs.
+        """Discrepant XY SNPs.
 
         A discrepant XY SNP is a heterozygous SNP in the non-PAR region of the X
         or Y chromosome found during deduplication for a detected male genotype.
@@ -242,7 +244,7 @@ class SNPs:
 
     @property
     def heterozygous_MT(self):
-        """ Heterozygous SNPs on the MT chromosome found during deduplication.
+        """Heterozygous SNPs on the MT chromosome found during deduplication.
 
         Returns
         -------
@@ -253,7 +255,7 @@ class SNPs:
 
     @property
     def discrepant_vcf_position(self):
-        """ SNPs with discrepant positions discovered while saving VCF.
+        """SNPs with discrepant positions discovered while saving VCF.
 
         Returns
         -------
@@ -264,7 +266,7 @@ class SNPs:
 
     @property
     def discrepant_merge_positions(self):
-        """ SNPs with discrepant positions discovered while merging SNPs.
+        """SNPs with discrepant positions discovered while merging SNPs.
 
         Notes
         -----
@@ -290,7 +292,7 @@ class SNPs:
 
     @property
     def discrepant_merge_genotypes(self):
-        """ SNPs with discrepant genotypes discovered while merging SNPs.
+        """SNPs with discrepant genotypes discovered while merging SNPs.
 
         Notes
         -----
@@ -317,7 +319,7 @@ class SNPs:
 
     @property
     def discrepant_merge_positions_genotypes(self):
-        """ SNPs with discrepant positions and / or genotypes discovered while merging SNPs.
+        """SNPs with discrepant positions and / or genotypes discovered while merging SNPs.
 
         Notes
         -----
@@ -346,7 +348,7 @@ class SNPs:
 
     @property
     def build(self):
-        """ Build of SNPs.
+        """Build of SNPs.
 
         Returns
         -------
@@ -356,7 +358,7 @@ class SNPs:
 
     @property
     def build_detected(self):
-        """ Status indicating if build of SNPs was detected.
+        """Status indicating if build of SNPs was detected.
 
         Returns
         -------
@@ -366,7 +368,7 @@ class SNPs:
 
     @property
     def assembly(self):
-        """ Assembly of SNPs.
+        """Assembly of SNPs.
 
         Returns
         -------
@@ -383,7 +385,7 @@ class SNPs:
 
     @property
     def count(self):
-        """ Count of SNPs.
+        """Count of SNPs.
 
         Returns
         -------
@@ -393,7 +395,7 @@ class SNPs:
 
     @property
     def chromosomes(self):
-        """ Chromosomes of SNPs.
+        """Chromosomes of SNPs.
 
         Returns
         -------
@@ -407,7 +409,7 @@ class SNPs:
 
     @property
     def chromosomes_summary(self):
-        """ Summary of the chromosomes of SNPs.
+        """Summary of the chromosomes of SNPs.
 
         Returns
         -------
@@ -444,7 +446,7 @@ class SNPs:
 
     @property
     def sex(self):
-        """ Sex derived from SNPs.
+        """Sex derived from SNPs.
 
         Returns
         -------
@@ -458,7 +460,7 @@ class SNPs:
 
     @property
     def unannotated_vcf(self):
-        """ Indicates if VCF file is unannotated.
+        """Indicates if VCF file is unannotated.
 
         Returns
         -------
@@ -471,7 +473,7 @@ class SNPs:
 
     @property
     def phased(self):
-        """ Indicates if genotype is phased.
+        """Indicates if genotype is phased.
 
         Returns
         -------
@@ -480,7 +482,7 @@ class SNPs:
         return self._phased
 
     def heterozygous(self, chrom=""):
-        """ Get heterozygous SNPs.
+        """Get heterozygous SNPs.
 
         Parameters
         ----------
@@ -501,7 +503,7 @@ class SNPs:
         ]
 
     def homozygous(self, chrom=""):
-        """ Get homozygous SNPs.
+        """Get homozygous SNPs.
 
         Parameters
         ----------
@@ -522,7 +524,7 @@ class SNPs:
         ]
 
     def notnull(self, chrom=""):
-        """ Get not null genotype SNPs.
+        """Get not null genotype SNPs.
 
         Parameters
         ----------
@@ -540,7 +542,7 @@ class SNPs:
 
     @property
     def summary(self):
-        """ Summary of SNPs.
+        """Summary of SNPs.
 
         Returns
         -------
@@ -562,7 +564,7 @@ class SNPs:
 
     @property
     def valid(self):
-        """ Determine if ``SNPs`` is valid.
+        """Determine if ``SNPs`` is valid.
 
         ``SNPs`` is valid when the input file has been successfully parsed.
 
@@ -577,7 +579,7 @@ class SNPs:
             return True
 
     def save(self, filename="", vcf=False, atomic=True, **kwargs):
-        """ Save SNPs to file.
+        """Save SNPs to file.
 
         Parameters
         ----------
@@ -623,7 +625,7 @@ class SNPs:
         return Reader.read_file(file, only_detect_source, self._resources, rsids)
 
     def _assign_par_snps(self):
-        """ Assign PAR SNPs to the X or Y chromosome using SNP position.
+        """Assign PAR SNPs to the X or Y chromosome using SNP position.
 
         References
         -----
@@ -697,7 +699,7 @@ class SNPs:
         return int(assembly_name[-2:])
 
     def detect_build(self):
-        """ Detect build of SNPs.
+        """Detect build of SNPs.
 
         Use the coordinates of common SNPs to identify the build / assembly of a genotype file
         that is being loaded.
@@ -793,7 +795,7 @@ class SNPs:
         return build
 
     def get_count(self, chrom=""):
-        """ Count of SNPs.
+        """Count of SNPs.
 
         Parameters
         ----------
@@ -812,7 +814,7 @@ class SNPs:
         y_snps_not_null_threshold=0.3,
         chrom="X",
     ):
-        """ Determine sex from SNPs using thresholds.
+        """Determine sex from SNPs using thresholds.
 
         Parameters
         ----------
@@ -902,7 +904,7 @@ class SNPs:
         )
 
     def _deduplicate_sex_chrom(self, chrom):
-        """ Deduplicate a chromosome in the non-PAR region. """
+        """Deduplicate a chromosome in the non-PAR region."""
 
         discrepant_XY_snps = self._get_non_par_snps(chrom)
 
@@ -920,12 +922,12 @@ class SNPs:
         self._deduplicate_alleles(non_par_snps)
 
     def _deduplicate_XY_chrom(self):
-        """ Fix chromosome issue where some data providers duplicate male X and Y chromosomes"""
+        """Fix chromosome issue where some data providers duplicate male X and Y chromosomes"""
         self._deduplicate_sex_chrom("X")
         self._deduplicate_sex_chrom("Y")
 
     def _deduplicate_MT_chrom(self):
-        """ Deduplicate MT chromosome. """
+        """Deduplicate MT chromosome."""
         heterozygous_MT_snps = self._snps.loc[self.heterozygous("MT").index].index
 
         # save heterozygous MT SNPs
@@ -940,7 +942,7 @@ class SNPs:
 
     @staticmethod
     def get_par_regions(build):
-        """ Get PAR regions for the X and Y chromosomes.
+        """Get PAR regions for the X and Y chromosomes.
 
         Parameters
         ----------
@@ -993,9 +995,10 @@ class SNPs:
             return pd.DataFrame()
 
     def sort(self):
-        """ Sort SNPs based on ordered chromosome list and position. """
-
-        sorted_list = sorted(self._snps["chrom"].unique(), key=self._natural_sort_key)
+        """Sort SNPs based on ordered chromosome list and position."""
+        sorted_list = sorted(
+            (str(x) for x in self._snps["chrom"].unique()), key=self._natural_sort_key
+        )
 
         # move PAR and MT to the end of the dataframe
         if "PAR" in sorted_list:
@@ -1021,7 +1024,7 @@ class SNPs:
         self._snps = snps
 
     def remap(self, target_assembly, complement_bases=True):
-        """ Remap SNP coordinates from one assembly to another.
+        """Remap SNP coordinates from one assembly to another.
 
         This method uses the assembly map endpoint of the Ensembl REST API service (via
         ``Resources``'s ``EnsemblRestClient``) to convert SNP coordinates / positions from one
@@ -1140,7 +1143,7 @@ class SNPs:
         return chromosomes_remapped, chromosomes_not_remapped
 
     def _remapper(self, task):
-        """ Remap SNPs for a chromosome.
+        """Remap SNPs for a chromosome.
 
         Parameters
         ----------
@@ -1162,58 +1165,68 @@ class SNPs:
         pos_end = int(temp["pos"].describe()["max"])
 
         for mapping in mappings["mappings"]:
-            # skip if mapping is outside of range of SNP positions
-            if (
-                mapping["original"]["end"] < pos_start
-                or mapping["original"]["start"] > pos_end
-            ):
-                continue
 
-            orig_range_len = mapping["original"]["end"] - mapping["original"]["start"]
-            mapped_range_len = mapping["mapped"]["end"] - mapping["mapped"]["start"]
+            orig_start = mapping["original"]["start"]
+            orig_end = mapping["original"]["end"]
+            mapped_start = mapping["mapped"]["start"]
+            mapped_end = mapping["mapped"]["end"]
 
             orig_region = mapping["original"]["seq_region_name"]
             mapped_region = mapping["mapped"]["seq_region_name"]
 
-            if orig_region != mapped_region:
-                logger.warning("discrepant chroms")
-                continue
-
-            if orig_range_len != mapped_range_len:
-                logger.warning(
-                    "discrepant coords"
-                )  # observed when mapping NCBI36 -> GRCh38
+            # skip if mapping is outside of range of SNP positions
+            if orig_end < pos_start or orig_start > pos_end:
                 continue
 
             # find the SNPs that are being remapped for this mapping
             snp_indices = temp.loc[
                 ~temp["remapped"]
-                & (temp["pos"] >= mapping["original"]["start"])
-                & (temp["pos"] <= mapping["original"]["end"])
+                & (temp["pos"] >= orig_start)
+                & (temp["pos"] <= orig_end)
             ].index
 
-            if len(snp_indices) > 0:
-                # remap the SNPs
-                if mapping["mapped"]["strand"] == -1:
-                    # flip and (optionally) complement since we're mapping to minus strand
-                    diff_from_start = (
-                        temp.loc[snp_indices, "pos"] - mapping["original"]["start"]
-                    )
-                    temp.loc[snp_indices, "pos"] = (
-                        mapping["mapped"]["end"] - diff_from_start
-                    )
+            # if there are no snp here, skip
+            if not len(snp_indices):
+                continue
 
-                    if complement_bases:
-                        temp.loc[snp_indices, "genotype"] = temp.loc[
-                            snp_indices, "genotype"
-                        ].apply(self._complement_bases)
-                else:
-                    # mapping is on same (plus) strand, so just remap based on offset
-                    offset = mapping["mapped"]["start"] - mapping["original"]["start"]
-                    temp.loc[snp_indices, "pos"] = temp["pos"] + offset
+            orig_range_len = orig_end - orig_start
+            mapped_range_len = mapped_end - mapped_start
 
-                # mark these SNPs as remapped
-                temp.loc[snp_indices, "remapped"] = True
+            # if this would change chromosome, skip
+            # TODO allow within normal chromosomes
+            # TODO flatten patches
+            if orig_region != mapped_region:
+                logger.warning(
+                    f"discrepant chroms for {len(snp_indices)} SNPs from {orig_region} to {mapped_region}"
+                )
+                continue
+
+            # if there is any stretching or squashing of the region
+            # observed when mapping NCBI36 -> GRCh38
+            # TODO disallow skipping a version when remapping
+            if orig_range_len != mapped_range_len:
+                logger.warning(
+                    f"discrepant coords for {len(snp_indices)} SNPs from {orig_region}:{orig_start}-{orig_end} to {mapped_region}:{mapped_start}-{mapped_end}"
+                )
+                continue
+
+            # remap the SNPs
+            if mapping["mapped"]["strand"] == -1:
+                # flip and (optionally) complement since we're mapping to minus strand
+                diff_from_start = temp.loc[snp_indices, "pos"] - orig_start
+                temp.loc[snp_indices, "pos"] = mapped_end - diff_from_start
+
+                if complement_bases:
+                    temp.loc[snp_indices, "genotype"] = temp.loc[
+                        snp_indices, "genotype"
+                    ].apply(self._complement_bases)
+            else:
+                # mapping is on same (plus) strand, so just remap based on offset
+                offset = mapped_start - orig_start
+                temp.loc[snp_indices, "pos"] = temp["pos"] + offset
+
+            # mark these SNPs as remapped
+            temp.loc[snp_indices, "remapped"] = True
 
         return temp
 
@@ -1253,7 +1266,7 @@ class SNPs:
         remap=True,
         chrom="",
     ):
-        """ Merge other ``SNPs`` objects into this ``SNPs`` object.
+        """Merge other ``SNPs`` objects into this ``SNPs`` object.
 
         Parameters
         ----------

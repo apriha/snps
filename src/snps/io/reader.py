@@ -156,7 +156,16 @@ class Reader:
             return d
 
         if "23andMe" in first_line:
-            d = self.read_23andme(file, compression)
+            # some 23andMe files have separate alleles
+            if comments.endswith("# rsid\tchromosome\tposition\tallele1\tallele2\n"):
+                d = self.read_23andme(file, compression, joined=False)
+            # some 23andMe files have a combined genotype
+            elif comments.endswith("# rsid\tchromosome\tposition\tgenotype\n"):
+                d = self.read_23andme(file, compression, joined=True)
+            #something we havent seen before and can't handle
+            else:
+                
+                return d
         elif "Ancestry" in first_line:
             d = self.read_ancestry(file, compression)
         elif first_line.startswith("RSID"):
@@ -391,8 +400,8 @@ class Reader:
 
         return {"snps": df, "source": source, "phased": phased, "build": build}
 
-    def read_23andme(self, file, compression):
-        """ Read and parse 23andMe file.
+    def read_23andme(self, file, compression, joined=True):
+        """Read and parse 23andMe file.
 
         https://www.23andme.com
 
@@ -408,18 +417,79 @@ class Reader:
         """
 
         def parser():
-            return (
-                pd.read_csv(
-                    file,
-                    comment="#",
-                    sep="\t",
-                    na_values="--",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    index_col=0,
-                    dtype=NORMALIZED_DTYPES,
-                    compression=compression,
-                ),
+            if joined:
+                columnnames = ["rsid", "chrom", "pos", "genotype"]
+            else:
+                columnnames = ["rsid", "chrom", "pos", "allele1", "allele2"]
+            df = pd.read_csv(
+                file,
+                comment="#",
+                sep="\t",
+                na_values=["--", "-"],
+                names=columnnames,
+                compression=compression,
             )
+            # turn number numbers into string numbers
+            df["chrom"] = df["chrom"].map(
+                {
+                    "1": "1",
+                    "2": "2",
+                    "3": "3",
+                    "4": "4",
+                    "5": "5",
+                    "6": "6",
+                    "7": "7",
+                    "8": "8",
+                    "9": "9",
+                    "10": "10",
+                    "11": "11",
+                    "12": "12",
+                    "13": "13",
+                    "14": "14",
+                    "15": "15",
+                    "16": "16",
+                    "17": "17",
+                    "18": "18",
+                    "19": "19",
+                    "20": "20",
+                    "21": "21",
+                    "22": "22",
+                    1: "1",
+                    2: "2",
+                    3: "3",
+                    4: "4",
+                    5: "5",
+                    6: "6",
+                    7: "7",
+                    8: "8",
+                    9: "9",
+                    10: "10",
+                    11: "11",
+                    12: "12",
+                    13: "13",
+                    14: "14",
+                    15: "15",
+                    16: "16",
+                    17: "17",
+                    18: "18",
+                    19: "19",
+                    20: "20",
+                    21: "21",
+                    22: "22",
+                    "X": "X",
+                    "Y": "Y",
+                    "MT": "MT",
+                }
+            )
+            if not joined:
+                # stick separate alleles together
+                df["genotype"] = df["allele1"]+df["allele2"]
+                del df["allele1"]
+                del df["allele2"]
+            df = df.dropna(subset=["rsid", "chrom", "pos"])
+            df = df.astype(dtype=NORMALIZED_DTYPES)
+            df = df.set_index("rsid")
+            return (df,)
 
         return self.read_helper("23andMe", parser)
 

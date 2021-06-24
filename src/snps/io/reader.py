@@ -162,9 +162,8 @@ class Reader:
             # some 23andMe files have a combined genotype
             elif comments.endswith("# rsid\tchromosome\tposition\tgenotype\n"):
                 d = self.read_23andme(file, compression, joined=True)
-            #something we havent seen before and can't handle
+            # something we havent seen before and can't handle
             else:
-                
                 return d
         elif "Ancestry" in first_line:
             d = self.read_ancestry(file, compression)
@@ -483,7 +482,7 @@ class Reader:
             )
             if not joined:
                 # stick separate alleles together
-                df["genotype"] = df["allele1"]+df["allele2"]
+                df["genotype"] = df["allele1"] + df["allele2"]
                 del df["allele1"]
                 del df["allele2"]
             df = df.dropna(subset=["rsid", "chrom", "pos"])

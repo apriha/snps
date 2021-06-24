@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import gzip
 import os
+import shutil
 import socket
 import tempfile
 from unittest.mock import Mock, mock_open, patch
@@ -46,7 +47,7 @@ import pandas as pd
 
 from snps import SNPs
 from snps.resources import Resources, ReferenceSequence
-from snps.utils import gzip_file
+from snps.utils import gzip_file, Singleton
 from tests import BaseSNPsTestCase
 
 
@@ -100,24 +101,31 @@ class TestResources(BaseSNPsTestCase):
             self.resource.get_gsa_resources() if self.downloads_enabled else f()
         )
 
-        self.assertEqual(len(gsa_resources["rsid_map"]), 618541)
-        self.assertEqual(len(gsa_resources["chrpos_map"]), 665609)
+        self.assertEqual(len(gsa_resources["rsid_map"]), 618539)
+        self.assertEqual(len(gsa_resources["chrpos_map"]), 665607)
+
+        # cleanup these test resources so other tests can use the file resources
+        if os.path.exists("resources"):
+            shutil.rmtree("resources")
+        Singleton._instances = {}
 
     def _generate_test_gsa_resources(self):
-        s = "Name\tRsID\n"
+        # Name RsID"
+        s = ""
         for i in range(1, 618541):
             s += f"rs{i}\trs{i}\n"
         mock = mock_open(read_data=gzip.compress(s.encode()))
         with patch("urllib.request.urlopen", mock):
-            self.resource._get_path_gsa_rsid_map()
+            self.resource.get_gsa_rsid()
 
-        s = "Name\tChr\tMapInfo\tdeCODE(cM)\n"
+        # Name Chr MapInfo deCODE(cM)
+        s = ""
         for i in range(1, 665609):
             s += f"rs{i}\t1\t{i}\t0.0000\n"
 
         mock = mock_open(read_data=gzip.compress(s.encode()))
         with patch("urllib.request.urlopen", mock):
-            self.resource._get_path_gsa_chrpos_map()
+            self.resource.get_gsa_chrpos()
 
     def test_get_all_resources(self):
         def f():
@@ -136,6 +144,11 @@ class TestResources(BaseSNPsTestCase):
 
         for k, v in resources.items():
             self.assertGreater(len(v), 0)
+
+        # cleanup these test resources so other tests can use the file resources
+        if os.path.exists("resources"):
+            shutil.rmtree("resources")
+        Singleton._instances = {}
 
     def test_download_example_datasets(self):
         def f():

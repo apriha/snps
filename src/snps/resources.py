@@ -82,6 +82,9 @@ class Resources(metaclass=Singleton):
         """
         self._resources_dir = os.path.abspath(resources_dir)
         self._ensembl_rest_client = EnsemblRestClient()
+        self._init_resource_attributes()
+
+    def _init_resource_attributes(self):
         self._reference_sequences = {}
         self._gsa_rsid_map = None
         self._gsa_chrpos_map = None

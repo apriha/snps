@@ -33,7 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import gzip
 import os
-import shutil
 import socket
 import tempfile
 from unittest.mock import Mock, mock_open, patch
@@ -47,15 +46,13 @@ import pandas as pd
 
 from snps import SNPs
 from snps.resources import Resources, ReferenceSequence
-from snps.utils import gzip_file, Singleton
+from snps.utils import gzip_file
 from tests import BaseSNPsTestCase
 
 
 class TestResources(BaseSNPsTestCase):
     def _reset_resource(self):
-        self.resource._reference_sequences = {}
-        self.resource._gsa_resources = {}
-        self.resource._opensnp_datadump_filenames = []
+        self.resource._init_resource_attributes()
 
     def run(self, result=None):
         # set resources directory based on if downloads are being performed
@@ -104,11 +101,6 @@ class TestResources(BaseSNPsTestCase):
         self.assertEqual(len(gsa_resources["rsid_map"]), 618540)
         self.assertEqual(len(gsa_resources["chrpos_map"]), 665608)
 
-        # cleanup these test resources so other tests can use the file resources
-        if os.path.exists("resources"):
-            shutil.rmtree("resources")
-        Singleton._instances = {}
-
     def _generate_test_gsa_resources(self):
         s = "Name\tRsID\n"
         for i in range(1, 618541):
@@ -142,11 +134,6 @@ class TestResources(BaseSNPsTestCase):
 
         for k, v in resources.items():
             self.assertGreater(len(v), 0)
-
-        # cleanup these test resources so other tests can use the file resources
-        if os.path.exists("resources"):
-            shutil.rmtree("resources")
-        Singleton._instances = {}
 
     def test_download_example_datasets(self):
         def f():

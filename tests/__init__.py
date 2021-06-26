@@ -42,12 +42,11 @@ import pandas as pd
 from pandas.api.types import is_object_dtype, is_unsigned_integer_dtype
 
 from snps import SNPs
-from snps.utils import gzip_file, zip_file, Singleton
+from snps.utils import gzip_file, zip_file
 
 
 class BaseSNPsTestCase(TestCase):
     def setUp(self):
-        Singleton._instances = {}
         self.del_output_dir_helper()
 
     # def tearDown(self):

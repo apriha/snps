@@ -101,8 +101,8 @@ class TestResources(BaseSNPsTestCase):
             self.resource.get_gsa_resources() if self.downloads_enabled else f()
         )
 
-        self.assertEqual(len(gsa_resources["rsid_map"]), 618539)
-        self.assertEqual(len(gsa_resources["chrpos_map"]), 665607)
+        self.assertEqual(len(gsa_resources["rsid_map"]), 618540)
+        self.assertEqual(len(gsa_resources["chrpos_map"]), 665608)
 
         # cleanup these test resources so other tests can use the file resources
         if os.path.exists("resources"):
@@ -110,16 +110,14 @@ class TestResources(BaseSNPsTestCase):
         Singleton._instances = {}
 
     def _generate_test_gsa_resources(self):
-        # Name RsID"
-        s = ""
+        s = "Name\tRsID\n"
         for i in range(1, 618541):
             s += f"rs{i}\trs{i}\n"
         mock = mock_open(read_data=gzip.compress(s.encode()))
         with patch("urllib.request.urlopen", mock):
             self.resource.get_gsa_rsid()
 
-        # Name Chr MapInfo deCODE(cM)
-        s = ""
+        s = "Name\tChr\tMapInfo\tdeCODE(cM)\n"
         for i in range(1, 665609):
             s += f"rs{i}\t1\t{i}\t0.0000\n"
 

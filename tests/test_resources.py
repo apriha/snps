@@ -100,6 +100,7 @@ class TestResources(BaseSNPsTestCase):
 
         self.assertEqual(len(gsa_resources["rsid_map"]), 618540)
         self.assertEqual(len(gsa_resources["chrpos_map"]), 665608)
+        self.assertEqual(len(gsa_resources["dbsnp_151_37_reverse"]), 2393418)
 
     def _generate_test_gsa_resources(self):
         s = "Name\tRsID\n"
@@ -116,6 +117,15 @@ class TestResources(BaseSNPsTestCase):
         mock = mock_open(read_data=gzip.compress(s.encode()))
         with patch("urllib.request.urlopen", mock):
             self.resource.get_gsa_chrpos()
+
+        s = "# comment\n"
+        s += "rs1 0.0 0.0 0.0 0.0\n"
+        for i in range(2, 2393419):
+            s += f"rs{i}\n"
+
+        mock = mock_open(read_data=gzip.compress(s.encode()))
+        with patch("urllib.request.urlopen", mock):
+            self.resource.get_dbsnp_151_37_reverse()
 
     def test_get_all_resources(self):
         def f():

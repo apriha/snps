@@ -266,6 +266,7 @@ class Resources(metaclass=Singleton):
         return {
             "rsid_map": self.get_gsa_rsid(),
             "chrpos_map": self.get_gsa_chrpos(),
+            "dbsnp_151_37_reverse": self.get_dbsnp_151_37_reverse(),
         }
 
     def get_dbsnp_151_37_reverse(self):

@@ -270,7 +270,7 @@ class Resources(metaclass=Singleton):
         }
 
     def get_dbsnp_151_37_reverse(self):
-        """Get pandas series of RSIDs that are on the reference reverse (-) strand in dbSNP 151 and lower
+        """ Get pandas series of RSIDs that are on the reference reverse (-) strand in dbSNP 151 and lower
 
         Returns
         -------

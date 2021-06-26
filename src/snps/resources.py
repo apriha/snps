@@ -270,11 +270,20 @@ class Resources(metaclass=Singleton):
         }
 
     def get_dbsnp_151_37_reverse(self):
-        """ Get pandas series of RSIDs that are on the reference reverse (-) strand in dbSNP 151 and lower
+        """ Get and load RSIDs that are on the reference reverse (-) strand in dbSNP 151 and lower.
 
         Returns
         -------
-        dict
+        pandas.DataFrame
+
+        References
+        ----------
+        1. Sherry ST, Ward MH, Kholodov M, Baker J, Phan L, Smigielski EM, Sirotkin K.
+           dbSNP: the NCBI database of genetic variation. Nucleic Acids Res. 2001 Jan 1;
+           29(1):308-11.
+        2. Database of Single Nucleotide Polymorphisms (dbSNP). Bethesda (MD): National Center
+           for Biotechnology Information, National Library of Medicine. (dbSNP Build ID: 151).
+           Available from: http://www.ncbi.nlm.nih.gov/SNP/
         """
         if self._dbsnp_151_37_reverse is None:
             # download the file from the cloud, if not done already
@@ -621,6 +630,14 @@ class Resources(metaclass=Singleton):
                         os.remove(f_tmp.name)
 
     def get_gsa_rsid(self):
+        """ Get and load GSA RSID map.
+
+        https://support.illumina.com/downloads/infinium-global-screening-array-v2-0-product-files.html
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
         if self._gsa_rsid_map is None:
             # download the file from the cloud, if not done already
             rsid_path = self._download_file(
@@ -640,6 +657,14 @@ class Resources(metaclass=Singleton):
         return self._gsa_rsid_map
 
     def get_gsa_chrpos(self):
+        """ Get and load GSA chromosome position map.
+
+        https://support.illumina.com/downloads/infinium-global-screening-array-v2-0-product-files.html
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
         if self._gsa_chrpos_map is None:
             # download the file from the cloud, if not done already
             chrpos_path = self._download_file(

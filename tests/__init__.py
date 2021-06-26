@@ -46,17 +46,6 @@ from snps.utils import gzip_file, zip_file
 
 
 class BaseSNPsTestCase(TestCase):
-    def setUp(self):
-        self.del_output_dir_helper()
-
-    # def tearDown(self):
-    #    self.del_output_dir_helper()
-
-    @staticmethod
-    def del_output_dir_helper():
-        if os.path.exists("output"):
-            shutil.rmtree("output")
-
     def simulate_snps(
         self,
         chrom="1",

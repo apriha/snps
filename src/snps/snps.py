@@ -164,6 +164,9 @@ class SNPs:
             else:
                 logger.warning("no SNPs loaded...")
 
+    def __len__(self):
+        return self.count
+
     def __repr__(self):
         if isinstance(self._file, str):
             return f"SNPs('{os.path.basename(self._file)}')"

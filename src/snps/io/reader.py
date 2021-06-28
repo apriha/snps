@@ -156,7 +156,15 @@ class Reader:
             return d
 
         if "23andMe" in first_line:
-            d = self.read_23andme(file, compression)
+            # some 23andMe files have separate alleles
+            if comments.endswith("# rsid\tchromosome\tposition\tallele1\tallele2\n"):
+                d = self.read_23andme(file, compression, joined=False)
+            # some 23andMe files have a combined genotype
+            elif comments.endswith("# rsid\tchromosome\tposition\tgenotype\n"):
+                d = self.read_23andme(file, compression, joined=True)
+            # something we havent seen before and can't handle
+            else:
+                return d
         elif "Ancestry" in first_line:
             d = self.read_ancestry(file, compression)
         elif first_line.startswith("RSID"):
@@ -430,7 +438,7 @@ class Reader:
 
         return {"snps": df, "source": source, "phased": phased, "build": build}
 
-    def read_23andme(self, file, compression):
+    def read_23andme(self, file, compression, joined=True):
         """Read and parse 23andMe file.
 
         https://www.23andme.com
@@ -447,15 +455,18 @@ class Reader:
         """
 
         def parser():
+            if joined:
+                columnnames = ["rsid", "chrom", "pos", "genotype"]
+            else:
+                columnnames = ["rsid", "chrom", "pos", "allele1", "allele2"]
             df = pd.read_csv(
                 file,
                 comment="#",
                 sep="\t",
-                na_values="--",
-                names=["rsid", "chrom", "pos", "genotype"],
+                na_values=["--", "-"],
+                names=columnnames,
                 compression=compression,
             )
-            df = df.dropna(subset=["rsid", "chrom", "pos"])
             # turn number numbers into string numbers
             df["chrom"] = df["chrom"].map(
                 {
@@ -508,6 +519,12 @@ class Reader:
                     "MT": "MT",
                 }
             )
+            if not joined:
+                # stick separate alleles together
+                df["genotype"] = df["allele1"] + df["allele2"]
+                del df["allele1"]
+                del df["allele2"]
+            df = df.dropna(subset=["rsid", "chrom", "pos"])
             df = df.astype(dtype=NORMALIZED_DTYPES)
             df = df.set_index("rsid")
             return (df,)

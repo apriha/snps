@@ -21,3 +21,5 @@ rs5	1	105	--
 rs6	1	106	GC
 rs7	1	107	TC
 rs8	1	108	AT
+rs9	--	109	AT
+rs10	--	--	AT

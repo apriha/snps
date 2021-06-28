@@ -99,6 +99,11 @@ class TestReader(BaseSNPsTestCase):
         # https://www.23andme.com
         self.run_parsing_tests("tests/input/23andme.txt", "23andMe")
 
+    def test_read_23andme_allele(self):
+        # https://www.23andme.com
+        # some files have split allele columns
+        self.run_parsing_tests("tests/input/23andme_allele.txt", "23andMe")
+
     def test_read_23andme_build36(self):
         self.run_build_detection_test(
             self.run_parsing_tests,

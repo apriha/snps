@@ -157,10 +157,12 @@ class Reader:
 
         if "23andMe" in first_line:
             # some 23andMe files have separate alleles
-            if comments.endswith("# rsid\tchromosome\tposition\tallele1\tallele2\n"):
+            if (comments.endswith("# rsid\tchromosome\tposition\tallele1\tallele2\n")
+                or comments.endswith("# rsid\tchromosome\tposition\tallele1\tallele2\r\n")):
                 d = self.read_23andme(file, compression, joined=False)
             # some 23andMe files have a combined genotype
-            elif comments.endswith("# rsid\tchromosome\tposition\tgenotype\n"):
+            elif (comments.endswith("# rsid\tchromosome\tposition\tgenotype\n") or 
+                comments.endswith("# rsid\tchromosome\tposition\tgenotype\r\n")):
                 d = self.read_23andme(file, compression, joined=True)
             # something we havent seen before and can't handle
             else:

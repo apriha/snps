@@ -171,7 +171,7 @@ class Reader:
             # something we havent seen before and can't handle
             else:
                 return d
-        elif "Ancestry" in first_line:
+        elif "AncestryDNA" in first_line:
             d = self.read_ancestry(file, compression)
         elif first_line.startswith("RSID"):
             d = self.read_ftdna(file, compression)

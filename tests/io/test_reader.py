@@ -137,7 +137,7 @@ class TestReader(BaseSNPsTestCase):
         # https://www.ancestry.com
 
         total_snps = 100
-        s = "#Ancestry\r\n"
+        s = "#AncestryDNA\r\n"
         s += "rsid\tchromosome\tposition\tallele1\tallele2\r\n"
         # add extra tab separator in first line
         s += "rs1\t1\t101\t\tA\tA\r\n"

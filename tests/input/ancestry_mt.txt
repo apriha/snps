@@ -1,4 +1,4 @@
-#Ancestry
+#AncestryDNA
 rsid	chromosome	position	allele1	allele2
 rs1	26	101	A	A
 rs2	26	102	0	0

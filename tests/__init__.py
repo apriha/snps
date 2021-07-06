@@ -695,6 +695,15 @@ class BaseSNPsTestCase(TestCase):
     ):
         if snps_df is None:
             snps_df = self.generic_snps()
+
+        # these are useful for debugging if there is a problem
+        print("Observed:")
+        print(snps.snps)
+        print(snps.snps.info())
+        print("Expected:")
+        print(snps_df)
+        print(snps_df.info())
+
         self.assertEqual(snps.source, source)
         pd.testing.assert_frame_equal(snps.snps, snps_df, check_exact=True)
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)

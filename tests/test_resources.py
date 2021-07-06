@@ -52,9 +52,7 @@ from tests import BaseSNPsTestCase
 
 class TestResources(BaseSNPsTestCase):
     def _reset_resource(self):
-        self.resource._reference_sequences = {}
-        self.resource._gsa_resources = {}
-        self.resource._opensnp_datadump_filenames = []
+        self.resource._init_resource_attributes()
 
     def run(self, result=None):
         # set resources directory based on if downloads are being performed
@@ -100,8 +98,9 @@ class TestResources(BaseSNPsTestCase):
             self.resource.get_gsa_resources() if self.downloads_enabled else f()
         )
 
-        self.assertEqual(len(gsa_resources["rsid_map"]), 618541)
-        self.assertEqual(len(gsa_resources["chrpos_map"]), 665609)
+        self.assertEqual(len(gsa_resources["rsid_map"]), 618540)
+        self.assertEqual(len(gsa_resources["chrpos_map"]), 665608)
+        self.assertEqual(len(gsa_resources["dbsnp_151_37_reverse"]), 2393418)
 
     def _generate_test_gsa_resources(self):
         s = "Name\tRsID\n"
@@ -109,7 +108,7 @@ class TestResources(BaseSNPsTestCase):
             s += f"rs{i}\trs{i}\n"
         mock = mock_open(read_data=gzip.compress(s.encode()))
         with patch("urllib.request.urlopen", mock):
-            self.resource._get_path_gsa_rsid_map()
+            self.resource.get_gsa_rsid()
 
         s = "Name\tChr\tMapInfo\tdeCODE(cM)\n"
         for i in range(1, 665609):
@@ -117,7 +116,16 @@ class TestResources(BaseSNPsTestCase):
 
         mock = mock_open(read_data=gzip.compress(s.encode()))
         with patch("urllib.request.urlopen", mock):
-            self.resource._get_path_gsa_chrpos_map()
+            self.resource.get_gsa_chrpos()
+
+        s = "# comment\n"
+        s += "rs1 0.0 0.0 0.0 0.0\n"
+        for i in range(2, 2393419):
+            s += f"rs{i}\n"
+
+        mock = mock_open(read_data=gzip.compress(s.encode()))
+        with patch("urllib.request.urlopen", mock):
+            self.resource.get_dbsnp_151_37_reverse()
 
     def test_get_all_resources(self):
         def f():

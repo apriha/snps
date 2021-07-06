@@ -1,0 +1,3 @@
+# this is a comment
+rs7    
+rs8 0.903 0.0 0.0 0.09704

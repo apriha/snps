@@ -137,8 +137,8 @@ these files. Specifically, we'll update the ``SNPs`` object with SNPs from a
 `Family Tree DNA <https://www.familytreedna.com>`_ file.
 
 >>> merge_results = s.merge([SNPs("resources/662.ftdna-illumina.341.csv.gz")])
-Merging SNPs('resources/662.ftdna-illumina.341.csv.gz')
-SNPs('resources/662.ftdna-illumina.341.csv.gz') has Build 36; remapping to Build 37
+Merging SNPs('662.ftdna-illumina.341.csv.gz')
+SNPs('662.ftdna-illumina.341.csv.gz') has Build 36; remapping to Build 37
 Downloading resources/NCBI36_GRCh37.tar.gz
 27 SNP positions were discrepant; keeping original positions
 151 SNP genotypes were discrepant; marking those as null

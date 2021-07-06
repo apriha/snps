@@ -47,7 +47,7 @@ class TestReader(BaseSNPsTestCase):
         # reset resource if already loaded
         r = Resources()
         r._resources_dir = resources_dir
-        r._gsa_resources = {}
+        r._init_resource_attributes()
 
         gzip_file(
             "tests/resources/gsa_rsid_map.txt",
@@ -57,12 +57,16 @@ class TestReader(BaseSNPsTestCase):
             "tests/resources/gsa_chrpos_map.txt",
             os.path.join(resources_dir, "gsa_chrpos_map.txt.gz"),
         )
+        gzip_file(
+            "tests/resources/dbsnp_151_37_reverse.txt",
+            os.path.join(resources_dir, "dbsnp_151_37_reverse.txt.gz"),
+        )
 
     @staticmethod
     def _teardown_gsa_test():
         r = Resources()
         r._resources_dir = "resources"
-        r._gsa_resources = {}
+        r._init_resource_attributes()
 
     def run_build_detection_test(
         self,
@@ -320,25 +324,76 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")
 
     def test_read_vcf_NCBI36(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "NCBI36", 36)
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "NCBI36",
+            36,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
 
     def test_read_vcf_b37(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "b37", 37)
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "b37",
+            37,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
 
     def test_read_vcf_hg19(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "hg19", 37)
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "hg19",
+            37,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
 
     def test_read_vcf_hg38(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "hg38", 38)
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "hg38",
+            38,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
 
     def test_read_vcf_GRCh38(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "GRCh38", 38)
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "GRCh38",
+            38,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
 
     def test_read_vcf_build38(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "Build 38", 38)
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "Build 38",
+            38,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
 
     def test_read_vcf_b38(self):
-        self.run_build_detection_test(self.run_parsing_tests_vcf, "b38", 38)
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "b38",
+            38,
+            comment_str="##contig=<ID=1,assembly={}>\n",
+        )
+
+    def test_read_vcf_length38(self):
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "",
+            38,
+            comment_str="##contig=<ID=1,length=248956422>\n",
+        )
+
+    def test_read_vcf_length37(self):
+        self.run_build_detection_test(
+            self.run_parsing_tests_vcf,
+            "",
+            37,
+            comment_str="##contig=<ID=1,length=249250621>\n",
+        )
 
     def test_read_vcf_multi_sample(self):
         self.run_parsing_tests_vcf("tests/input/testvcf_multi_sample.vcf")

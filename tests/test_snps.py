@@ -50,6 +50,14 @@ class TestSnps(BaseSNPsTestCase):
     def empty_snps():
         return [SNPs(), SNPs(b""), SNPs("tests/input/empty.txt")]
 
+    def test___len__(self):
+        s = SNPs("tests/input/generic.csv")
+        self.assertEqual(len(s), 8)
+
+    def test___len__empty(self):
+        for s in self.empty_snps():
+            self.assertEqual(len(s), 0)
+
     def test___repr__snps(self):
         s = SNPs("tests/input/GRCh37.csv")
         self.assertEqual("SNPs('GRCh37.csv')", s.__repr__())

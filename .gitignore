@@ -113,6 +113,7 @@ tests/output/
 tests/resources/*
 !tests/resources/gsa_chrpos_map.txt
 !tests/resources/gsa_rsid_map.txt
+!tests/resources/dbsnp_151_37_reverse.txt
 tests/input/23andme.txt.zip
 tests/input/discrepant_snps[12].csv
 tests/input/ftdna.csv.gz

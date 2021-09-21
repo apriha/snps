@@ -891,8 +891,7 @@ class TestDeprecatedMethods(TestSnps):
                 snps = SNPs("tests/input/generic.csv", output_dir=tmpdir)
                 dest = os.path.join(tmpdir, "generic_GRCh37.csv")
                 self.assertEqual(
-                    snps.save_snps(sep=","),
-                    dest,
+                    snps.save_snps(sep=","), dest,
                 )
                 self.run_parsing_tests(dest, "generic")
 

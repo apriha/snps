@@ -458,6 +458,11 @@ class TestSnps(BaseSNPsTestCase):
             self.assertEqual(snps.count, 0)
             self.assertTrue(snps.snps.empty)
 
+    def test_ancestry(self):
+        s = SNPs("tests/input/generic.csv", predict_ancestry=True)
+        print(s.predicted_ancestry.iloc[0]["predicted_superpopulation_code"])
+        self.assertTrue(s.predicted_ancestry.iloc[0]["predicted_superpopulation_code"] == "SAS")
+
 
 class TestSNPsMerge(TestSnps):
     def assert_results(self, results, expected_results):

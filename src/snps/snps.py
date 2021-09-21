@@ -67,6 +67,7 @@ class SNPs:
         parallelize=False,
         processes=os.cpu_count(),
         rsids=(),
+        predict_ancestry=False,
     ):
         """ Object used to read, write, and remap genotype / raw data files.
 
@@ -95,6 +96,8 @@ class SNPs:
             processes to launch if multiprocessing
         rsids : tuple, optional
             rsids to extract if loading a VCF file
+        predict_ancestry : bool, optional
+            Whether to predict genetic ancestry for your sample.
         """
         self._file = file
         self._only_detect_source = only_detect_source
@@ -163,6 +166,9 @@ class SNPs:
 
                 if deduplicate_MT_chrom:
                     self._deduplicate_MT_chrom()
+
+                if predict_ancestry:
+                    self._predicted_ancestry = self._predict_ancestry()
             else:
                 logger.warning("no SNPs loaded...")
 
@@ -1611,3 +1617,52 @@ class SNPs:
             DeprecationWarning,
         )
         return self.valid
+
+    def _predict_ancestry(self):
+        try:
+            from ezancestry.commands import predict
+            from ezancestry.config import models_directory
+        except ModuleNotFoundError:
+            warnings.warn(
+                "This method requires install of ezancestry, please install it using pip install ezancestry"
+            )
+            return None
+
+        def max_pop(row):
+            popcode = row["predicted_population_population"]
+            popdesc = row["population_description"]
+            poppct = row[popcode]
+            superpopcode = row["predicted_population_superpopulation"]
+            superpopdesc = row["superpopulation_name"]
+            superpoppct = row[superpopcode]
+
+            return {
+                "predicted_population_code": popcode,
+                "predicted_population_description": popdesc,
+                "predicted_population_percent": poppct,
+                "predicted_superpopulation_code": superpopcode,
+                "predicted_superpopulation_description": superpopdesc,
+                "predicted_superpopulation_percent": superpoppct,
+            }
+
+        predictions = predict(
+            self.snps,
+            output_directory=None,
+            write_predictions=False,
+            models_directory=None,
+            aisnps_directory=None,
+            n_components=None,
+            k=None,
+            thousand_genomes_directory=None,
+            samples_directory=None,
+            algorithm=None,
+            aisnps_set=None,
+        )
+        return predictions.apply(max_pop, axis=1)
+
+    @property
+    def predicted_ancestry(self):
+        if self._predicted_ancestry is None:
+            return self._predict_ancestry()
+        else:
+            return self._predicted_ancestry

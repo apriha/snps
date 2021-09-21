@@ -461,7 +461,9 @@ class TestSnps(BaseSNPsTestCase):
     def test_ancestry(self):
         s = SNPs("tests/input/generic.csv", predict_ancestry=True)
         print(s.predicted_ancestry.iloc[0]["predicted_superpopulation_code"])
-        self.assertTrue(s.predicted_ancestry.iloc[0]["predicted_superpopulation_code"] == "SAS")
+        self.assertTrue(
+            s.predicted_ancestry.iloc[0]["predicted_superpopulation_code"] == "SAS"
+        )
 
 
 class TestSNPsMerge(TestSnps):
@@ -889,7 +891,8 @@ class TestDeprecatedMethods(TestSnps):
                 snps = SNPs("tests/input/generic.csv", output_dir=tmpdir)
                 dest = os.path.join(tmpdir, "generic_GRCh37.csv")
                 self.assertEqual(
-                    snps.save_snps(sep=","), dest,
+                    snps.save_snps(sep=","),
+                    dest,
                 )
                 self.run_parsing_tests(dest, "generic")
 

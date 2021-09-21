@@ -96,7 +96,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install pytest-cov
-        pip install .
+        pip install .[ezancestry]
     - name: Test with pytest (Ubuntu & macOS)
       if: ${{ matrix.os != 'windows-latest' }}
       run: |

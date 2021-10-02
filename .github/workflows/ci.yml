@@ -95,6 +95,7 @@ jobs:
         fi
     - name: Install dependencies
       run: |
+        python -m pip install --upgrade pip
         pip install pytest-cov
         pip install .[ezancestry]
     - name: Test with pytest (Ubuntu & macOS)

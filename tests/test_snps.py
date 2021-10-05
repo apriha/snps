@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 
+import importlib.util
 import io
 import os
 import tempfile
@@ -459,11 +460,12 @@ class TestSnps(BaseSNPsTestCase):
             self.assertTrue(snps.snps.empty)
 
     def test_ancestry(self):
-        s = SNPs("tests/input/generic.csv", predict_ancestry=True)
-        print(s.predicted_ancestry.iloc[0]["predicted_superpopulation_code"])
-        self.assertTrue(
-            s.predicted_ancestry.iloc[0]["predicted_superpopulation_code"] == "SAS"
-        )
+        if importlib.util.find_spec("ezancestry") is not None:
+            s = SNPs("tests/input/generic.csv", predict_ancestry=True)
+            print(s.predicted_ancestry.iloc[0]["predicted_superpopulation_code"])
+            self.assertTrue(
+                s.predicted_ancestry.iloc[0]["predicted_superpopulation_code"] == "SAS"
+            )
 
 
 class TestSNPsMerge(TestSnps):

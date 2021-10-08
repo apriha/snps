@@ -130,6 +130,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        pip install --upgrade pip setuptools wheel
         pip install pytest-cov
         pip install .[ezancestry]
     - name: Test with pytest

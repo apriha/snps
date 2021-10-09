@@ -130,9 +130,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install pytest-cov
-        pip install .[ezancestry]
+        pip install pytest-cov ezancestry
+        pip install .
     - name: Test with pytest
       run: |
         pytest --cov=snps tests

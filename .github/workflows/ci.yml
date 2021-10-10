@@ -134,6 +134,8 @@ jobs:
         pip install --upgrade pip setuptools wheel
         pip install pytest-cov
         pip install .[ezancestry]
+        # run this command to move the data files to the user's home directory
+        ezancestry
     - name: Test with pytest
       run: |
         pytest --cov=snps tests

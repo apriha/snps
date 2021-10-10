@@ -135,7 +135,7 @@ jobs:
         pip install pytest-cov
         pip install .[ezancestry]
         # run this command to move the data files to the user's home directory
-        ezancestry
+        ezancestry --help
     - name: Test with pytest
       run: |
         pytest --cov=snps tests

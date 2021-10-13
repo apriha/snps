@@ -67,7 +67,6 @@ class SNPs:
         parallelize=False,
         processes=os.cpu_count(),
         rsids=(),
-        predict_ancestry=False,
     ):
         """ Object used to read, write, and remap genotype / raw data files.
 
@@ -96,8 +95,6 @@ class SNPs:
             processes to launch if multiprocessing
         rsids : tuple, optional
             rsids to extract if loading a VCF file
-        predict_ancestry : bool, optional
-            Whether to predict genetic ancestry for your sample.
         """
         self._file = file
         self._only_detect_source = only_detect_source
@@ -167,8 +164,6 @@ class SNPs:
                 if deduplicate_MT_chrom:
                     self._deduplicate_MT_chrom()
 
-                if predict_ancestry:
-                    self._predicted_ancestry = self._predict_ancestry()
             else:
                 logger.warning("no SNPs loaded...")
 
@@ -1618,7 +1613,16 @@ class SNPs:
         )
         return self.valid
 
-    def _predict_ancestry(self):
+    @property
+    def predicted_ancestry(self):
+        """ Predicted genetic ancestry for SNPs.
+
+        Predictions by `ezancestry <https://github.com/arvkevi/ezancestry>`_.
+
+        Returns
+        -------
+        dict
+        """
         try:
             from ezancestry.commands import predict
             from ezancestry.config import models_directory
@@ -1637,12 +1641,12 @@ class SNPs:
             superpoppct = row[superpopcode]
 
             return {
-                "predicted_population_code": popcode,
-                "predicted_population_description": popdesc,
-                "predicted_population_percent": poppct,
-                "predicted_superpopulation_code": superpopcode,
-                "predicted_superpopulation_description": superpopdesc,
-                "predicted_superpopulation_percent": superpoppct,
+                "population_code": popcode,
+                "population_description": popdesc,
+                "population_percent": poppct,
+                "superpopulation_code": superpopcode,
+                "superpopulation_description": superpopdesc,
+                "superpopulation_percent": superpoppct,
             }
 
         predictions = predict(
@@ -1658,11 +1662,4 @@ class SNPs:
             algorithm=None,
             aisnps_set=None,
         )
-        return predictions.apply(max_pop, axis=1)
-
-    @property
-    def predicted_ancestry(self):
-        if self._predicted_ancestry is None:
-            return self._predict_ancestry()
-        else:
-            return self._predicted_ancestry
+        return dict(predictions.apply(max_pop, axis=1).iloc[0])

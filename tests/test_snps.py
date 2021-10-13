@@ -459,13 +459,16 @@ class TestSnps(BaseSNPsTestCase):
             self.assertEqual(snps.count, 0)
             self.assertTrue(snps.snps.empty)
 
+    def _make_ancestry_assertions(self, d):
+        self.assertEqual(d["population_code"], "ITU")
+        self.assertAlmostEqual(d["population_percent"], 0.3001358380028885)
+        self.assertEqual(d["superpopulation_code"], "SAS")
+        self.assertAlmostEqual(d["superpopulation_percent"], 0.8271225008369771)
+
     def test_ancestry(self):
         if importlib.util.find_spec("ezancestry") is not None:
-            s = SNPs("tests/input/generic.csv", predict_ancestry=True)
-            print(s.predicted_ancestry.iloc[0]["predicted_superpopulation_code"])
-            self.assertTrue(
-                s.predicted_ancestry.iloc[0]["predicted_superpopulation_code"] == "SAS"
-            )
+            s = SNPs("tests/input/generic.csv")
+            self._make_ancestry_assertions(s.predicted_ancestry)
 
 
 class TestSNPsMerge(TestSnps):

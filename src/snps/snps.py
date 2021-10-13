@@ -1623,6 +1623,9 @@ class SNPs:
         -------
         dict
         """
+        if not self.valid:
+            return {}
+
         try:
             from ezancestry.commands import predict
             from ezancestry.config import models_directory

@@ -470,6 +470,10 @@ class TestSnps(BaseSNPsTestCase):
             s = SNPs("tests/input/generic.csv")
             self._make_ancestry_assertions(s.predicted_ancestry)
 
+    def test_ancestry_no_snps(self):
+        for snps in self.empty_snps():
+            self.assertDictEqual(snps.predicted_ancestry, {})
+
 
 class TestSNPsMerge(TestSnps):
     def assert_results(self, results, expected_results):

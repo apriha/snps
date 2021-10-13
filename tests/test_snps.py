@@ -467,8 +467,27 @@ class TestSnps(BaseSNPsTestCase):
 
     def test_ancestry(self):
         if importlib.util.find_spec("ezancestry") is not None:
+            # test with ezancestry if installed
             s = SNPs("tests/input/generic.csv")
             self._make_ancestry_assertions(s.predicted_ancestry)
+
+        mock = Mock(
+            return_value=pd.DataFrame(
+                {
+                    "predicted_population_population": ["ITU"],
+                    "population_description": [""],
+                    "ITU": [0.3001358380028885],
+                    "predicted_population_superpopulation": ["SAS"],
+                    "superpopulation_name": [""],
+                    "SAS": [0.8271225008369771],
+                }
+            )
+        )
+
+        with patch("ezancestry.commands.predict", mock):
+            with patch("ezancestry.config.models_directory", Mock()):
+                s = SNPs("tests/input/generic.csv")
+                self._make_ancestry_assertions(s.predicted_ancestry)
 
     def test_ancestry_no_snps(self):
         for snps in self.empty_snps():

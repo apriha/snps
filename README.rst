@@ -36,6 +36,11 @@ Data Cleaning
 - Deduplicate alleles on MT
 - Assign PAR SNPs to the X or Y chromosome
 
+Analysis
+````````
+- Derive sex from SNPs
+- Predict ancestry from SNPs (when installed with `ezancestry <https://github.com/arvkevi/ezancestry>`_)
+
 Supported Genotype Files
 ------------------------
 ``snps`` supports `VCF <https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3137218/>`_ files and
@@ -71,6 +76,11 @@ Installation
 Python dependencies) via ``pip``::
 
     $ pip install snps
+
+For `ancestry prediction <https://snps.readthedocs.io/en/stable/snps.html#snps.snps.SNPs.predicted_ancestry>`_
+capability, ``snps`` can be installed with `ezancestry <https://github.com/arvkevi/ezancestry>`_::
+
+    $ pip install snps[ezancestry]
 
 Examples
 --------

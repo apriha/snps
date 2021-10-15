@@ -1630,10 +1630,9 @@ class SNPs:
             from ezancestry.commands import predict
             from ezancestry.config import models_directory
         except ModuleNotFoundError:
-            warnings.warn(
-                "This method requires install of ezancestry, please install it using pip install ezancestry"
+            raise ModuleNotFoundError(
+                "Ancestry prediction requires the ezancestry package; please install it using pip install ezancestry"
             )
-            return None
 
         def max_pop(row):
             popcode = row["predicted_population_population"]

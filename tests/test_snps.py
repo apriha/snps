@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import importlib.util
 import io
 import os
+import sys
 import tempfile
 from unittest.mock import Mock, patch
 import warnings
@@ -466,12 +467,26 @@ class TestSnps(BaseSNPsTestCase):
         self.assertAlmostEqual(d["superpopulation_percent"], 0.8271225008369771)
 
     def test_ancestry(self):
+        def pop_modules(modules):
+            d = {}
+            for m in modules:
+                if m in sys.modules:
+                    d[m] = sys.modules.pop(m)
+            return d
+
         if importlib.util.find_spec("ezancestry") is not None:
             # test with ezancestry if installed
             s = SNPs("tests/input/generic.csv")
             self._make_ancestry_assertions(s.predicted_ancestry)
 
-        mock = Mock(
+        ezancestry_mods = ["ezancestry", "ezancestry.config", "ezancestry.commands"]
+        popped_mods = pop_modules(ezancestry_mods)
+
+        # mock ezancestry modules
+        for mod in ezancestry_mods:
+            sys.modules[mod] = Mock()
+
+        sys.modules["ezancestry.commands"].predict = Mock(
             return_value=pd.DataFrame(
                 {
                     "predicted_population_population": ["ITU"],
@@ -484,10 +499,27 @@ class TestSnps(BaseSNPsTestCase):
             )
         )
 
-        with patch("ezancestry.commands.predict", mock):
-            with patch("ezancestry.config.models_directory", Mock()):
-                s = SNPs("tests/input/generic.csv")
-                self._make_ancestry_assertions(s.predicted_ancestry)
+        # test with mocked ezancestry
+        s = SNPs("tests/input/generic.csv")
+        self._make_ancestry_assertions(s.predicted_ancestry)
+
+        # unload mocked ezancestry modules
+        pop_modules(ezancestry_mods)
+
+        # restore ezancestry modules if ezancestry installed
+        sys.modules.update(popped_mods)
+
+    def test_ancestry_module_not_found_error(self):
+        if importlib.util.find_spec("ezancestry") is None:
+            # test when ezancestry not installed
+            s = SNPs("tests/input/generic.csv")
+            with self.assertRaises(ModuleNotFoundError) as err:
+                _ = s.predicted_ancestry
+
+            self.assertEqual(
+                err.exception.msg,
+                "Ancestry prediction requires the ezancestry package; please install it using pip install ezancestry",
+            )
 
     def test_ancestry_no_snps(self):
         for snps in self.empty_snps():

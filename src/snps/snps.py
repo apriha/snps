@@ -1622,6 +1622,7 @@ class SNPs:
         Returns
         -------
         dict
+            predicted population and superpopulation codes, descriptions, and percentages
         """
         if not self.valid:
             return {}

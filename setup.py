@@ -119,6 +119,7 @@ setup(
     },
     keywords="snps dna chromosomes bioinformatics vcf",
     install_requires=["numpy", "pandas!=1.0.0,!=1.1.0", "atomicwrites"],
+    extras_require={"ezancestry": ["ezancestry"]},
     python_requires=">=3.7.1",
     platforms=["any"],
 )

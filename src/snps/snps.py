@@ -163,6 +163,7 @@ class SNPs:
 
                 if deduplicate_MT_chrom:
                     self._deduplicate_MT_chrom()
+
             else:
                 logger.warning("no SNPs loaded...")
 
@@ -1611,3 +1612,110 @@ class SNPs:
             DeprecationWarning,
         )
         return self.valid
+
+    def predict_ancestry(
+        self,
+        output_directory=None,
+        write_predictions=False,
+        models_directory=None,
+        aisnps_directory=None,
+        n_components=None,
+        k=None,
+        thousand_genomes_directory=None,
+        samples_directory=None,
+        algorithm=None,
+        aisnps_set=None,
+    ):
+        """ Predict genetic ancestry for SNPs.
+
+        Predictions by `ezancestry <https://github.com/arvkevi/ezancestry>`_.
+
+        Notes
+        -----
+        Populations below are described `here <https://www.internationalgenome.org/faq/what-do-the-population-codes-mean/>`_.
+
+        Parameters
+        ----------
+        various : optional
+            See the available settings for `predict` at `ezancestry <https://github.com/arvkevi/ezancestry>`_.
+
+        Returns
+        -------
+        dict
+            dict with the following keys:
+
+            `population_code` (str)
+              max predicted population for the sample
+            `population_description` (str)
+              descriptive name of the population
+            `population_percent` (float)
+              predicted probability for the max predicted population
+            `superpopulation_code` (str)
+              max predicted super population (continental) for the sample
+            `superpopulation_description` (str)
+              descriptive name of the super population
+            `superpopulation_percent` (float)
+              predicted probability for the max predicted super population
+            `ezancestry_df` (pandas.DataFrame)
+              pandas.DataFrame with the following columns:
+
+              `component1`, `component2`, `component3`
+                The coordinates of the sample in the dimensionality-reduced component space. Can be
+                used as (x, y, z,) coordinates for plotting in a 3d scatter plot.
+              `predicted_population_population`
+                The max predicted population for the sample.
+              `ACB`, `ASW`, `BEB`, `CDX`, `CEU`, `CHB`, `CHS`, `CLM`, `ESN`, `FIN`, `GBR`, `GIH`, `GWD`, `IBS`, `ITU`, `JPT`, `KHV`, `LWK`, `MSL`, `MXL`, `PEL`, `PJL`, `PUR`, `STU`, `TSI`, `YRI`
+                Predicted probabilities for each of the populations. These sum to 1.0.
+              `predicted_population_superpopulation`
+                The max predicted super population (continental) for the sample.
+              `AFR`, `AMR`, `EAS`, `EUR`, `SAS`
+                Predicted probabilities for each of the super populations. These sum to 1.0.
+              `population_description`, `superpopulation_name`
+                Descriptive names of the population and super population.
+
+        """
+        if not self.valid:
+            return {}
+
+        try:
+            from ezancestry.commands import predict
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError(
+                "Ancestry prediction requires the ezancestry package; please install it using pip install ezancestry"
+            )
+
+        def max_pop(row):
+            popcode = row["predicted_population_population"]
+            popdesc = row["population_description"]
+            poppct = row[popcode]
+            superpopcode = row["predicted_population_superpopulation"]
+            superpopdesc = row["superpopulation_name"]
+            superpoppct = row[superpopcode]
+
+            return {
+                "population_code": popcode,
+                "population_description": popdesc,
+                "population_percent": poppct,
+                "superpopulation_code": superpopcode,
+                "superpopulation_description": superpopdesc,
+                "superpopulation_percent": superpoppct,
+            }
+
+        predictions = predict(
+            self.snps,
+            output_directory,
+            write_predictions,
+            models_directory,
+            aisnps_directory,
+            n_components,
+            k,
+            thousand_genomes_directory,
+            samples_directory,
+            algorithm,
+            aisnps_set,
+        )
+
+        d = dict(predictions.apply(max_pop, axis=1).iloc[0])
+        d["ezancestry_df"] = predictions
+
+        return d

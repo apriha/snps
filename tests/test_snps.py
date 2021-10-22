@@ -467,6 +467,10 @@ class TestSnps(BaseSNPsTestCase):
         self.assertEqual(d["superpopulation_code"], "SAS")
         self.assertEqual(d["superpopulation_description"], "South Asian Ancestry")
         self.assertAlmostEqual(d["superpopulation_percent"], 0.827977563875996)
+        self.assertTrue("predicted_population_population" in d["ezancestry_df"].keys())
+        self.assertTrue(
+            "predicted_population_superpopulation" in d["ezancestry_df"].keys()
+        )
 
     def test_ancestry(self):
         def pop_modules(modules):
@@ -479,9 +483,9 @@ class TestSnps(BaseSNPsTestCase):
         if importlib.util.find_spec("ezancestry") is not None:
             # test with ezancestry if installed
             s = SNPs("tests/input/generic.csv")
-            self._make_ancestry_assertions(s.predicted_ancestry)
+            self._make_ancestry_assertions(s.predicted_ancestry())
 
-        ezancestry_mods = ["ezancestry", "ezancestry.config", "ezancestry.commands"]
+        ezancestry_mods = ["ezancestry", "ezancestry.commands"]
         popped_mods = pop_modules(ezancestry_mods)
 
         # mock ezancestry modules
@@ -503,7 +507,7 @@ class TestSnps(BaseSNPsTestCase):
 
         # test with mocked ezancestry
         s = SNPs("tests/input/generic.csv")
-        self._make_ancestry_assertions(s.predicted_ancestry)
+        self._make_ancestry_assertions(s.predicted_ancestry())
 
         # unload mocked ezancestry modules
         pop_modules(ezancestry_mods)
@@ -516,7 +520,7 @@ class TestSnps(BaseSNPsTestCase):
             # test when ezancestry not installed
             s = SNPs("tests/input/generic.csv")
             with self.assertRaises(ModuleNotFoundError) as err:
-                _ = s.predicted_ancestry
+                _ = s.predicted_ancestry()
 
             self.assertEqual(
                 err.exception.msg,
@@ -525,7 +529,7 @@ class TestSnps(BaseSNPsTestCase):
 
     def test_ancestry_no_snps(self):
         for snps in self.empty_snps():
-            self.assertDictEqual(snps.predicted_ancestry, {})
+            self.assertDictEqual(snps.predicted_ancestry(), {})
 
 
 class TestSNPsMerge(TestSnps):

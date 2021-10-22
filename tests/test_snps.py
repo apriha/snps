@@ -483,7 +483,7 @@ class TestSnps(BaseSNPsTestCase):
         if importlib.util.find_spec("ezancestry") is not None:
             # test with ezancestry if installed
             s = SNPs("tests/input/generic.csv")
-            self._make_ancestry_assertions(s.predicted_ancestry())
+            self._make_ancestry_assertions(s.predict_ancestry())
 
         ezancestry_mods = ["ezancestry", "ezancestry.commands"]
         popped_mods = pop_modules(ezancestry_mods)
@@ -507,7 +507,7 @@ class TestSnps(BaseSNPsTestCase):
 
         # test with mocked ezancestry
         s = SNPs("tests/input/generic.csv")
-        self._make_ancestry_assertions(s.predicted_ancestry())
+        self._make_ancestry_assertions(s.predict_ancestry())
 
         # unload mocked ezancestry modules
         pop_modules(ezancestry_mods)
@@ -520,7 +520,7 @@ class TestSnps(BaseSNPsTestCase):
             # test when ezancestry not installed
             s = SNPs("tests/input/generic.csv")
             with self.assertRaises(ModuleNotFoundError) as err:
-                _ = s.predicted_ancestry()
+                _ = s.predict_ancestry()
 
             self.assertEqual(
                 err.exception.msg,
@@ -529,7 +529,7 @@ class TestSnps(BaseSNPsTestCase):
 
     def test_ancestry_no_snps(self):
         for snps in self.empty_snps():
-            self.assertDictEqual(snps.predicted_ancestry(), {})
+            self.assertDictEqual(snps.predict_ancestry(), {})
 
 
 class TestSNPsMerge(TestSnps):

@@ -1613,7 +1613,7 @@ class SNPs:
         )
         return self.valid
 
-    def predicted_ancestry(
+    def predict_ancestry(
         self,
         output_directory=None,
         write_predictions=False,
@@ -1626,7 +1626,7 @@ class SNPs:
         algorithm=None,
         aisnps_set=None,
     ):
-        """ Predicted genetic ancestry for SNPs.
+        """ Predict genetic ancestry for SNPs.
 
         Predictions by `ezancestry <https://github.com/arvkevi/ezancestry>`_.
 

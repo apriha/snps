@@ -77,7 +77,7 @@ Python dependencies) via ``pip``::
 
     $ pip install snps
 
-For `ancestry prediction <https://snps.readthedocs.io/en/stable/snps.html#snps.snps.SNPs.predicted_ancestry>`_
+For `ancestry prediction <https://snps.readthedocs.io/en/stable/snps.html#snps.snps.SNPs.predict_ancestry>`_
 capability, ``snps`` can be installed with `ezancestry <https://github.com/arvkevi/ezancestry>`_::
 
     $ pip install snps[ezancestry]

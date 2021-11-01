@@ -92,7 +92,7 @@ class BaseSNPsTestCase(TestCase):
 
     @property
     def downloads_enabled(self):
-        """ Property indicating if downloads are enabled.
+        """Property indicating if downloads are enabled.
 
         Only download from external resources when an environment variable named
         "DOWNLOADS_ENABLED" is set to "true".
@@ -152,7 +152,7 @@ class BaseSNPsTestCase(TestCase):
         return df
 
     def load_assign_PAR_SNPs(self, path):
-        """ Load and assign PAR SNPs.
+        """Load and assign PAR SNPs.
 
         If downloads are not enabled, use a minimal subset of the real responses.
 

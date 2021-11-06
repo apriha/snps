@@ -23,7 +23,7 @@ jobs:
     - uses: actions/setup-python@v2
     - name: Install Black
       run: |
-        pip install black==19.10b0
+        pip install black
     - name: Lint with Black
       run: |
         black --check --diff .
@@ -111,3 +111,29 @@ jobs:
       uses: codecov/codecov-action@v1
       with:
         fail_ci_if_error: true
+
+  test-extras:
+    needs: [test]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.7, 3.8, 3.9]
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip setuptools wheel
+        pip install pytest-cov
+        pip install .[ezancestry]
+    - name: Test with pytest
+      run: |
+        pytest --cov=snps tests

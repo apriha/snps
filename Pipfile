@@ -9,7 +9,7 @@ pytest-cov = "*"
 pytest-watch = "*"
 sphinx = "*"
 sphinx-rtd-theme = "*"
-black = "==19.10b0"
+black = "==21.10b0"
 matplotlib = "*"
 
 [packages]

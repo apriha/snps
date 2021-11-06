@@ -82,7 +82,8 @@ class TestWriter(BaseSNPsTestCase):
             snps = SNPs("tests/input/generic.csv", output_dir=tmpdir)
             dest = os.path.join(tmpdir, "generic.csv")
             self.assertEqual(
-                snps.save("generic.csv", sep=","), dest,
+                snps.save("generic.csv", sep=","),
+                dest,
             )
             self.run_parsing_tests(dest, "generic")
 
@@ -91,7 +92,8 @@ class TestWriter(BaseSNPsTestCase):
             snps = SNPs("tests/input/generic.tsv", output_dir=tmpdir)
             dest = os.path.join(tmpdir, "generic.tsv")
             self.assertEqual(
-                snps.save("generic.tsv", sep="\t"), dest,
+                snps.save("generic.tsv", sep="\t"),
+                dest,
             )
             self.run_parsing_tests(dest, "generic")
 

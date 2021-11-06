@@ -68,7 +68,7 @@ TWO_ALLELE_DTYPES = {
 
 
 def get_empty_snps_dataframe():
-    """ Get empty dataframe normalized for usage with ``snps``.
+    """Get empty dataframe normalized for usage with ``snps``.
 
     Returns
     -------
@@ -81,10 +81,10 @@ def get_empty_snps_dataframe():
 
 
 class Reader:
-    """ Class for reading and parsing raw data / genotype files. """
+    """Class for reading and parsing raw data / genotype files."""
 
     def __init__(self, file="", only_detect_source=False, resources=None, rsids=()):
-        """ Initialize a `Reader`.
+        """Initialize a `Reader`.
 
         Parameters
         ----------
@@ -104,7 +104,7 @@ class Reader:
         self._rsids = frozenset(rsids)
 
     def read(self):
-        """ Read and parse a raw data / genotype file.
+        """Read and parse a raw data / genotype file.
 
         Returns
         -------
@@ -195,7 +195,7 @@ class Reader:
 
     @classmethod
     def read_file(cls, file, only_detect_source, resources, rsids):
-        """ Read `file`.
+        """Read `file`.
 
         Parameters
         ----------
@@ -362,12 +362,12 @@ class Reader:
 
     @staticmethod
     def is_zip(bytes_data):
-        """ Check whether or not a bytes_data file is a valid Zip file."""
+        """Check whether or not a bytes_data file is a valid Zip file."""
         return zipfile.is_zipfile(io.BytesIO(bytes_data))
 
     @staticmethod
     def is_gzip(bytes_data):
-        """ Check whether or not a bytes_data file is a valid gzip file."""
+        """Check whether or not a bytes_data file is a valid gzip file."""
         return binascii.hexlify(bytes_data[:2]) == b"1f8b"
 
     @staticmethod
@@ -379,7 +379,7 @@ class Reader:
             return f.readline()
 
     def read_helper(self, source, parser):
-        """ Generic method to help read files.
+        """Generic method to help read files.
 
         Parameters
         ----------
@@ -431,7 +431,7 @@ class Reader:
         return {"snps": df, "source": source, "phased": phased, "build": build}
 
     def read_23andme(self, file, compression):
-        """ Read and parse 23andMe file.
+        """Read and parse 23andMe file.
 
         https://www.23andme.com
 
@@ -515,7 +515,7 @@ class Reader:
         return self.read_helper("23andMe", parser)
 
     def read_ftdna(self, file, compression):
-        """ Read and parse Family Tree DNA (FTDNA) file.
+        """Read and parse Family Tree DNA (FTDNA) file.
 
         https://www.familytreedna.com
 
@@ -602,7 +602,7 @@ class Reader:
         return self.read_helper("FTDNA", parser)
 
     def read_ftdna_famfinder(self, file, compression):
-        """ Read and parse Family Tree DNA (FTDNA) "famfinder" file.
+        """Read and parse Family Tree DNA (FTDNA) "famfinder" file.
 
         https://www.familytreedna.com
 
@@ -641,7 +641,7 @@ class Reader:
         return self.read_helper("FTDNA", parser)
 
     def read_ancestry(self, file, compression):
-        """ Read and parse Ancestry.com file.
+        """Read and parse Ancestry.com file.
 
         http://www.ancestry.com
 
@@ -690,7 +690,7 @@ class Reader:
         return self.read_helper("AncestryDNA", parser)
 
     def read_myheritage(self, file, compression):
-        """ Read and parse MyHeritage file.
+        """Read and parse MyHeritage file.
 
         https://www.myheritage.com
 
@@ -745,7 +745,7 @@ class Reader:
         return self.read_helper("MyHeritage", parser)
 
     def read_livingdna(self, file, compression):
-        """ Read and parse LivingDNA file.
+        """Read and parse LivingDNA file.
 
         https://livingdna.com/
 
@@ -777,7 +777,7 @@ class Reader:
         return self.read_helper("LivingDNA", parser)
 
     def read_mapmygenome(self, file, compression, header):
-        """ Read and parse Mapmygenome file.
+        """Read and parse Mapmygenome file.
 
         https://mapmygenome.in
 
@@ -827,7 +827,7 @@ class Reader:
         return self.read_helper("Mapmygenome", parser)
 
     def read_genes_for_good(self, file, compression):
-        """ Read and parse Genes For Good file.
+        """Read and parse Genes For Good file.
 
         https://genesforgood.sph.umich.edu/readme/readme1.2.txt
 
@@ -1008,7 +1008,7 @@ class Reader:
         return self.read_helper(source, parser)
 
     def read_tellmegen(self, file, compression):
-        """ Read and parse tellmeGen files.
+        """Read and parse tellmeGen files.
 
         https://www.tellmegen.com/
 
@@ -1058,7 +1058,7 @@ class Reader:
         return self.read_helper("tellmeGen", parser)
 
     def read_gsa(self, data_or_filename, compresion, comments):
-        """ Read and parse Illumina Global Screening Array files
+        """Read and parse Illumina Global Screening Array files
 
 
         Parameters
@@ -1085,7 +1085,7 @@ class Reader:
         return self._read_gsa_helper(data_or_filename, source)
 
     def read_dnaland(self, file, compression):
-        """ Read and parse DNA.land files.
+        """Read and parse DNA.land files.
 
         https://dna.land/
 
@@ -1117,7 +1117,7 @@ class Reader:
         return self.read_helper("DNA.Land", parser)
 
     def read_snps_csv(self, file, comments, compression):
-        """ Read and parse CSV file generated by ``snps``.
+        """Read and parse CSV file generated by ``snps``.
 
         https://pypi.org/project/snps/
 
@@ -1178,7 +1178,7 @@ class Reader:
         return self.read_helper(source, parser)
 
     def read_generic(self, file, compression, skip=1):
-        """ Read and parse generic CSV or TSV file.
+        """Read and parse generic CSV or TSV file.
 
         Notes
         -----
@@ -1244,7 +1244,7 @@ class Reader:
         return self.read_helper("generic", parser)
 
     def read_vcf(self, file, compression, provider, rsids=()):
-        """ Read and parse VCF file.
+        """Read and parse VCF file.
 
         Notes
         -----

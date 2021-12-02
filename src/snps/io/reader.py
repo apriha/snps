@@ -66,6 +66,11 @@ TWO_ALLELE_DTYPES = {
     "allele2": object,
 }
 
+NA_VALUES = [
+    "--", "A-", "C-",
+    "G-", "T-", "-A",
+    "-C", "-G", "-T"
+]
 
 def get_empty_snps_dataframe():
     """Get empty dataframe normalized for usage with ``snps``.
@@ -453,7 +458,7 @@ class Reader:
                 file,
                 comment="#",
                 sep="\t",
-                na_values="--",
+                na_values=NA_VALUES,
                 names=["rsid", "chrom", "pos", "genotype"],
                 compression=compression,
             )
@@ -545,7 +550,7 @@ class Reader:
                 df = pd.read_csv(
                     file,
                     skiprows=1,
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -569,7 +574,7 @@ class Reader:
                 df = pd.read_csv(
                     file,
                     skiprows=[0, second_header_idx],
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -600,7 +605,7 @@ class Reader:
                 df = pd.read_csv(
                     new_file,
                     skiprows=1,
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -745,7 +750,7 @@ class Reader:
                     io.StringIO(file_string_out.getvalue()),
                     comment="#",
                     header=0,
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -776,7 +781,7 @@ class Reader:
                     file,
                     comment="#",
                     sep="\t",
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -808,7 +813,7 @@ class Reader:
                     file,
                     comment="#",
                     sep="\t",
-                    na_values="--",
+                    na_values=NA_VALUES,
                     header=0,
                     index_col=rsid_col_idx,
                     dtype={
@@ -858,7 +863,7 @@ class Reader:
                     file,
                     comment="#",
                     sep="\t",
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -1038,7 +1043,7 @@ class Reader:
                 file,
                 sep="\t",
                 skiprows=1,
-                na_values="--",
+                na_values=NA_VALUES,
                 names=["rsid", "chrom", "pos", "genotype"],
                 dtype=NORMALIZED_DTYPES,
                 compression=compression,
@@ -1116,7 +1121,7 @@ class Reader:
                     file,
                     comment="#",
                     sep="\t",
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -1170,7 +1175,7 @@ class Reader:
                     sep=sep,
                     comment="#",
                     header=0,
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -1218,7 +1223,7 @@ class Reader:
                     file,
                     sep=sep,
                     skiprows=skip,
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -1240,7 +1245,7 @@ class Reader:
                     df = pd.read_csv(
                         file,
                         sep=None,
-                        na_values="--",
+                        na_values=NA_VALUES,
                         skiprows=skip,
                         engine="python",
                         names=["rsid", "chrom", "pos", "genotype"],

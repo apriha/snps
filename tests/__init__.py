@@ -46,17 +46,6 @@ from snps.utils import gzip_file, zip_file
 
 
 class BaseSNPsTestCase(TestCase):
-    def setUp(self):
-        self.del_output_dir_helper()
-
-    def tearDown(self):
-        self.del_output_dir_helper()
-
-    @staticmethod
-    def del_output_dir_helper():
-        if os.path.exists("output"):
-            shutil.rmtree("output")
-
     def simulate_snps(
         self,
         chrom="1",
@@ -103,7 +92,7 @@ class BaseSNPsTestCase(TestCase):
 
     @property
     def downloads_enabled(self):
-        """ Property indicating if downloads are enabled.
+        """Property indicating if downloads are enabled.
 
         Only download from external resources when an environment variable named
         "DOWNLOADS_ENABLED" is set to "true".
@@ -163,7 +152,7 @@ class BaseSNPsTestCase(TestCase):
         return df
 
     def load_assign_PAR_SNPs(self, path):
-        """ Load and assign PAR SNPs.
+        """Load and assign PAR SNPs.
 
         If downloads are not enabled, use a minimal subset of the real responses.
 
@@ -706,6 +695,15 @@ class BaseSNPsTestCase(TestCase):
     ):
         if snps_df is None:
             snps_df = self.generic_snps()
+
+        # these are useful for debugging if there is a problem
+        print("Observed:")
+        print(snps.snps)
+        print(snps.snps.info())
+        print("Expected:")
+        print(snps_df)
+        print(snps_df.info())
+
         self.assertEqual(snps.source, source)
         pd.testing.assert_frame_equal(snps.snps, snps_df, check_exact=True)
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)

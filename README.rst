@@ -14,7 +14,7 @@ Features
 Input / Output
 ``````````````
 - Read raw data (genotype) files from a variety of direct-to-consumer (DTC) DNA testing
-  sources with a `SNPs <https://snps.readthedocs.io/en/latest/snps.html#snps.snps.SNPs>`_
+  sources with a `SNPs <https://snps.readthedocs.io/en/stable/snps.html#snps.snps.SNPs>`_
   object
 - Read and write VCF files (e.g., convert `23andMe <https://www.23andme.com>`_ to VCF)
 - Merge raw data files from different DNA tests, identifying discrepant SNPs in the process
@@ -35,6 +35,11 @@ Data Cleaning
 - Deduplicate alleles in the non-PAR regions of the X and Y chromosomes for males
 - Deduplicate alleles on MT
 - Assign PAR SNPs to the X or Y chromosome
+
+Analysis
+````````
+- Derive sex from SNPs
+- Predict ancestry from SNPs (when installed with `ezancestry <https://github.com/arvkevi/ezancestry>`_)
 
 Supported Genotype Files
 ------------------------
@@ -57,7 +62,7 @@ Additionally, ``snps`` can read a variety of "generic" CSV and TSV files.
 
 Dependencies
 ------------
-``snps`` requires `Python <https://www.python.org>`_ 3.6.1+ and the following Python
+``snps`` requires `Python <https://www.python.org>`_ 3.7.1+ and the following Python
 packages:
 
 - `numpy <http://www.numpy.org>`_
@@ -71,6 +76,11 @@ Installation
 Python dependencies) via ``pip``::
 
     $ pip install snps
+
+For `ancestry prediction <https://snps.readthedocs.io/en/stable/snps.html#snps.snps.SNPs.predict_ancestry>`_
+capability, ``snps`` can be installed with `ezancestry <https://github.com/arvkevi/ezancestry>`_::
+
+    $ pip install snps[ezancestry]
 
 Examples
 --------
@@ -104,7 +114,7 @@ Load a `23andMe <https://www.23andme.com>`_ raw data file:
 
 The ``SNPs`` class accepts a path to a file or a bytes object. A ``Reader`` class attempts to
 infer the data source and load the SNPs. The loaded SNPs are
-`normalized <https://snps.readthedocs.io/en/latest/snps.html#snps.snps.SNPs.snps>`_ and
+`normalized <https://snps.readthedocs.io/en/stable/snps.html#snps.snps.SNPs.snps>`_ and
 available via a ``pandas.DataFrame``:
 
 >>> df = s.snps
@@ -137,8 +147,8 @@ these files. Specifically, we'll update the ``SNPs`` object with SNPs from a
 `Family Tree DNA <https://www.familytreedna.com>`_ file.
 
 >>> merge_results = s.merge([SNPs("resources/662.ftdna-illumina.341.csv.gz")])
-Merging SNPs('resources/662.ftdna-illumina.341.csv.gz')
-SNPs('resources/662.ftdna-illumina.341.csv.gz') has Build 36; remapping to Build 37
+Merging SNPs('662.ftdna-illumina.341.csv.gz')
+SNPs('662.ftdna-illumina.341.csv.gz') has Build 36; remapping to Build 37
 Downloading resources/NCBI36_GRCh37.tar.gz
 27 SNP positions were discrepant; keeping original positions
 151 SNP genotypes were discrepant; marking those as null
@@ -241,7 +251,7 @@ Saving output/out.vcf
 When saving a VCF, if any SNPs have positions outside of the reference sequence, they are marked
 as discrepant and are available via a property of the ``SNPs`` object.
 
-All `output files <https://snps.readthedocs.io/en/latest/output_files.html>`_ are saved to the
+All `output files <https://snps.readthedocs.io/en/stable/output_files.html>`_ are saved to the
 output directory.
 
 Documentation
@@ -258,7 +268,7 @@ Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org
    :target: https://github.com/apriha/snps/actions/workflows/ci.yml
 .. |codecov| image:: https://codecov.io/gh/apriha/snps/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/apriha/snps
-.. |docs| image:: https://readthedocs.org/projects/snps/badge/?version=latest
+.. |docs| image:: https://readthedocs.org/projects/snps/badge/?version=stable
    :target: https://snps.readthedocs.io/
 .. |pypi| image:: https://img.shields.io/pypi/v/snps.svg
    :target: https://pypi.python.org/pypi/snps

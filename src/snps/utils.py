@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 
 class Parallelizer:
     def __init__(self, parallelize=False, processes=os.cpu_count()):
-        """ Initialize a `Parallelizer`.
+        """Initialize a `Parallelizer`.
 
         Parameters
         ----------
@@ -68,7 +68,7 @@ class Parallelizer:
         self._processes = processes
 
     def __call__(self, f, tasks):
-        """ Optionally parallelize execution of a function.
+        """Optionally parallelize execution of a function.
 
         Parameters
         ----------
@@ -100,7 +100,7 @@ class Singleton(type):
 
 
 def create_dir(path):
-    """ Create directory specified by `path` if it doesn't already exist.
+    """Create directory specified by `path` if it doesn't already exist.
 
     Parameters
     ----------
@@ -124,7 +124,7 @@ def create_dir(path):
 def save_df_as_csv(
     df, path, filename, comment="", prepend_info=True, atomic=True, **kwargs
 ):
-    """ Save dataframe to a CSV file.
+    """Save dataframe to a CSV file.
 
     Parameters
     ----------
@@ -176,6 +176,8 @@ def save_df_as_csv(
             kwargs["na_rep"] = "--"
 
         if buffer:
+            if not isinstance(destination, io.TextIOBase):
+                s = s.encode()
             destination.write(s)
             df.to_csv(destination, **kwargs)
             destination.seek(0)
@@ -196,7 +198,7 @@ def save_df_as_csv(
 
 
 def clean_str(s):
-    """ Clean a string so that it can be used as a Python variable name.
+    """Clean a string so that it can be used as a Python variable name.
 
     Parameters
     ----------
@@ -214,7 +216,7 @@ def clean_str(s):
 
 
 def zip_file(src, dest, arcname):
-    """ Zip a file.
+    """Zip a file.
 
     Parameters
     ----------
@@ -238,7 +240,7 @@ def zip_file(src, dest, arcname):
 
 
 def gzip_file(src, dest):
-    """ Gzip a file.
+    """Gzip a file.
 
     Parameters
     ----------

@@ -104,7 +104,6 @@ setup(
         "License :: OSI Approved :: BSD License",
         "Natural Language :: English",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
@@ -114,11 +113,13 @@ setup(
         "Topic :: Utilities",
     ],
     project_urls={
+        "Documentation": "https://snps.readthedocs.io/",
         "Changelog": "https://github.com/apriha/snps/releases",
         "Issue Tracker": "https://github.com/apriha/snps/issues",
     },
     keywords="snps dna chromosomes bioinformatics vcf",
     install_requires=["numpy", "pandas!=1.0.0,!=1.1.0", "atomicwrites"],
-    python_requires=">=3.6.1",
+    extras_require={"ezancestry": ["ezancestry"]},
+    python_requires=">=3.7.1",
     platforms=["any"],
 )

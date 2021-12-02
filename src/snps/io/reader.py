@@ -173,6 +173,8 @@ class Reader:
             d = self.read_snps_csv(file, comments, compression)
         elif "rsid\tChromosome\tposition\tgenotype" == first_line.strip():
             d = self.read_tellmegen(file, compression)
+        elif "rsid\tchromosome\tposition\tgenotype" == first_line.strip():
+            d = self.read_generic(file, compression)
         elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
             d = self.read_generic(file, compression)
         elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
@@ -503,9 +505,17 @@ class Reader:
                     20: "20",
                     21: "21",
                     22: "22",
+                    23: "X",
+                    24: "Y",
+                    25: "X",
+                    26: "MT",
                     "X": "X",
                     "Y": "Y",
                     "MT": "MT",
+                    "23": "X",
+                    "24": "Y",
+                    "25": "X",
+                    "26": "MT",
                 }
             )
             df = df.astype(dtype=NORMALIZED_DTYPES)

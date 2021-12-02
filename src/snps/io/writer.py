@@ -123,12 +123,14 @@ class Writer:
             filename = f"{clean_str(self._snps.source)}_{self._snps.assembly}{ext}"
 
         comment = (
-            f"# Source(s): {self._snps.source}\n"
+            f"# Pipeline Version: {self._kwargs.pop('pipeline_version')}\n"
+            f"# Source(s): SelfDecode\n"
             f"# Build: {self._snps.build}\n"
-            f"# Build Detected: { self._snps.build_detected}\n"
-            f"# Phased: {self._snps.phased}\n"
+            # f"# Build Detected: { self._snps.build_detected}\n"
+            # f"# Phased: {self._snps.phased}\n"
             f"# SNPs: {self._snps.count}\n"
             f"# Chromosomes: {self._snps.chromosomes_summary}\n"
+            f"# Sex: {self._snps.sex}\n"
         )
         if "header" in self._kwargs:
             if isinstance(self._kwargs["header"], bool):

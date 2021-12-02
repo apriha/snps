@@ -162,6 +162,8 @@ class Reader:
 
         if "23andMe" in first_line:
             d = self.read_23andme(file, compression)
+        elif "24Genetics" in first_line:
+            d = self.read_23andme(file, compression)
         elif "Ancestry" in first_line:
             d = self.read_ancestry(file, compression)
         elif first_line.startswith("RSID"):

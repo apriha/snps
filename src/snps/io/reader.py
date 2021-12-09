@@ -69,7 +69,10 @@ TWO_ALLELE_DTYPES = {
 NA_VALUES = [
     "--", "A-", "C-",
     "G-", "T-", "-A",
-    "-C", "-G", "-T"
+    "-C", "-G", "-T",
+    "-/-", "A/-", "C/-",
+    "G/-", "T/-", "-/A",
+    "-/C", "-/G", "-/T",
 ]
 
 def get_empty_snps_dataframe():
@@ -162,6 +165,8 @@ class Reader:
 
         if "23andMe" in first_line:
             d = self.read_23andme(file, compression)
+        if "Circle" in first_line:
+            d = self.read_circledna(file, compression)
         elif "24Genetics" in first_line:
             d = self.read_23andme(file, compression)
         elif "Ancestry" in first_line:
@@ -440,6 +445,38 @@ class Reader:
                 build = extra[1]
 
         return {"snps": df, "source": source, "phased": phased, "build": build}
+
+    def read_circledna(self, file, compression):
+        """Read and parse circledna file.
+
+        https://circledna.com/en-us/
+
+        Parameters
+        ----------
+        file : str
+            path to file
+
+        Returns
+        -------
+        dict
+            result of `read_helper`
+        """
+        def parser():
+            df = pd.read_csv(
+                file,
+                comment="#",
+                sep="\t",
+                na_values=NA_VALUES,
+                names=["rsid", "chrom", "pos", "genotype"],
+                compression=compression,
+            )
+            df = df.applymap(lambda x: str(x).replace("/",""))
+            df = df.dropna(subset=["rsid", "chrom", "pos"])
+            df = df.astype(dtype=NORMALIZED_DTYPES)
+            df = df.set_index("rsid")
+            return (df,)
+
+        return self.read_helper("CircleDNA", parser)
 
     def read_23andme(self, file, compression):
         """Read and parse 23andMe file.

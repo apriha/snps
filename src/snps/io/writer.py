@@ -124,8 +124,8 @@ class Writer:
 
         comment = (
             f"# Pipeline Version: {self._kwargs.pop('pipeline_version')}\n"
-            f"# Source(s): SelfDecode\n"
-            f"# Build: {self._snps.build}\n"
+            f"# Source: SelfDecode\n"
+            f"# Assembly: GRCh{self._snps.build}\n"
             # f"# Build Detected: { self._snps.build_detected}\n"
             # f"# Phased: {self._snps.phased}\n"
             f"# SNPs: {self._snps.count}\n"

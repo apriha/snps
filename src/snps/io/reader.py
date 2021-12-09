@@ -470,7 +470,7 @@ class Reader:
                 names=["rsid", "chrom", "pos", "genotype"],
                 compression=compression,
             )
-            df = df.applymap(lambda x: str(x).replace("/",""))
+            df["genotype"] = df['genotype'].apply(lambda x: x.replace("/",""))
             df = df.dropna(subset=["rsid", "chrom", "pos"])
             df = df.astype(dtype=NORMALIZED_DTYPES)
             df = df.set_index("rsid")

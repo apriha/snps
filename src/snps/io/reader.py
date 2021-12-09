@@ -471,6 +471,7 @@ class Reader:
                 compression=compression,
             )
             df["genotype"] = df['genotype'].apply(lambda x: x.replace("/",""))
+            df["chrom"] = df['chrom'].apply(lambda x: x.replace("chr",""))
             df = df.dropna(subset=["rsid", "chrom", "pos"])
             df = df.astype(dtype=NORMALIZED_DTYPES)
             df = df.set_index("rsid")

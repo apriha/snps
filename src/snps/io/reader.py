@@ -187,6 +187,8 @@ class Reader:
             d = self.read_tellmegen(file, compression)
         elif "rsid\tchromosome\tposition\tgenotype" == first_line.strip():
             d = self.read_generic(file, compression)
+        elif "rsid\tchromosome\tposition\tgenotype\tBestandRecommended\tCR" == first_line.strip():
+            d = self.read_generic(file, compression)
         elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
             d = self.read_generic(file, compression)
         elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
@@ -1267,6 +1269,7 @@ class Reader:
                     skiprows=skip,
                     na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
+                    usecols=[0, 1, 2, 3],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
                     compression=compression,

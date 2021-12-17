@@ -445,7 +445,8 @@ class Reader:
             elif len(extra) == 2:
                 phased = extra[0]
                 build = extra[1]
-
+        # SELFDECODE: remove all genotypes with length other than 2
+        df = df[df["genotype"].str.len() <= 2]
         return {"snps": df, "source": source, "phased": phased, "build": build}
 
     def read_circledna(self, file, compression):

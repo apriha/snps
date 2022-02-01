@@ -95,7 +95,7 @@ jobs:
         fi
     - name: Install dependencies
       run: |
-        pip install pytest-cov
+        pip install coverage==6.2 pytest-cov
         pip install .
     - name: Test with pytest (Ubuntu & macOS)
       if: ${{ matrix.os != 'windows-latest' }}
@@ -132,7 +132,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install pytest-cov
+        pip install coverage==6.2 pytest-cov
         pip install .[ezancestry]
     - name: Test with pytest
       run: |

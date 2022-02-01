@@ -923,11 +923,9 @@ class TestDeprecatedMethods(TestSnps):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             f()
-            w_filtered = [
-                item for item in w if issubclass(item.category, DeprecationWarning)
-            ]
-            self.assertEqual(len(w_filtered), 1)
-            self.assertEqual(str(w_filtered[0].message), msg)
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            self.assertEqual(str(w[-1].message), msg)
 
     def test_sort_snps(self):
         def f():

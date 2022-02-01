@@ -345,7 +345,9 @@ class SNPs:
         -------
         pandas.DataFrame
         """
-        df = self._discrepant_merge_positions.append(self._discrepant_merge_genotypes)
+        df = pd.concat(
+            [self._discrepant_merge_positions, self._discrepant_merge_genotypes]
+        )
         if len(df) > 1:
             df = df.drop_duplicates()
         return df
@@ -897,7 +899,7 @@ class SNPs:
         # Keep first duplicate rsid.
         duplicate_rsids = self._snps.index.duplicated(keep="first")
         # save duplicate SNPs
-        self._duplicate = self._duplicate.append(self._snps.loc[duplicate_rsids])
+        self._duplicate = pd.concat([self._duplicate, self._snps.loc[duplicate_rsids]])
         # deduplicate
         self._snps = self._snps.loc[~duplicate_rsids]
 
@@ -913,8 +915,8 @@ class SNPs:
         discrepant_XY_snps = self._get_non_par_snps(chrom)
 
         # save discrepant XY SNPs
-        self._discrepant_XY = self._discrepant_XY.append(
-            self._snps.loc[discrepant_XY_snps]
+        self._discrepant_XY = pd.concat(
+            [self._discrepant_XY, self._snps.loc[discrepant_XY_snps]]
         )
 
         # drop discrepant XY SNPs since it's ambiguous for which allele to deduplicate
@@ -935,8 +937,8 @@ class SNPs:
         heterozygous_MT_snps = self._snps.loc[self.heterozygous("MT").index].index
 
         # save heterozygous MT SNPs
-        self._heterozygous_MT = self._heterozygous_MT.append(
-            self._snps.loc[heterozygous_MT_snps]
+        self._heterozygous_MT = pd.concat(
+            [self._heterozygous_MT, self._snps.loc[heterozygous_MT_snps]]
         )
 
         # drop heterozygous MT SNPs since it's ambiguous for which allele to deduplicate
@@ -1348,11 +1350,11 @@ class SNPs:
 
         def merge_dfs(s):
             # append dataframes created when a ``SNPs`` object is instantiated
-            self._duplicate = self.duplicate.append(s.duplicate)
-            self._discrepant_XY = self.discrepant_XY.append(s.discrepant_XY)
-            self._heterozygous_MT = self.heterozygous_MT.append(s.heterozygous_MT)
-            self._discrepant_vcf_position = self.discrepant_vcf_position.append(
-                s.discrepant_vcf_position
+            self._duplicate = pd.concat([self.duplicate, s.duplicate])
+            self._discrepant_XY = pd.concat([self.discrepant_XY, s.discrepant_XY])
+            self._heterozygous_MT = pd.concat([self.heterozygous_MT, s.heterozygous_MT])
+            self._discrepant_vcf_position = pd.concat(
+                [self.discrepant_vcf_position, s.discrepant_vcf_position]
             )
 
         def merge_snps(s, positions_threshold, genotypes_threshold, merge_chrom):
@@ -1437,12 +1439,12 @@ class SNPs:
             self._snps.loc[discrepant_genotypes.index, "genotype"] = np.nan
 
             # append discrepant positions dataframe
-            self._discrepant_merge_positions = self._discrepant_merge_positions.append(
-                discrepant_positions, sort=True
+            self._discrepant_merge_positions = pd.concat(
+                [self._discrepant_merge_positions, discrepant_positions], sort=True
             )
             # append discrepant genotypes dataframe
-            self._discrepant_merge_genotypes = self._discrepant_merge_genotypes.append(
-                discrepant_genotypes, sort=True
+            self._discrepant_merge_genotypes = pd.concat(
+                [self._discrepant_merge_genotypes, discrepant_genotypes], sort=True
             )
 
             return (

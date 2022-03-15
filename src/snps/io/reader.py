@@ -66,6 +66,14 @@ TWO_ALLELE_DTYPES = {
     "allele2": object,
 }
 
+NA_VALUES = [
+    "--", "A-", "C-",
+    "G-", "T-", "-A",
+    "-C", "-G", "-T",
+    "-/-", "A/-", "C/-",
+    "G/-", "T/-", "-/A",
+    "-/C", "-/G", "-/T",
+]
 
 def get_empty_snps_dataframe():
     """Get empty dataframe normalized for usage with ``snps``.
@@ -157,6 +165,10 @@ class Reader:
 
         if "23andMe" in first_line:
             d = self.read_23andme(file, compression)
+        if "Circle" in first_line:
+            d = self.read_circledna(file, compression)
+        elif "24Genetics" in first_line:
+            d = self.read_23andme(file, compression)
         elif "Ancestry" in first_line:
             d = self.read_ancestry(file, compression)
         elif first_line.startswith("RSID"):
@@ -173,12 +185,18 @@ class Reader:
             d = self.read_snps_csv(file, comments, compression)
         elif "rsid\tChromosome\tposition\tgenotype" == first_line.strip():
             d = self.read_tellmegen(file, compression)
+        elif "rsid\tchromosome\tposition\tgenotype" == first_line.strip():
+            d = self.read_generic(file, compression)
+        elif "rsid\tchromosome\tposition\tgenotype\tBestandRecommended\tCR" == first_line.strip():
+            d = self.read_generic(file, compression)
         elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
             d = self.read_generic(file, compression)
         elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
             d = self.read_generic(file, compression, skip=0)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
             d = self.read_vcf(file, compression, "vcf", self._rsids)
+        elif ("selfdecode" in comments.lower()):
+            d = self.read_23andme(file, compression)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
             d = self.read_genes_for_good(file, compression)
         elif "DNA.Land" in comments:
@@ -427,8 +445,42 @@ class Reader:
             elif len(extra) == 2:
                 phased = extra[0]
                 build = extra[1]
-
+        # SELFDECODE: remove all genotypes with length other than 2
+        df = df[df["genotype"].str.len() <= 2]
         return {"snps": df, "source": source, "phased": phased, "build": build}
+
+    def read_circledna(self, file, compression):
+        """Read and parse circledna file.
+
+        https://circledna.com/en-us/
+
+        Parameters
+        ----------
+        file : str
+            path to file
+
+        Returns
+        -------
+        dict
+            result of `read_helper`
+        """
+        def parser():
+            df = pd.read_csv(
+                file,
+                comment="#",
+                sep="\t",
+                na_values=NA_VALUES,
+                names=["rsid", "chrom", "pos", "genotype"],
+                compression=compression,
+            )
+            df["genotype"] = df['genotype'].apply(lambda x: x.replace("/",""))
+            df["chrom"] = df['chrom'].apply(lambda x: x.replace("chr",""))
+            df = df.dropna(subset=["rsid", "chrom", "pos"])
+            df = df.astype(dtype=NORMALIZED_DTYPES)
+            df = df.set_index("rsid")
+            return (df,)
+
+        return self.read_helper("CircleDNA", parser)
 
     def read_23andme(self, file, compression):
         """Read and parse 23andMe file.
@@ -451,7 +503,7 @@ class Reader:
                 file,
                 comment="#",
                 sep="\t",
-                na_values="--",
+                na_values=NA_VALUES,
                 names=["rsid", "chrom", "pos", "genotype"],
                 compression=compression,
             )
@@ -503,9 +555,17 @@ class Reader:
                     20: "20",
                     21: "21",
                     22: "22",
+                    23: "X",
+                    24: "Y",
+                    25: "X",
+                    26: "MT",
                     "X": "X",
                     "Y": "Y",
                     "MT": "MT",
+                    "23": "X",
+                    "24": "Y",
+                    "25": "X",
+                    "26": "MT",
                 }
             )
             df = df.astype(dtype=NORMALIZED_DTYPES)
@@ -535,7 +595,7 @@ class Reader:
                 df = pd.read_csv(
                     file,
                     skiprows=1,
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -559,7 +619,7 @@ class Reader:
                 df = pd.read_csv(
                     file,
                     skiprows=[0, second_header_idx],
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -590,7 +650,7 @@ class Reader:
                 df = pd.read_csv(
                     new_file,
                     skiprows=1,
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -735,7 +795,7 @@ class Reader:
                     io.StringIO(file_string_out.getvalue()),
                     comment="#",
                     header=0,
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -766,7 +826,7 @@ class Reader:
                     file,
                     comment="#",
                     sep="\t",
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -798,7 +858,7 @@ class Reader:
                     file,
                     comment="#",
                     sep="\t",
-                    na_values="--",
+                    na_values=NA_VALUES,
                     header=0,
                     index_col=rsid_col_idx,
                     dtype={
@@ -848,7 +908,7 @@ class Reader:
                     file,
                     comment="#",
                     sep="\t",
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -1028,7 +1088,7 @@ class Reader:
                 file,
                 sep="\t",
                 skiprows=1,
-                na_values="--",
+                na_values=NA_VALUES,
                 names=["rsid", "chrom", "pos", "genotype"],
                 dtype=NORMALIZED_DTYPES,
                 compression=compression,
@@ -1106,7 +1166,7 @@ class Reader:
                     file,
                     comment="#",
                     sep="\t",
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -1160,7 +1220,7 @@ class Reader:
                     sep=sep,
                     comment="#",
                     header=0,
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
@@ -1208,8 +1268,9 @@ class Reader:
                     file,
                     sep=sep,
                     skiprows=skip,
-                    na_values="--",
+                    na_values=NA_VALUES,
                     names=["rsid", "chrom", "pos", "genotype"],
+                    usecols=[0, 1, 2, 3],
                     index_col=0,
                     dtype=NORMALIZED_DTYPES,
                     compression=compression,
@@ -1230,7 +1291,7 @@ class Reader:
                     df = pd.read_csv(
                         file,
                         sep=None,
-                        na_values="--",
+                        na_values=NA_VALUES,
                         skiprows=skip,
                         engine="python",
                         names=["rsid", "chrom", "pos", "genotype"],

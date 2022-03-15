@@ -129,7 +129,7 @@ class Writer:
             # f"# Build Detected: { self._snps.build_detected}\n"
             # f"# Phased: {self._snps.phased}\n"
             f"# SNPs: {self._snps.count}\n"
-            f"# Chromosomes: {self._snps.chromosomes_summary}\n"
+            f"# Chromosomes: {self._snps.chromosomes_summary_output}\n"
             f"# Sex: {self._snps.sex}\n"
         )
         if "header" in self._kwargs:

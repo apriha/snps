@@ -412,6 +412,48 @@ class SNPs:
             return []
 
     @property
+    def chromosomes_summary_output(self):
+        from natsort import natsorted, ns
+        """Summary of the chromosomes of SNPs.
+
+        Returns
+        -------
+        str
+            human-readable listing of chromosomes (e.g., '1-3, MT'), empty str if no chromosomes
+        """
+
+        chr_list = [f"{i}" for i in [str(x) for x in list(range(0, 27))] + ["X", "Y", "MT"]]
+        
+        if not self._snps.empty:
+            chroms = list(pd.unique(self._snps["chrom"]))
+            chroms = natsorted(list(set(chroms).intersection(chr_list)))
+
+            int_chroms = [int(chrom) for chrom in chroms if chrom.isdigit()]
+            str_chroms = [chrom for chrom in chroms if not chrom.isdigit()]
+
+            # https://codereview.stackexchange.com/a/5202
+            def as_range(iterable):
+                l = list(iterable)
+                if len(l) > 1:
+                    return f"{l[0]}-{l[-1]}"
+                else:
+                    return f"{l[0]}"
+
+            # create str representations
+            int_chroms = ", ".join(
+                as_range(g)
+                for _, g in groupby(int_chroms, key=lambda n, c=count(): n - next(c))
+            )
+            str_chroms = ", ".join(str_chroms)
+
+            if int_chroms != "" and str_chroms != "":
+                int_chroms += ", "
+
+            return int_chroms + str_chroms
+        else:
+            return ""
+
+    @property
     def chromosomes_summary(self):
         """Summary of the chromosomes of SNPs.
 

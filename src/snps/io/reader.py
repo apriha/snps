@@ -507,6 +507,8 @@ class Reader:
                 names=["rsid", "chrom", "pos", "genotype"],
                 compression=compression,
             )
+            if df["rsid"].iloc[0] == "rsid":
+                df = df.iloc[1:]
             df = df.dropna(subset=["rsid", "chrom", "pos"])
             # turn number numbers into string numbers
             df["chrom"] = df["chrom"].map(

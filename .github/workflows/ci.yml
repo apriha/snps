@@ -134,6 +134,7 @@ jobs:
         pip install --upgrade pip setuptools wheel
         pip install coverage==6.2 pytest-cov
         pip install .[ezancestry]
+        pip install cyvcf2==0.30.14
     - name: Test with pytest
       run: |
         pytest --cov=snps tests

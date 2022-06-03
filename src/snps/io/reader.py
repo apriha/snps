@@ -568,6 +568,7 @@ class Reader:
                     "24": "Y",
                     "25": "X",
                     "26": "MT",
+                    "M": "MT",
                 }
             )
             df = df.astype(dtype=NORMALIZED_DTYPES)

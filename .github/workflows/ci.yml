@@ -116,7 +116,7 @@ jobs:
         fail_ci_if_error: true
 
   test-extras:
-    needs: [test]
+    needs: [lint, build-docs]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

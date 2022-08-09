@@ -692,7 +692,6 @@ class Reader:
                 index_col=0,
                 dtype=TWO_ALLELE_DTYPES,
                 compression=compression,
-                error_bad_lines=False,
             )
 
             # create genotype column from allele columns

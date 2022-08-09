@@ -176,6 +176,8 @@ def save_df_as_csv(
             kwargs["na_rep"] = "--"
 
         if buffer:
+            if not isinstance(destination, io.TextIOBase):
+                s = s.encode()
             destination.write(s)
             df.to_csv(destination, **kwargs)
             destination.seek(0)

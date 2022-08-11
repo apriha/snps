@@ -42,22 +42,10 @@ import pandas as pd
 from pandas.api.types import is_object_dtype, is_unsigned_integer_dtype
 
 from snps import SNPs
-from snps.utils import gzip_file, zip_file, Singleton
+from snps.utils import gzip_file, zip_file
 
 
 class BaseSNPsTestCase(TestCase):
-    def setUp(self):
-        Singleton._instances = {}
-        self.del_output_dir_helper()
-
-    # def tearDown(self):
-    #    self.del_output_dir_helper()
-
-    @staticmethod
-    def del_output_dir_helper():
-        if os.path.exists("output"):
-            shutil.rmtree("output")
-
     def simulate_snps(
         self,
         chrom="1",
@@ -104,7 +92,7 @@ class BaseSNPsTestCase(TestCase):
 
     @property
     def downloads_enabled(self):
-        """ Property indicating if downloads are enabled.
+        """Property indicating if downloads are enabled.
 
         Only download from external resources when an environment variable named
         "DOWNLOADS_ENABLED" is set to "true".
@@ -164,7 +152,7 @@ class BaseSNPsTestCase(TestCase):
         return df
 
     def load_assign_PAR_SNPs(self, path):
-        """ Load and assign PAR SNPs.
+        """Load and assign PAR SNPs.
 
         If downloads are not enabled, use a minimal subset of the real responses.
 

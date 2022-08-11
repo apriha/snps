@@ -47,7 +47,7 @@ class TestReader(BaseSNPsTestCase):
         # reset resource if already loaded
         r = Resources()
         r._resources_dir = resources_dir
-        r._gsa_resources = {}
+        r._init_resource_attributes()
 
         gzip_file(
             "tests/resources/gsa_rsid_map.txt",
@@ -66,7 +66,7 @@ class TestReader(BaseSNPsTestCase):
     def _teardown_gsa_test():
         r = Resources()
         r._resources_dir = "resources"
-        r._gsa_resources = {}
+        r._init_resource_attributes()
 
     def run_build_detection_test(
         self,

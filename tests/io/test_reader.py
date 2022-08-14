@@ -181,6 +181,12 @@ class TestReader(BaseSNPsTestCase):
         # https://dna.land/
         self.run_parsing_tests("tests/input/DNALand.txt", "DNA.Land")
 
+    def test_read_circledna(self):
+        # https://circledna.com/
+        df = self.generic_snps()
+        df.drop("rs5", inplace=True)  # only called genotypes
+        self.run_parsing_tests("tests/input/circledna.txt", "CircleDNA", snps_df=df)
+
     def test_read_ftdna(self):
         # https://www.familytreedna.com
         self.run_parsing_tests("tests/input/ftdna.csv", "FTDNA")

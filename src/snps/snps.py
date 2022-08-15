@@ -584,7 +584,9 @@ class SNPs:
         else:
             return True
 
-    def save(self, filename="", vcf=False, atomic=True, **kwargs):
+    def save(
+        self, filename="", vcf=False, atomic=True, vcf_alt_unavailable=".", **kwargs
+    ):
         """Save SNPs to file.
 
         Parameters
@@ -595,6 +597,8 @@ class SNPs:
             flag to save file as VCF
         atomic : bool
             atomically write output to a file on local filesystem
+        vcf_alt_unavailable : str
+            representation of VCF ALT allele when ALT is not able to be determined
         **kwargs
             additional parameters to `pandas.DataFrame.to_csv`
 
@@ -612,7 +616,12 @@ class SNPs:
             kwargs["sep"] = "\t"
 
         path, *extra = Writer.write_file(
-            snps=self, filename=filename, vcf=vcf, atomic=atomic, **kwargs
+            snps=self,
+            filename=filename,
+            vcf=vcf,
+            atomic=atomic,
+            vcf_alt_unavailable=vcf_alt_unavailable,
+            **kwargs,
         )
 
         if len(extra) == 1 and not extra[0].empty:

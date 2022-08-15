@@ -1,0 +1,13 @@
+# Circle
+#
+#
+# MARKERNAME	CHROM	POS	GT
+chr1:1:A	chr1	1	A/A
+rs1	chr1	101	A/A
+rs2	chr1	102	C/C
+rs3	chr1	103	G/G
+rs4	chr1	104	T/T
+rs6	chr1	106	G/C
+rs7	chr1	107	T/C
+rs8	chr1	108	A/T
+chr1:1001:A	chr1	1001	A/A

@@ -99,6 +99,16 @@ class TestReader(BaseSNPsTestCase):
         # https://www.23andme.com
         self.run_parsing_tests("tests/input/23andme.txt", "23andMe")
 
+    def test_read_23andme_allele(self):
+        # https://www.23andme.com
+        # some files have split allele columns
+        self.run_parsing_tests("tests/input/23andme_allele.txt", "23andMe")
+
+    def test_read_23andme_win(self):
+        # https://www.23andme.com
+        # windows line endings
+        self.run_parsing_tests("tests/input/23andme_win.txt", "23andMe")
+
     def test_read_23andme_build36(self):
         self.run_build_detection_test(
             self.run_parsing_tests,
@@ -127,7 +137,7 @@ class TestReader(BaseSNPsTestCase):
         # https://www.ancestry.com
 
         total_snps = 100
-        s = "#Ancestry\r\n"
+        s = "#AncestryDNA\r\n"
         s += "rsid\tchromosome\tposition\tallele1\tallele2\r\n"
         # add extra tab separator in first line
         s += "rs1\t1\t101\t\tA\tA\r\n"
@@ -170,6 +180,12 @@ class TestReader(BaseSNPsTestCase):
     def test_read_DNALand(self):
         # https://dna.land/
         self.run_parsing_tests("tests/input/DNALand.txt", "DNA.Land")
+
+    def test_read_circledna(self):
+        # https://circledna.com/
+        df = self.generic_snps()
+        df.drop("rs5", inplace=True)  # only called genotypes
+        self.run_parsing_tests("tests/input/circledna.txt", "CircleDNA", snps_df=df)
 
     def test_read_ftdna(self):
         # https://www.familytreedna.com

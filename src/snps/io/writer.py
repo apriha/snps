@@ -50,7 +50,15 @@ logger = logging.getLogger(__name__)
 class Writer:
     """Class for writing SNPs to files."""
 
-    def __init__(self, snps=None, filename="", vcf=False, atomic=True, **kwargs):
+    def __init__(
+        self,
+        snps=None,
+        filename="",
+        vcf=False,
+        atomic=True,
+        vcf_alt_unavailable=".",
+        **kwargs,
+    ):
         """Initialize a `Writer`.
 
         Parameters
@@ -63,6 +71,8 @@ class Writer:
             flag to save file as VCF
         atomic : bool
             atomically write output to a file on local filesystem
+        vcf_alt_unavailable : str
+            representation of VCF ALT allele when ALT is not able to be determined
         **kwargs
             additional parameters to `pandas.DataFrame.to_csv`
         """
@@ -70,6 +80,7 @@ class Writer:
         self._filename = filename
         self._vcf = vcf
         self._atomic = atomic
+        self._vcf_alt_unavailable = vcf_alt_unavailable
         self._kwargs = kwargs
 
     def write(self):
@@ -79,7 +90,15 @@ class Writer:
             return (self._write_csv(),)
 
     @classmethod
-    def write_file(cls, snps=None, filename="", vcf=False, atomic=True, **kwargs):
+    def write_file(
+        cls,
+        snps=None,
+        filename="",
+        vcf=False,
+        atomic=True,
+        vcf_alt_unavailable=".",
+        **kwargs,
+    ):
         """Save SNPs to file.
 
         Parameters
@@ -92,6 +111,8 @@ class Writer:
             flag to save file as VCF
         atomic : bool
             atomically write output to a file on local filesystem
+        vcf_alt_unavailable : str
+            representation of VCF ALT allele when ALT is not able to be determined
         **kwargs
             additional parameters to `pandas.DataFrame.to_csv`
 
@@ -102,7 +123,14 @@ class Writer:
         discrepant_vcf_position : pd.DataFrame
             SNPs with discrepant positions discovered while saving VCF
         """
-        w = cls(snps=snps, filename=filename, vcf=vcf, atomic=atomic, **kwargs)
+        w = cls(
+            snps=snps,
+            filename=filename,
+            vcf=vcf,
+            atomic=atomic,
+            vcf_alt_unavailable=vcf_alt_unavailable,
+            **kwargs,
+        )
         return w.write()
 
     def _write_csv(self):
@@ -365,7 +393,7 @@ class Writer:
 
         if ref in genotype_alleles:
             if len(genotype_alleles) == 1:
-                return "N"
+                return self._vcf_alt_unavailable
             else:
                 genotype_alleles.remove(ref)
                 return genotype_alleles.pop(0)

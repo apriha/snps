@@ -48,6 +48,7 @@ genotype files from the following DNA testing sources:
 
 - `23andMe <https://www.23andme.com>`_
 - `Ancestry <https://www.ancestry.com>`_
+- `CircleDNA <https://circledna.com/>`_
 - `Código 46 <https://codigo46.com.mx>`_
 - `DNA.Land <https://dna.land>`_
 - `Family Tree DNA <https://www.familytreedna.com>`_

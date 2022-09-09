@@ -131,6 +131,7 @@ class TestResources(BaseSNPsTestCase):
         def f():
             # mock download of test data for each resource
             self._generate_test_gsa_resources()
+            self._generate_test_chip_clusters()
 
             # generate test data for permutations of remapping data
             effects = [{"mappings": []} for _ in range(1, 26)]
@@ -485,3 +486,22 @@ class TestResources(BaseSNPsTestCase):
             )
 
             self.resource._resources_dir = "resources"
+
+    def _generate_test_chip_clusters(self):
+        s = "1:1\tc1\n" * 2135214
+        mock = mock_open(read_data=gzip.compress(s.encode()))
+        with patch("urllib.request.urlopen", mock):
+            self.resource.get_chip_clusters()
+
+    def test_get_chip_clusters(self):
+        def f():
+            # mock download of test data for chip clusters
+            self._generate_test_chip_clusters()
+            # load test resource
+            return self.resource.get_chip_clusters()
+
+        chip_clusters = (
+            self.resource.get_chip_clusters() if self.downloads_enabled else f()
+        )
+
+        self.assertEqual(len(chip_clusters), 2135214)

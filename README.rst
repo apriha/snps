@@ -39,6 +39,7 @@ Data Cleaning
 Analysis
 ````````
 - Derive sex from SNPs
+- Detect deduced genotype / chip array and chip version based on `chip clusters <https://doi.org/10.1016/j.csbj.2021.06.040>`_
 - Predict ancestry from SNPs (when installed with `ezancestry <https://github.com/arvkevi/ezancestry>`_)
 
 Supported Genotype Files

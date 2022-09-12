@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 
+import copy
 from itertools import groupby, count
 import logging
 import os
@@ -112,6 +113,9 @@ class SNPs:
         self._output_dir = output_dir
         self._resources = Resources(resources_dir=resources_dir)
         self._parallelizer = Parallelizer(parallelize=parallelize, processes=processes)
+        self._cluster = ""
+        self._chip = ""
+        self._chip_version = ""
 
         if file:
 
@@ -486,6 +490,59 @@ class SNPs:
         bool
         """
         return self._phased
+
+    @property
+    def cluster(self):
+        """Detected chip cluster, if any, per
+        :meth:`compute_cluster_overlap <snps.snps.SNPs.compute_cluster_overlap>`.
+
+        Notes
+        -----
+        Refer to :meth:`compute_cluster_overlap <snps.snps.SNPs.compute_cluster_overlap>`
+        for more details about chip clusters.
+
+        Returns
+        -------
+        str
+            detected chip cluster, e.g., 'c1', else empty str
+        """
+        if not self._cluster:
+            self.compute_cluster_overlap()
+        return self._cluster
+
+    @property
+    def chip(self):
+        """Detected deduced genotype / chip array, if any, per
+        :meth:`compute_cluster_overlap <snps.snps.SNPs.compute_cluster_overlap>`.
+
+        Returns
+        -------
+        str
+            detected chip array, else empty str
+        """
+        if not self._chip:
+            self.compute_cluster_overlap()
+        return self._chip
+
+    @property
+    def chip_version(self):
+        """Detected genotype / chip array version, if any, per
+        :meth:`compute_cluster_overlap <snps.snps.SNPs.compute_cluster_overlap>`.
+
+        Notes
+        -----
+        Chip array version is only applicable to 23andMe (v3, v4, v5)  and AncestryDNA
+        (v1, v2) files.
+
+        Returns
+        -------
+        str
+            detected chip array version, e.g., 'v4', else empty str
+        """
+
+        if not self._chip_version:
+            self.compute_cluster_overlap()
+        return self._chip_version
 
     def heterozygous(self, chrom=""):
         """Get heterozygous SNPs.
@@ -1730,3 +1787,113 @@ class SNPs:
         d["ezancestry_df"] = predictions
 
         return d
+
+    def compute_cluster_overlap(self, cluster_overlap_threshold=0.95):
+        """Compute overlap with chip clusters.
+
+        Chip clusters, which are defined in [1]_, are associated with deduced genotype /
+        chip arrays and DTC companies.
+
+        This method also sets the values returned by the `cluster`, `chip`, and
+        `chip_version` properties, based on max overlap, if the specified threshold is
+        satisfied.
+
+        Parameters
+        ----------
+        cluster_overlap_threshold : float
+            threshold for cluster to overlap this SNPs object, and vice versa, to set
+            values returned by the `cluster`, `chip`, and `chip_version` properties
+
+        Returns
+        -------
+        pandas.DataFrame
+            pandas.DataFrame with the following columns:
+
+            `company_composition`
+              DTC company composition of associated cluster from [1]_
+            `chip_base_deduced`
+              deduced genotype / chip array of associated cluster from [1]_
+            `snps_in_cluster`
+              count of SNPs in cluster
+            `snps_in_common`
+              count of SNPs in common with cluster (inner merge with cluster)
+            `overlap_with_cluster`
+              percentage overlap of `snps_in_common` with cluster
+            `overlap_with_self`
+              percentage overlap of `snps_in_common` with this SNPs object
+
+        References
+        ----------
+        .. [1] Chang Lu, Bastian Greshake Tzovaras, Julian Gough, A survey of
+               direct-to-consumer genotype data, and quality control tool
+               (GenomePrep) for research, Computational and Structural
+               Biotechnology Journal, Volume 19, 2021, Pages 3747-3754, ISSN
+               2001-0370, https://doi.org/10.1016/j.csbj.2021.06.040.
+        """
+
+        # information from Lu et. al (Ref. [1]_), Table 2 and Fig. 2
+        df = pd.DataFrame(
+            data={
+                "cluster_id": ["c1", "c3", "c4", "c5", "v5"],
+                "company_composition": [
+                    "23andMe-v4",
+                    "AncestryDNA-v1, FTDNA, MyHeritage",
+                    "23andMe-v3",
+                    "AncestryDNA-v2",
+                    "23andMe-v5, LivingDNA",
+                ],
+                "chip_base_deduced": [
+                    "HTS iSelect HD",
+                    "OmniExpress",
+                    "OmniExpress plus",
+                    "OmniExpress plus",
+                    "Illumina GSAs",
+                ],
+                "snps_in_cluster": [0] * 5,
+                "snps_in_common": [0] * 5,
+            }
+        )
+        df.set_index("cluster_id", inplace=True)
+
+        if self.build != 37:
+            to_remap = copy.deepcopy(self)
+            to_remap.remap(37)  # clusters are relative to Build 37
+            self_snps = to_remap.snps[["chrom", "pos"]].drop_duplicates()
+        else:
+            self_snps = self.snps[["chrom", "pos"]].drop_duplicates()
+
+        chip_clusters = self._resources.get_chip_clusters()
+
+        for cluster in df.index.values:
+            cluster_snps = chip_clusters.loc[
+                chip_clusters.clusters.str.contains(cluster)
+            ][["chrom", "pos"]]
+            df.loc[cluster, "snps_in_cluster"] = len(cluster_snps)
+            df.loc[cluster, "snps_in_common"] = len(
+                self_snps.merge(cluster_snps, how="inner")
+            )
+
+        df["overlap_with_cluster"] = df.snps_in_common / df.snps_in_cluster
+        df["overlap_with_self"] = df.snps_in_common / len(self_snps)
+
+        max_overlap = df.overlap_with_cluster.idxmax()
+
+        if (
+            df.overlap_with_cluster.loc[max_overlap] > cluster_overlap_threshold
+            and df.overlap_with_self.loc[max_overlap] > cluster_overlap_threshold
+        ):
+            self._cluster = max_overlap
+            self._chip = df.chip_base_deduced.loc[max_overlap]
+
+            company_composition = df.company_composition.loc[max_overlap]
+
+            if self.source in company_composition:
+                if self.source == "23andMe" or self.source == "AncestryDNA":
+                    i = company_composition.find("v")
+                    self._chip_version = company_composition[i : i + 2]
+            else:
+                logger.warning(
+                    "Detected SNPs data source not found in cluster's company composition"
+                )
+
+        return df

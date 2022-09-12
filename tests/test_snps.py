@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import importlib.util
 import io
+import logging
 import os
 import sys
 import tempfile
@@ -530,6 +531,102 @@ class TestSnps(BaseSNPsTestCase):
     def test_ancestry_no_snps(self):
         for snps in self.empty_snps():
             self.assertDictEqual(snps.predict_ancestry(), {})
+
+    def _get_chip_clusters(self, pos=tuple(range(101, 109)), cluster="c1", length=8):
+        df = pd.DataFrame(
+            {"chrom": ["1"] * length, "pos": pos, "clusters": [cluster] * length},
+            columns=["chrom", "pos", "clusters"],
+        )
+        df.chrom = df.chrom.astype(pd.CategoricalDtype(ordered=False))
+        df.pos = df.pos.astype(np.uint32)
+        df.clusters = df.clusters.astype(pd.CategoricalDtype(ordered=False))
+        return df
+
+    def run_cluster_test(self, f, chip_clusters):
+        mock = Mock(return_value=chip_clusters)
+        with patch("snps.resources.Resources.get_chip_clusters", mock):
+            f()
+
+    def test_cluster(self):
+        def f():
+            s = SNPs("tests/input/23andme.txt")
+            self.assertEqual(s.cluster, "c1")
+
+        self.run_cluster_test(f, self._get_chip_clusters())
+
+    def test_chip(self):
+        def f():
+            s = SNPs("tests/input/23andme.txt")
+            self.assertEqual(s.chip, "HTS iSelect HD")
+
+        self.run_cluster_test(f, self._get_chip_clusters())
+
+    def test_chip_version(self):
+        def f():
+            s = SNPs("tests/input/23andme.txt")
+            self.assertEqual(s.chip_version, "v4")
+
+        self.run_cluster_test(f, self._get_chip_clusters())
+
+    def test_chip_version_na(self):
+        def f():
+            s = SNPs("tests/input/myheritage.csv")
+            self.assertEqual(s.cluster, "c3")
+            self.assertEqual(s.chip_version, "")
+
+        self.run_cluster_test(f, self._get_chip_clusters(cluster="c3"))
+
+    def test_compute_cluster_overlap_set_property_values(self):
+        def f():
+            s = SNPs("tests/input/23andme.txt")
+            s.compute_cluster_overlap()
+            self.assertEqual(s.cluster, "c1")
+            self.assertEqual(s.chip, "HTS iSelect HD")
+            self.assertEqual(s.chip_version, "v4")
+
+        self.run_cluster_test(f, self._get_chip_clusters())
+
+    def test_compute_cluster_overlap_threshold_not_met(self):
+        def f():
+            s = SNPs("tests/input/23andme.txt")
+            self.assertEqual(s.cluster, "")
+
+        self.run_cluster_test(f, self._get_chip_clusters(pos=tuple(range(104, 112))))
+
+    def test_compute_cluster_overlap_source_warning(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            self.assertEqual(s.cluster, "c1")
+
+        with self.assertLogs(level=logging.WARN) as cm:
+            self.run_cluster_test(f, self._get_chip_clusters())
+
+        self.assertIn(
+            "Detected SNPs data source not found in cluster's company composition",
+            cm.output[0],
+        )
+
+    def test_compute_cluster_overlap_remap(self):
+        def f():
+            s = SNPs("tests/input/23andme.txt")
+            # drop SNPs not currently remapped by test mapping data
+            s._snps.drop(["rs4", "rs5", "rs6", "rs7", "rs8"], inplace=True)
+            s._build = 36  # manually set build 36
+            self.assertEqual(s.cluster, "c1")
+            self.assertEqual(s.build, 36)  # ensure copy gets remapped
+
+        mock = Mock(
+            return_value=self._get_test_assembly_mapping_data(
+                "NCBI36",
+                "GRCh37",
+                [1] * 8,
+                [101, 101, 102, 102, 103, 103, 0, 0],
+            )
+        )
+        with patch("snps.resources.Resources.get_assembly_mapping_data", mock):
+            self.run_cluster_test(
+                f, self._get_chip_clusters(pos=tuple(range(101, 104)), length=3)
+            )
 
 
 class TestSNPsMerge(TestSnps):

@@ -683,7 +683,14 @@ class SNPs:
             return True
 
     def save(
-        self, filename="", vcf=False, atomic=True, vcf_alt_unavailable=".", **kwargs
+        self,
+        filename="",
+        vcf=False,
+        atomic=True,
+        vcf_alt_unavailable=".",
+        vcf_qc_only=False,
+        vcf_qc_filter=False,
+        **kwargs,
     ):
         """Save SNPs to file.
 
@@ -697,6 +704,10 @@ class SNPs:
             atomically write output to a file on local filesystem
         vcf_alt_unavailable : str
             representation of VCF ALT allele when ALT is not able to be determined
+        vcf_qc_only : bool
+            for VCF, output only SNPs that pass quality control
+        vcf_qc_filter : bool
+            for VCF, populate VCF FILTER column based on quality control results
         **kwargs
             additional parameters to `pandas.DataFrame.to_csv`
 
@@ -704,6 +715,15 @@ class SNPs:
         -------
         str
             path to file in output directory if SNPs were saved, else empty str
+
+        Notes
+        -----
+        Parameters `vcf_qc_only` and `vcf_qc_filter`, if true, will identify low
+        quality SNPs per
+        :meth:`identify_low_quality_snps() <snps.snps.SNPs.identify_low_quality_snps>`,
+        if not done already. Moreover, these parameters have no effect if this SNPs
+        object does not map to a cluster per
+        :meth:`compute_cluster_overlap() <snps.snps.SNPs.compute_cluster_overlap>`.
 
         References
         ----------
@@ -719,6 +739,8 @@ class SNPs:
             vcf=vcf,
             atomic=atomic,
             vcf_alt_unavailable=vcf_alt_unavailable,
+            vcf_qc_only=vcf_qc_only,
+            vcf_qc_filter=vcf_qc_filter,
             **kwargs,
         )
 

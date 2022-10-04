@@ -259,11 +259,11 @@ class TestWriter(BaseSNPsTestCase):
                     )
 
                     # read result
-                    with open(output, "r") as f:
+                    with open(output, "r", newline="\n") as f:
                         actual = f.read()
 
                     # read expected result
-                    with open(expected_output, "r") as f:
+                    with open(expected_output, "r", newline="\n") as f:
                         expected = f.read()
 
                     self.assertIn(expected, actual)

@@ -42,6 +42,7 @@ import io
 import logging
 import os
 import re
+import warnings
 import zipfile
 import zlib
 
@@ -211,31 +212,9 @@ class Reader:
 
     @classmethod
     def read_file(cls, file, only_detect_source, resources, rsids):
-        """Read `file`.
-
-        Parameters
-        ----------
-        file : str or bytes
-            path to file to load or bytes to load
-        only_detect_source : bool
-            only detect the source of the data
-        resources : Resources
-            instance of Resources
-        rsids : tuple
-            rsids to extract if loading a VCF file
-
-        Returns
-        -------
-        dict
-            dict with the following items:
-
-            snps (pandas.DataFrame)
-                dataframe of parsed SNPs
-            source (str)
-                detected source of SNPs
-            phased (bool)
-                flag indicating if SNPs are phased
-        """
+        warnings.warn(
+            "This method will be removed in a future release.", DeprecationWarning
+        )
         r = cls(file, only_detect_source, resources, rsids)
         return r.read()
 

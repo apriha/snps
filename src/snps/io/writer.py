@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import datetime
 import logging
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -84,6 +85,15 @@ class Writer:
         self._kwargs = kwargs
 
     def write(self):
+        """Write SNPs to file or buffer.
+
+        Returns
+        -------
+        str
+            path to file in output directory if SNPs were saved, else empty str
+        discrepant_vcf_position : pd.DataFrame
+            SNPs with discrepant positions discovered while saving VCF
+        """
         if self._vcf:
             return self._write_vcf()
         else:
@@ -99,30 +109,9 @@ class Writer:
         vcf_alt_unavailable=".",
         **kwargs,
     ):
-        """Save SNPs to file.
-
-        Parameters
-        ----------
-        snps : SNPs
-            SNPs to save to file or write to buffer
-        filename : str or buffer
-            filename for file to save or buffer to write to
-        vcf : bool
-            flag to save file as VCF
-        atomic : bool
-            atomically write output to a file on local filesystem
-        vcf_alt_unavailable : str
-            representation of VCF ALT allele when ALT is not able to be determined
-        **kwargs
-            additional parameters to `pandas.DataFrame.to_csv`
-
-        Returns
-        -------
-        str
-            path to file in output directory if SNPs were saved, else empty str
-        discrepant_vcf_position : pd.DataFrame
-            SNPs with discrepant positions discovered while saving VCF
-        """
+        warnings.warn(
+            "This method will be removed in a future release.", DeprecationWarning
+        )
         w = cls(
             snps=snps,
             filename=filename,

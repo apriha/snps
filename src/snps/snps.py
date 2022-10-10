@@ -672,7 +672,7 @@ class SNPs:
         if "sep" not in kwargs:
             kwargs["sep"] = "\t"
 
-        path, *extra = Writer.write_file(
+        w = Writer(
             snps=self,
             filename=filename,
             vcf=vcf,
@@ -680,6 +680,7 @@ class SNPs:
             vcf_alt_unavailable=vcf_alt_unavailable,
             **kwargs,
         )
+        path, *extra = w.write()
 
         if len(extra) == 1 and not extra[0].empty:
             self._discrepant_vcf_position = extra[0]
@@ -694,7 +695,8 @@ class SNPs:
         return self.snps.loc[self.snps.chrom == chrom] if chrom else self.snps
 
     def _read_raw_data(self, file, only_detect_source, rsids):
-        return Reader.read_file(file, only_detect_source, self._resources, rsids)
+        r = Reader(file, only_detect_source, self._resources, rsids)
+        return r.read()
 
     def _assign_par_snps(self):
         """Assign PAR SNPs to the X or Y chromosome using SNP position.

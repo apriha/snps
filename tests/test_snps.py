@@ -628,6 +628,70 @@ class TestSnps(BaseSNPsTestCase):
                 f, self._get_chip_clusters(pos=tuple(range(101, 104)), length=3)
             )
 
+    def test_snps_qc(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            # identify quality controlled SNPs
+            pd.testing.assert_frame_equal(
+                s.snps_qc, self.generic_snps().drop(["rs4", "rs6"])
+            )
+            # return already identified quality controlled SNPs (test branch)
+            pd.testing.assert_frame_equal(
+                s.snps_qc, self.generic_snps().drop(["rs4", "rs6"])
+            )
+
+        self.run_low_quality_snps_test(f, self.get_low_quality_snps())
+
+    def test_low_quality(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            # identify low quality SNPs
+            pd.testing.assert_frame_equal(
+                s.low_quality, self.generic_snps().loc[["rs4", "rs6"]]
+            )
+            # return already identified low quality SNPs (test branch)
+            pd.testing.assert_frame_equal(
+                s.low_quality, self.generic_snps().loc[["rs4", "rs6"]]
+            )
+
+        self.run_low_quality_snps_test(f, self.get_low_quality_snps())
+
+    def test_snps_qc_low_quality_no_cluster(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            pd.testing.assert_frame_equal(s.snps_qc, self.generic_snps())
+            self.assertEqual(len(s.low_quality), 0)
+
+        self.run_low_quality_snps_test(f, self.get_low_quality_snps(), cluster="")
+
+    def test_identify_low_quality_snps_remap(self):
+        def f():
+            s = SNPs("tests/input/generic.csv")
+            # drop SNPs not currently remapped by test mapping data
+            s._snps.drop(["rs4", "rs5", "rs6", "rs7", "rs8"], inplace=True)
+            s._build = 36  # manually set build 36
+            s.identify_low_quality_snps()
+            pd.testing.assert_frame_equal(
+                s.snps_qc, self.generic_snps().loc[["rs1", "rs3"]]
+            )
+            pd.testing.assert_frame_equal(
+                s.low_quality, self.generic_snps().loc[["rs2"]]
+            )
+            self.assertEqual(s.build, 36)  # ensure copy gets remapped
+
+        mock = Mock(
+            return_value=self._get_test_assembly_mapping_data(
+                "NCBI36",
+                "GRCh37",
+                [1] * 8,
+                [101, 101, 102, 102, 103, 103, 0, 0],
+            )
+        )
+        with patch("snps.resources.Resources.get_assembly_mapping_data", mock):
+            self.run_low_quality_snps_test(
+                f, self.get_low_quality_snps(pos=(102, 1001))
+            )
+
 
 class TestSNPsMerge(TestSnps):
     def assert_results(self, results, expected_results):

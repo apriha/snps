@@ -227,3 +227,102 @@ class TestWriter(BaseSNPsTestCase):
             dest = os.path.join(tmpdir, "snps.csv")
             self.assertEqual(s.save("snps.csv"), dest)
             self.run_parsing_tests(dest, "generic")
+
+    def run_vcf_qc_test(
+        self, expected_output, vcf_qc_only, vcf_qc_filter, cluster="c1"
+    ):
+        def f():
+            with tempfile.TemporaryDirectory() as tmpdir1:
+                s = SNPs("tests/input/generic.csv", output_dir=tmpdir1)
+
+                # setup resource to use test FASTA reference sequence
+                r = Resources()
+                r._reference_sequences["GRCh37"] = {}
+
+                output = os.path.join(tmpdir1, "generic_GRCh37.vcf")
+                with tempfile.TemporaryDirectory() as tmpdir2:
+                    dest = os.path.join(tmpdir2, "generic.fa.gz")
+                    gzip_file("tests/input/generic.fa", dest)
+
+                    seq = ReferenceSequence(ID="1", path=dest)
+
+                    r._reference_sequences["GRCh37"]["1"] = seq
+
+                    # save phased data to VCF
+                    self.assertEqual(
+                        s.save(
+                            vcf=True,
+                            vcf_qc_only=vcf_qc_only,
+                            vcf_qc_filter=vcf_qc_filter,
+                        ),
+                        output,
+                    )
+
+                    # read result
+                    with open(output, "r") as f:
+                        actual = f.read()
+
+                    # read expected result
+                    with open(expected_output, "r") as f:
+                        expected = f.read()
+
+                    self.assertIn(expected, actual)
+
+                    if not vcf_qc_filter or not cluster:
+                        self.assertNotIn("##FILTER=<ID=lq", actual)
+
+        self.run_low_quality_snps_test(f, self.get_low_quality_snps(), cluster=cluster)
+
+    def test_save_vcf_qc_only_F_qc_filter_F(self):
+        self.run_vcf_qc_test(
+            "tests/output/vcf_qc/qc_only_F_qc_filter_F.vcf",
+            vcf_qc_only=False,
+            vcf_qc_filter=False,
+        )
+
+    def test_save_vcf_qc_only_F_qc_filter_T(self):
+        self.run_vcf_qc_test(
+            "tests/output/vcf_qc/qc_only_F_qc_filter_T.vcf",
+            vcf_qc_only=False,
+            vcf_qc_filter=True,
+        )
+
+    def test_save_vcf_qc_only_T_qc_filter_F(self):
+        self.run_vcf_qc_test(
+            "tests/output/vcf_qc/qc_only_T_qc_filter_F.vcf",
+            vcf_qc_only=True,
+            vcf_qc_filter=False,
+        )
+
+    def test_save_vcf_qc_only_T_qc_filter_T(self):
+        self.run_vcf_qc_test(
+            "tests/output/vcf_qc/qc_only_T_qc_filter_T.vcf",
+            vcf_qc_only=True,
+            vcf_qc_filter=True,
+        )
+
+    def test_save_vcf_no_cluster(self):
+        self.run_vcf_qc_test(
+            "tests/output/vcf_qc/qc_only_F_qc_filter_F.vcf",
+            vcf_qc_only=False,
+            vcf_qc_filter=False,
+            cluster="",
+        )
+        self.run_vcf_qc_test(
+            "tests/output/vcf_qc/qc_only_F_qc_filter_F.vcf",
+            vcf_qc_only=False,
+            vcf_qc_filter=True,
+            cluster="",
+        )
+        self.run_vcf_qc_test(
+            "tests/output/vcf_qc/qc_only_F_qc_filter_F.vcf",
+            vcf_qc_only=True,
+            vcf_qc_filter=False,
+            cluster="",
+        )
+        self.run_vcf_qc_test(
+            "tests/output/vcf_qc/qc_only_F_qc_filter_F.vcf",
+            vcf_qc_only=True,
+            vcf_qc_filter=True,
+            cluster="",
+        )

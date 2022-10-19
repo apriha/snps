@@ -43,6 +43,7 @@ import numpy as np
 import pandas as pd
 
 import snps
+from snps.io import get_empty_snps_dataframe
 from snps.utils import save_df_as_csv, clean_str
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,8 @@ class Writer:
         vcf=False,
         atomic=True,
         vcf_alt_unavailable=".",
+        vcf_qc_only=False,
+        vcf_qc_filter=False,
         **kwargs,
     ):
         """Initialize a `Writer`.
@@ -74,6 +77,10 @@ class Writer:
             atomically write output to a file on local filesystem
         vcf_alt_unavailable : str
             representation of VCF ALT allele when ALT is not able to be determined
+        vcf_qc_only : bool
+            for VCF, output only SNPs that pass quality control
+        vcf_qc_filter : bool
+            for VCF, populate VCF FILTER column based on quality control results
         **kwargs
             additional parameters to `pandas.DataFrame.to_csv`
         """
@@ -82,6 +89,8 @@ class Writer:
         self._vcf = vcf
         self._atomic = atomic
         self._vcf_alt_unavailable = vcf_alt_unavailable
+        self._vcf_qc_only = vcf_qc_only
+        self._vcf_qc_filter = vcf_qc_filter
         self._kwargs = kwargs
 
     def write(self):
@@ -107,6 +116,8 @@ class Writer:
         vcf=False,
         atomic=True,
         vcf_alt_unavailable=".",
+        vcf_qc_only=False,
+        vcf_qc_filter=False,
         **kwargs,
     ):
         warnings.warn(
@@ -118,6 +129,8 @@ class Writer:
             vcf=vcf,
             atomic=atomic,
             vcf_alt_unavailable=vcf_alt_unavailable,
+            vcf_qc_only=vcf_qc_only,
+            vcf_qc_filter=vcf_qc_filter,
             **kwargs,
         )
         return w.write()
@@ -246,6 +259,14 @@ class Writer:
                     "assembly": self._snps.assembly,
                     "chrom": chrom,
                     "snps": pd.DataFrame(df.loc[(df["chrom"] == chrom)]),
+                    "cluster": self._snps.cluster
+                    if self._vcf_qc_only or self._vcf_qc_filter
+                    else "",
+                    "low_quality_snps": self._snps.low_quality
+                    if self._vcf_qc_only or self._vcf_qc_filter
+                    else get_empty_snps_dataframe(),
+                    "vcf_qc_only": self._vcf_qc_only,
+                    "vcf_qc_filter": self._vcf_qc_filter,
                 }
             )
 
@@ -268,6 +289,10 @@ class Writer:
         discrepant_vcf_position = pd.concat(discrepant_vcf_position)
 
         comment += "".join(contigs)
+
+        if self._vcf_qc_filter and self._snps.cluster:
+            comment += '##FILTER=<ID=lq,Description="Low quality SNP per Lu et al.: https://doi.org/10.1016/j.csbj.2021.06.040">\n'
+
         comment += '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n'
         comment += "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE\n"
 
@@ -291,6 +316,10 @@ class Writer:
         assembly = task["assembly"]
         chrom = task["chrom"]
         snps = task["snps"]
+        cluster = task["cluster"]
+        low_quality_snps = task["low_quality_snps"]
+        vcf_qc_only = task["vcf_qc_only"]
+        vcf_qc_filter = task["vcf_qc_filter"]
 
         if len(snps.loc[snps["genotype"].notnull()]) == 0:
             return {
@@ -303,6 +332,16 @@ class Writer:
         seq = seqs[chrom]
 
         contig = f'##contig=<ID={seq.ID},URL={seq.url},length={seq.length},assembly={seq.build},md5={seq.md5},species="{seq.species}">\n'
+
+        if vcf_qc_only and cluster:
+            # drop low quality SNPs if SNPs object maps to a cluster
+            snps = snps.drop(snps.index.intersection(low_quality_snps.index))
+
+        if vcf_qc_filter and cluster:
+            # initialize filter for  all SNPs if SNPs object maps to a cluster,
+            snps["filter"] = "PASS"
+            # then indicate SNPs that were identified as low quality
+            snps.loc[snps.index.intersection(low_quality_snps.index), "filter"] = "lq"
 
         snps = snps.reset_index()
 
@@ -338,6 +377,9 @@ class Writer:
         df["CHROM"] = snps["chrom"]
         df["POS"] = snps["pos"]
         df["ID"] = snps["rsid"]
+
+        if vcf_qc_filter and cluster:
+            df["FILTER"] = snps["filter"]
 
         # drop SNPs with discrepant positions (outside reference sequence)
         discrepant_vcf_position = snps.loc[

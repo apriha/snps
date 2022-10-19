@@ -36,6 +36,7 @@ snps.io.reader
     :members:
     :undoc-members:
     :show-inheritance:
+    :exclude-members: read_file
 
 snps.io.writer
 ~~~~~~~~~~~~~~
@@ -44,6 +45,7 @@ snps.io.writer
     :members:
     :undoc-members:
     :show-inheritance:
+    :exclude-members: write_file
 
 snps.resources
 --------------

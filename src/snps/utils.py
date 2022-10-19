@@ -184,12 +184,12 @@ def save_df_as_csv(
         elif atomic:
             with atomic_write(destination, mode="w", overwrite=True) as f:
                 f.write(s)
-                # https://stackoverflow.com/a/29233924
-                df.to_csv(f, **kwargs)
+            # https://stackoverflow.com/a/29233924
+            df.to_csv(destination, mode="a", **kwargs)
         else:
             with open(destination, mode="w") as f:
                 f.write(s)
-                df.to_csv(f, **kwargs)
+            df.to_csv(destination, mode="a", **kwargs)
 
         return destination
     else:

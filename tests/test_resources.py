@@ -132,6 +132,7 @@ class TestResources(BaseSNPsTestCase):
             # mock download of test data for each resource
             self._generate_test_gsa_resources()
             self._generate_test_chip_clusters()
+            self._generate_test_low_quality_snps()
 
             # generate test data for permutations of remapping data
             effects = [{"mappings": []} for _ in range(1, 26)]
@@ -505,3 +506,22 @@ class TestResources(BaseSNPsTestCase):
         )
 
         self.assertEqual(len(chip_clusters), 2135214)
+
+    def _generate_test_low_quality_snps(self):
+        s = "c1\t" + "1:1," * 56024 + "1:1\n"
+        mock = mock_open(read_data=gzip.compress(s.encode()))
+        with patch("urllib.request.urlopen", mock):
+            self.resource.get_low_quality_snps()
+
+    def test_get_low_quality_snps(self):
+        def f():
+            # mock download of test data for low quality SNPs
+            self._generate_test_low_quality_snps()
+            # load test resource
+            return self.resource.get_low_quality_snps()
+
+        low_quality_snps = (
+            self.resource.get_low_quality_snps() if self.downloads_enabled else f()
+        )
+
+        self.assertEqual(len(low_quality_snps), 56025)

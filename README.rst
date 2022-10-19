@@ -29,6 +29,7 @@ Build / Assembly Detection and Remapping
 
 Data Cleaning
 `````````````
+- Perform quality control (QC) / filter low quality SNPs based on `chip clusters <https://doi.org/10.1016/j.csbj.2021.06.040>`_
 - Fix several common issues when loading SNPs
 - Sort SNPs based on chromosome and position
 - Deduplicate RSIDs

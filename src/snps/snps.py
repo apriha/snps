@@ -104,6 +104,7 @@ class SNPs:
         self._discrepant_XY = get_empty_snps_dataframe()
         self._heterozygous_MT = get_empty_snps_dataframe()
         self._discrepant_vcf_position = get_empty_snps_dataframe()
+        self._low_quality = get_empty_snps_dataframe().index
         self._discrepant_merge_positions = pd.DataFrame()
         self._discrepant_merge_genotypes = pd.DataFrame()
         self._source = []
@@ -223,6 +224,30 @@ class SNPs:
         return self._snps
 
     @property
+    def snps_qc(self):
+        """Normalized SNPs, after quality control.
+
+        Any low quality SNPs, identified per
+        :meth:`identify_low_quality_snps() <snps.snps.SNPs.identify_low_quality_snps>`,
+        are not included in the result.
+
+        Returns
+        -------
+        pandas.DataFrame
+            normalized ``snps`` dataframe
+        """
+        if len(self._low_quality) == 0:
+            # ensure low quality SNPs, if any, are identified
+            self.identify_low_quality_snps()
+
+        if len(self._low_quality) > 0:
+            # filter out low quality SNPs
+            return self._snps.drop(self._low_quality)
+        else:
+            # no low quality SNPs to filter
+            return self._snps
+
+    @property
     def duplicate(self):
         """Duplicate SNPs.
 
@@ -271,6 +296,22 @@ class SNPs:
             normalized ``snps`` dataframe
         """
         return self._discrepant_vcf_position
+
+    @property
+    def low_quality(self):
+        """SNPs identified as low quality, if any, per
+        :meth:`identify_low_quality_snps() <snps.snps.SNPs.identify_low_quality_snps>`.
+
+        Returns
+        -------
+        pandas.DataFrame
+            normalized ``snps`` dataframe
+        """
+        if len(self._low_quality) == 0:
+            # ensure low quality SNPs, if any, are identified
+            self.identify_low_quality_snps()
+
+        return self._snps.loc[self._low_quality]
 
     @property
     def discrepant_merge_positions(self):
@@ -642,7 +683,14 @@ class SNPs:
             return True
 
     def save(
-        self, filename="", vcf=False, atomic=True, vcf_alt_unavailable=".", **kwargs
+        self,
+        filename="",
+        vcf=False,
+        atomic=True,
+        vcf_alt_unavailable=".",
+        vcf_qc_only=False,
+        vcf_qc_filter=False,
+        **kwargs,
     ):
         """Save SNPs to file.
 
@@ -656,6 +704,10 @@ class SNPs:
             atomically write output to a file on local filesystem
         vcf_alt_unavailable : str
             representation of VCF ALT allele when ALT is not able to be determined
+        vcf_qc_only : bool
+            for VCF, output only SNPs that pass quality control
+        vcf_qc_filter : bool
+            for VCF, populate VCF FILTER column based on quality control results
         **kwargs
             additional parameters to `pandas.DataFrame.to_csv`
 
@@ -663,6 +715,15 @@ class SNPs:
         -------
         str
             path to file in output directory if SNPs were saved, else empty str
+
+        Notes
+        -----
+        Parameters `vcf_qc_only` and `vcf_qc_filter`, if true, will identify low
+        quality SNPs per
+        :meth:`identify_low_quality_snps() <snps.snps.SNPs.identify_low_quality_snps>`,
+        if not done already. Moreover, these parameters have no effect if this SNPs
+        object does not map to a cluster per
+        :meth:`compute_cluster_overlap() <snps.snps.SNPs.compute_cluster_overlap>`.
 
         References
         ----------
@@ -678,6 +739,8 @@ class SNPs:
             vcf=vcf,
             atomic=atomic,
             vcf_alt_unavailable=vcf_alt_unavailable,
+            vcf_qc_only=vcf_qc_only,
+            vcf_qc_filter=vcf_qc_filter,
             **kwargs,
         )
 
@@ -1897,3 +1960,39 @@ class SNPs:
                 )
 
         return df
+
+    def identify_low_quality_snps(self):
+        """Identify low quality SNPs based on chip clusters.
+
+        Any low quality SNPs are removed from the
+        :meth:`snps_qc <snps.snps.SNPs.snps_qc>` dataframe and are made
+        available as :meth:`low_quality <snps.snps.SNPs.low_quality>`.
+
+        Notes
+        -----
+        Chip clusters, which are defined in [1]_, are associated with low quality SNPs.
+        As such, low quality SNPs will only be identified when this SNPs object corresponds
+        to a cluster per
+        :meth:`compute_cluster_overlap() <snps.snps.SNPs.compute_cluster_overlap>`.
+        """
+        if self.build != 37:
+            to_remap = copy.deepcopy(self)
+            to_remap.remap(37)  # clusters are relative to Build 37
+            self_snps = to_remap._snps[["chrom", "pos"]]
+        else:
+            self_snps = self._snps[["chrom", "pos"]]
+
+        low_quality_snps = self._resources.get_low_quality_snps()
+
+        if self.cluster:
+            cluster_snps = low_quality_snps.loc[
+                low_quality_snps.cluster.str.contains(self.cluster)
+            ][["chrom", "pos"]]
+            # keep index after merge; https://stackoverflow.com/a/11982843
+            merged = (
+                self_snps.reset_index()
+                .merge(cluster_snps, how="inner")
+                .set_index("rsid")
+            )
+
+            self._low_quality = merged.index

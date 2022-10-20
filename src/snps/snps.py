@@ -692,38 +692,31 @@ class SNPs:
         vcf_qc_filter=False,
         **kwargs,
     ):
+        warnings.warn(
+            "Method `save` has been replaced by `to_csv`, `to_tsv`, and `to_vcf`.",
+            DeprecationWarning,
+        )
+        return self._save(
+            filename,
+            vcf,
+            atomic,
+            vcf_alt_unavailable,
+            vcf_qc_only,
+            vcf_qc_filter,
+            **kwargs,
+        )
+
+    def _save(
+        self,
+        filename="",
+        vcf=False,
+        atomic=True,
+        vcf_alt_unavailable=".",
+        vcf_qc_only=False,
+        vcf_qc_filter=False,
+        **kwargs,
+    ):
         """Save SNPs to file.
-
-        Parameters
-        ----------
-        filename : str or buffer
-            filename for file to save or buffer to write to
-        vcf : bool
-            flag to save file as VCF
-        atomic : bool
-            atomically write output to a file on local filesystem
-        vcf_alt_unavailable : str
-            representation of VCF ALT allele when ALT is not able to be determined
-        vcf_qc_only : bool
-            for VCF, output only SNPs that pass quality control
-        vcf_qc_filter : bool
-            for VCF, populate VCF FILTER column based on quality control results
-        **kwargs
-            additional parameters to `pandas.DataFrame.to_csv`
-
-        Returns
-        -------
-        str
-            path to file in output directory if SNPs were saved, else empty str
-
-        Notes
-        -----
-        Parameters `vcf_qc_only` and `vcf_qc_filter`, if true, will identify low
-        quality SNPs per
-        :meth:`identify_low_quality_snps() <snps.snps.SNPs.identify_low_quality_snps>`,
-        if not done already. Moreover, these parameters have no effect if this SNPs
-        object does not map to a cluster per
-        :meth:`compute_cluster_overlap() <snps.snps.SNPs.compute_cluster_overlap>`.
 
         References
         ----------
@@ -753,6 +746,102 @@ class SNPs:
             )
 
         return path
+
+    def to_csv(self, filename="", atomic=True, **kwargs):
+        """Output SNPs as comma-separated values.
+
+        Parameters
+        ----------
+        filename : str or buffer
+            filename for file to save or buffer to write to
+        atomic : bool
+            atomically write output to a file on local filesystem
+        **kwargs
+            additional parameters to `pandas.DataFrame.to_csv`
+
+        Returns
+        -------
+        str
+            path to file in output directory if SNPs were saved, else empty str
+        """
+        kwargs["sep"] = ","
+        return self._save(filename=filename, atomic=atomic, **kwargs)
+
+    def to_tsv(self, filename="", atomic=True, **kwargs):
+        """Output SNPs as tab-separated values.
+
+        Note that this results in the same default output as `save`.
+
+        Parameters
+        ----------
+        filename : str or buffer
+            filename for file to save or buffer to write to
+        atomic : bool
+            atomically write output to a file on local filesystem
+        **kwargs
+            additional parameters to `pandas.DataFrame.to_csv`
+
+        Returns
+        -------
+        str
+            path to file in output directory if SNPs were saved, else empty str
+        """
+        kwargs["sep"] = "\t"
+        return self._save(filename=filename, atomic=atomic, **kwargs)
+
+    def to_vcf(
+        self,
+        filename="",
+        atomic=True,
+        alt_unavailable=".",
+        qc_only=False,
+        qc_filter=False,
+        **kwargs,
+    ):
+        """Output SNPs as Variant Call Format.
+
+        Parameters
+        ----------
+        filename : str or buffer
+            filename for file to save or buffer to write to
+        atomic : bool
+            atomically write output to a file on local filesystem
+        alt_unavailable : str
+            representation of ALT allele when ALT is not able to be determined
+        qc_only : bool
+            output only SNPs that pass quality control
+        qc_filter : bool
+            populate FILTER column based on quality control results
+        **kwargs
+            additional parameters to `pandas.DataFrame.to_csv`
+
+        Returns
+        -------
+        str
+            path to file in output directory if SNPs were saved, else empty str
+
+        Notes
+        -----
+        Parameters `qc_only` and `qc_filter`, if true, will identify low quality SNPs per
+        :meth:`identify_low_quality_snps() <snps.snps.SNPs.identify_low_quality_snps>`,
+        if not done already. Moreover, these parameters have no effect if this SNPs
+        object does not map to a cluster per
+        :meth:`compute_cluster_overlap() <snps.snps.SNPs.compute_cluster_overlap>`.
+
+        References
+        ----------
+        1. The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
+           https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        """
+        return self._save(
+            filename=filename,
+            vcf=True,
+            atomic=atomic,
+            vcf_alt_unavailable=alt_unavailable,
+            vcf_qc_only=qc_only,
+            vcf_qc_filter=qc_filter,
+            **kwargs,
+        )
 
     def _filter(self, chrom=""):
         return self.snps.loc[self.snps.chrom == chrom] if chrom else self.snps
@@ -1645,8 +1734,11 @@ class SNPs:
         return self.remap(target_assembly, complement_bases)
 
     def save_snps(self, filename="", vcf=False, atomic=True, **kwargs):
-        warnings.warn("This method has been renamed to `save`.", DeprecationWarning)
-        return self.save(filename, vcf, atomic, **kwargs)
+        warnings.warn(
+            "Method `save_snps` has been replaced by `to_csv`, `to_tsv`, and `to_vcf`.",
+            DeprecationWarning,
+        )
+        return self._save(filename, vcf, atomic, **kwargs)
 
     @property
     def snp_count(self):

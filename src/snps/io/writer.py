@@ -269,8 +269,6 @@ class Writer:
                     "low_quality_snps": self._snps.low_quality
                     if self._vcf_qc_only or self._vcf_qc_filter
                     else get_empty_snps_dataframe(),
-                    "vcf_qc_only": self._vcf_qc_only,
-                    "vcf_qc_filter": self._vcf_qc_filter,
                 }
             )
 
@@ -322,8 +320,6 @@ class Writer:
         snps = task["snps"]
         cluster = task["cluster"]
         low_quality_snps = task["low_quality_snps"]
-        vcf_qc_only = task["vcf_qc_only"]
-        vcf_qc_filter = task["vcf_qc_filter"]
 
         if len(snps.loc[snps["genotype"].notnull()]) == 0:
             return {
@@ -337,11 +333,11 @@ class Writer:
 
         contig = f'##contig=<ID={seq.ID},URL={seq.url},length={seq.length},assembly={seq.build},md5={seq.md5},species="{seq.species}">\n'
 
-        if vcf_qc_only and cluster:
+        if self._vcf_qc_only and cluster:
             # drop low quality SNPs if SNPs object maps to a cluster
             snps = snps.drop(snps.index.intersection(low_quality_snps.index))
 
-        if vcf_qc_filter and cluster:
+        if self._vcf_qc_filter and cluster:
             # initialize filter for  all SNPs if SNPs object maps to a cluster,
             snps["filter"] = "PASS"
             # then indicate SNPs that were identified as low quality
@@ -382,7 +378,7 @@ class Writer:
         df["POS"] = snps["pos"]
         df["ID"] = snps["rsid"]
 
-        if vcf_qc_filter and cluster:
+        if self._vcf_qc_filter and cluster:
             df["FILTER"] = snps["filter"]
 
         # drop SNPs with discrepant positions (outside reference sequence)

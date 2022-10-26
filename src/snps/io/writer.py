@@ -59,6 +59,7 @@ class Writer:
         vcf=False,
         atomic=True,
         vcf_alt_unavailable=".",
+        vcf_chrom_prefix="",
         vcf_qc_only=False,
         vcf_qc_filter=False,
         **kwargs,
@@ -77,6 +78,8 @@ class Writer:
             atomically write output to a file on local filesystem
         vcf_alt_unavailable : str
             representation of VCF ALT allele when ALT is not able to be determined
+        vcf_chrom_prefix : str
+            prefix for chromosomes in VCF CHROM column
         vcf_qc_only : bool
             for VCF, output only SNPs that pass quality control
         vcf_qc_filter : bool
@@ -89,6 +92,7 @@ class Writer:
         self._vcf = vcf
         self._atomic = atomic
         self._vcf_alt_unavailable = vcf_alt_unavailable
+        self._vcf_chrom_prefix = vcf_chrom_prefix
         self._vcf_qc_only = vcf_qc_only
         self._vcf_qc_filter = vcf_qc_filter
         self._kwargs = kwargs
@@ -374,7 +378,7 @@ class Writer:
             }
         )
 
-        df["CHROM"] = snps["chrom"]
+        df["CHROM"] = self._vcf_chrom_prefix + snps["chrom"]
         df["POS"] = snps["pos"]
         df["ID"] = snps["rsid"]
 

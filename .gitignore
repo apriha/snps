@@ -121,3 +121,5 @@ tests/input/generic.fa.gz
 tests/input/testvcf.vcf.gz
 !tests/output/
 !tests/output/vcf_qc/
+!tests/output/vcf_chrom_prefix_chr.vcf
+!tests/output/vcf_generic.vcf

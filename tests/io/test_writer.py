@@ -44,7 +44,9 @@ from tests import BaseSNPsTestCase
 
 
 class TestWriter(BaseSNPsTestCase):
-    def run_writer_test(self, func_str, filename="", output_file=""):
+    def run_writer_test(
+        self, func_str, filename="", output_file="", expected_output="", **kwargs
+    ):
         if func_str == "to_vcf":
             with tempfile.TemporaryDirectory() as tmpdir1:
                 s = SNPs("tests/input/testvcf.vcf", output_dir=tmpdir1)
@@ -62,9 +64,22 @@ class TestWriter(BaseSNPsTestCase):
                     r._reference_sequences["GRCh37"]["1"] = seq
 
                     if not filename:
-                        self.assertEqual(s.to_vcf(), output)
+                        result = s.to_vcf(**kwargs)
                     else:
-                        self.assertEqual(s.to_vcf(filename), output)
+                        result = s.to_vcf(filename, **kwargs)
+
+                    self.assertEqual(result, output)
+
+                    if expected_output:
+                        # read result
+                        with open(output, "r") as f:
+                            actual = f.read()
+
+                        # read expected result
+                        with open(expected_output, "r") as f:
+                            expected = f.read()
+
+                        self.assertIn(expected, actual)
 
                 self.run_parsing_tests_vcf(output)
         else:
@@ -95,10 +110,22 @@ class TestWriter(BaseSNPsTestCase):
         )
 
     def test_to_vcf(self):
-        self.run_writer_test("to_vcf", output_file="vcf_GRCh37.vcf")
+        self.run_writer_test(
+            "to_vcf",
+            output_file="vcf_GRCh37.vcf",
+            expected_output="tests/output/vcf_generic.vcf",
+        )
 
     def test_to_vcf_filename(self):
         self.run_writer_test("to_vcf", filename="vcf.vcf", output_file="vcf.vcf")
+
+    def test_to_vcf_chrom_prefix(self):
+        self.run_writer_test(
+            "to_vcf",
+            output_file="vcf_GRCh37.vcf",
+            expected_output="tests/output/vcf_chrom_prefix_chr.vcf",
+            chrom_prefix="chr",
+        )
 
     def test_save_snps_false_positive_build(self):
         with tempfile.TemporaryDirectory() as tmpdir:

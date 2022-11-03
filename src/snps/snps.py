@@ -712,6 +712,7 @@ class SNPs:
         vcf=False,
         atomic=True,
         vcf_alt_unavailable=".",
+        vcf_chrom_prefix="",
         vcf_qc_only=False,
         vcf_qc_filter=False,
         **kwargs,
@@ -732,6 +733,7 @@ class SNPs:
             vcf=vcf,
             atomic=atomic,
             vcf_alt_unavailable=vcf_alt_unavailable,
+            vcf_chrom_prefix=vcf_chrom_prefix,
             vcf_qc_only=vcf_qc_only,
             vcf_qc_filter=vcf_qc_filter,
             **kwargs,
@@ -794,6 +796,7 @@ class SNPs:
         filename="",
         atomic=True,
         alt_unavailable=".",
+        chrom_prefix="",
         qc_only=False,
         qc_filter=False,
         **kwargs,
@@ -808,6 +811,8 @@ class SNPs:
             atomically write output to a file on local filesystem
         alt_unavailable : str
             representation of ALT allele when ALT is not able to be determined
+        chrom_prefix : str
+            prefix for chromosomes in VCF CHROM column
         qc_only : bool
             output only SNPs that pass quality control
         qc_filter : bool
@@ -838,6 +843,7 @@ class SNPs:
             vcf=True,
             atomic=atomic,
             vcf_alt_unavailable=alt_unavailable,
+            vcf_chrom_prefix=chrom_prefix,
             vcf_qc_only=qc_only,
             vcf_qc_filter=qc_filter,
             **kwargs,

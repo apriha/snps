@@ -29,6 +29,7 @@ Build / Assembly Detection and Remapping
 
 Data Cleaning
 `````````````
+- Perform quality control (QC) / filter low quality SNPs based on `chip clusters <https://doi.org/10.1016/j.csbj.2021.06.040>`_
 - Fix several common issues when loading SNPs
 - Sort SNPs based on chromosome and position
 - Deduplicate RSIDs
@@ -39,6 +40,7 @@ Data Cleaning
 Analysis
 ````````
 - Derive sex from SNPs
+- Detect deduced genotype / chip array and chip version based on `chip clusters <https://doi.org/10.1016/j.csbj.2021.06.040>`_
 - Predict ancestry from SNPs (when installed with `ezancestry <https://github.com/arvkevi/ezancestry>`_)
 
 Supported Genotype Files
@@ -213,14 +215,14 @@ Ok, so far we've merged the SNPs from two files (ensuring the same build in the 
 identifying discrepancies along the way). Then, we remapped the SNPs to Build 38. Now, let's save
 the merged and remapped dataset consisting of 1M+ SNPs to a tab-separated values (TSV) file:
 
->>> saved_snps = s.save("out.txt")
+>>> saved_snps = s.to_tsv("out.txt")
 Saving output/out.txt
 >>> print(saved_snps)
 output/out.txt
 
 Moreover, let's get the reference sequences for this assembly and save the SNPs as a VCF file:
 
->>> saved_snps = s.save("out.vcf", vcf=True)
+>>> saved_snps = s.to_vcf("out.vcf")
 Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.1.fa.gz
 Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.2.fa.gz
 Downloading resources/fasta/GRCh38/Homo_sapiens.GRCh38.dna.chromosome.3.fa.gz

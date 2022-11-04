@@ -43,6 +43,7 @@ from multiprocessing import Pool
 import os
 import re
 import shutil
+import tempfile
 import zipfile
 
 from atomicwrites import atomic_write
@@ -182,14 +183,19 @@ def save_df_as_csv(
             df.to_csv(destination, **kwargs)
             destination.seek(0)
         elif atomic:
-            with atomic_write(destination, mode="w", overwrite=True) as f:
+            fd, tmp_path = tempfile.mkstemp(dir=path)
+
+            with open(fd, mode="w") as f:
                 f.write(s)
-                # https://stackoverflow.com/a/29233924
-                df.to_csv(f, **kwargs)
+
+            # https://stackoverflow.com/a/29233924
+            df.to_csv(tmp_path, mode="a", **kwargs)
+
+            os.rename(tmp_path, destination)
         else:
             with open(destination, mode="w") as f:
                 f.write(s)
-                df.to_csv(f, **kwargs)
+            df.to_csv(destination, mode="a", **kwargs)
 
         return destination
     else:

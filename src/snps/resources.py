@@ -90,6 +90,8 @@ class Resources(metaclass=Singleton):
         self._gsa_chrpos_map = None
         self._dbsnp_151_37_reverse = None
         self._opensnp_datadump_filenames = []
+        self._chip_clusters = None
+        self._low_quality_snps = None
 
     def get_reference_sequences(
         self,
@@ -235,6 +237,8 @@ class Resources(metaclass=Singleton):
                 source, target
             )
         resources["gsa_resources"] = self.get_gsa_resources()
+        resources["chip_clusters"] = self.get_chip_clusters()
+        resources["low_quality_snps"] = self.get_low_quality_snps()
         return resources
 
     def get_all_reference_sequences(self, **kwargs):
@@ -268,6 +272,90 @@ class Resources(metaclass=Singleton):
             "chrpos_map": self.get_gsa_chrpos(),
             "dbsnp_151_37_reverse": self.get_dbsnp_151_37_reverse(),
         }
+
+    def get_chip_clusters(self):
+        """Get resource for identifying deduced genotype / chip array based on chip clusters.
+
+        Returns
+        -------
+        pandas.DataFrame
+
+        References
+        ----------
+        1. Chang Lu, Bastian Greshake Tzovaras, Julian Gough, A survey of
+           direct-to-consumer genotype data, and quality control tool
+           (GenomePrep) for research, Computational and Structural
+           Biotechnology Journal, Volume 19, 2021, Pages 3747-3754, ISSN
+           2001-0370, https://doi.org/10.1016/j.csbj.2021.06.040.
+        """
+        if self._chip_clusters is None:
+            chip_clusters_path = self._download_file(
+                "https://supfam.mrc-lmb.cam.ac.uk/GenomePrep/datadir/the_list.tsv.gz",
+                "chip_clusters.tsv.gz",
+            )
+
+            df = pd.read_csv(
+                chip_clusters_path,
+                sep="\t",
+                names=["locus", "clusters"],
+                dtype={"locus": object, "clusters": pd.CategoricalDtype(ordered=False)},
+            )
+            clusters = df.clusters
+            df = df.locus.str.split(":", expand=True)
+            df.rename({0: "chrom", 1: "pos"}, axis=1, inplace=True)
+            df.pos = df.pos.astype(np.uint32)
+            df.chrom = df.chrom.astype(pd.CategoricalDtype(ordered=False))
+            df["clusters"] = clusters
+
+            self._chip_clusters = df
+
+        return self._chip_clusters
+
+    def get_low_quality_snps(self):
+        """Get listing of low quality SNPs for quality control based on chip clusters.
+
+        Returns
+        -------
+        pandas.DataFrame
+
+        References
+        ----------
+        1. Chang Lu, Bastian Greshake Tzovaras, Julian Gough, A survey of
+           direct-to-consumer genotype data, and quality control tool
+           (GenomePrep) for research, Computational and Structural
+           Biotechnology Journal, Volume 19, 2021, Pages 3747-3754, ISSN
+           2001-0370, https://doi.org/10.1016/j.csbj.2021.06.040.
+        """
+        if self._low_quality_snps is None:
+            low_quality_snps_path = self._download_file(
+                "https://supfam.mrc-lmb.cam.ac.uk/GenomePrep/datadir/badalleles.tsv.gz",
+                "low_quality_snps.tsv.gz",
+            )
+
+            df = pd.read_csv(
+                low_quality_snps_path,
+                sep="\t",
+                names=["cluster", "loci"],
+            )
+
+            cluster_dfs = []
+            for row in df.itertuples():
+                loci = row.loci.split(",")
+                cluster_dfs.append(
+                    pd.DataFrame({"cluster": [row.cluster] * len(loci), "locus": loci})
+                )
+
+            df = pd.concat(cluster_dfs)
+            df.reset_index(inplace=True, drop=True)
+            cluster = df.cluster.astype(pd.CategoricalDtype(ordered=False))
+            df = df.locus.str.split(":", expand=True)
+            df.rename({0: "chrom", 1: "pos"}, axis=1, inplace=True)
+            df.pos = df.pos.astype(np.uint32)
+            df.chrom = df.chrom.astype(pd.CategoricalDtype(ordered=False))
+            df["cluster"] = cluster
+            self._low_quality_snps = df
+
+        return self._low_quality_snps
 
     def get_dbsnp_151_37_reverse(self):
         """Get and load RSIDs that are on the reference reverse (-) strand in dbSNP 151 and lower.

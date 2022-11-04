@@ -109,7 +109,7 @@ output*/
 resources/*
 
 # snps tests
-tests/output/
+tests/output/*
 tests/resources/*
 !tests/resources/gsa_chrpos_map.txt
 !tests/resources/gsa_rsid_map.txt
@@ -119,3 +119,7 @@ tests/input/discrepant_snps[12].csv
 tests/input/ftdna.csv.gz
 tests/input/generic.fa.gz
 tests/input/testvcf.vcf.gz
+!tests/output/
+!tests/output/vcf_qc/
+!tests/output/vcf_chrom_prefix_chr.vcf
+!tests/output/vcf_generic.vcf

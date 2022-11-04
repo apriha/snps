@@ -424,3 +424,6 @@ class TestReader(BaseSNPsTestCase):
         self.run_parsing_tests_vcf(
             "tests/input/unannotated_testvcf.vcf", "vcf", unannotated=True, build=0
         )
+
+    def test_read_vcf_chr_prefix(self):
+        self.run_parsing_tests_vcf("tests/input/testvcf_chr_prefix.vcf")

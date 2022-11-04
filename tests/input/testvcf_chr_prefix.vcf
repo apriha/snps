@@ -1,0 +1,23 @@
+##fileformat=VCFv4.1
+##fileDate=20190527
+##
+##
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLEID
+chr1	101	rs1	A	.	.	.	.	GT	0/0
+chr1	102	rs2	.	C	.	.	.	GT	1/1
+chr1	103	rs3	G	T	.	.	.	GT	0|0
+chr1	104	rs4	C	T	.	.	.	GT	1/1
+chr1	105	rs5	C	.	.	.	.	GT	./.
+chr1	106	rs6	G	C	.	.	.	GT	0/1
+chr1	107	rs7	G	T,C	.	.	.	GT	1/2
+chr1	108	rs8	A	T	.	.	.	GT	0/1
+chr1	109	.	C	T	.	.	.	GT	0/1
+chr1	110	rs10	A	AGC	.	.	.	GT	0/1
+chr1	111	rs11	AGC	A	.	.	.	GT	0/1
+chr1	112	rs12	.	A	.	.	.	GT	0/1
+chr1	113	rs13	.	A	.	.	.	GT	1/0
+chr1	114	rs14	A	.	.	.	.	GT	0/1
+chr1	115	rs15	A	.	.	.	.	GT	1/0
+chr1	116	rs16	A	A	.	.	.	GT	0/.
+chr1	117	rs17	A	A	.	.	.	GT	./0

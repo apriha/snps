@@ -35,7 +35,7 @@ import os
 import shutil
 import tempfile
 from unittest import TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, PropertyMock
 
 import numpy as np
 import pandas as pd
@@ -738,3 +738,20 @@ class BaseSNPsTestCase(TestCase):
             snps.build_detected
         )
         self.make_normalized_dataframe_assertions(snps.snps)
+
+    def get_low_quality_snps(self, pos=(104, 106, 1001), cluster="c1"):
+        df = pd.DataFrame(
+            {"chrom": ["1"] * len(pos), "pos": pos, "cluster": [cluster] * len(pos)},
+            columns=["chrom", "pos", "cluster"],
+        )
+        df.chrom = df.chrom.astype(pd.CategoricalDtype(ordered=False))
+        df.pos = df.pos.astype(np.uint32)
+        df.cluster = df.cluster.astype(pd.CategoricalDtype(ordered=False))
+        return df
+
+    def run_low_quality_snps_test(self, f, low_quality_snps, cluster="c1"):
+        mock1 = PropertyMock(return_value=cluster)
+        mock2 = Mock(return_value=low_quality_snps)
+        with patch("snps.SNPs.cluster", mock1):
+            with patch("snps.resources.Resources.get_low_quality_snps", mock2):
+                f()

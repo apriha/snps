@@ -177,7 +177,7 @@ class Reader:
             d = self.read_generic(file, compression)
         elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
             d = self.read_generic(file, compression, skip=0)
-        elif ("##" in first_line and "vcf" in comments.lower() and "#CHROM" in comments.lower()) or "##contig" in comments.lower():
+        elif ("##" in first_line and "vcf" in comments.lower() and "#CHROM\tPOS" in comments) or "##contig" in comments.lower():
             d = self.read_vcf(file, compression, "vcf", self._rsids)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
             d = self.read_genes_for_good(file, compression)

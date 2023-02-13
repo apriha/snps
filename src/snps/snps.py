@@ -119,7 +119,6 @@ class SNPs:
         self._chip_version = ""
 
         if file:
-
             d = self._read_raw_data(file, only_detect_source, rsids)
 
             # Replace multiple rsids separated by commas in index with the first rsid. E.g. rs1,rs2 -> rs1
@@ -1397,7 +1396,6 @@ class SNPs:
         pos_end = int(temp["pos"].describe()["max"])
 
         for mapping in mappings["mappings"]:
-
             orig_start = mapping["original"]["start"]
             orig_end = mapping["original"]["end"]
             mapped_start = mapping["mapped"]["start"]

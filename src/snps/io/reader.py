@@ -130,7 +130,6 @@ class Reader:
 
         # peek into files to determine the data format
         if isinstance(file, str) and os.path.exists(file):
-
             if ".zip" in file:
                 with zipfile.ZipFile(file) as z:
                     with z.open(z.namelist()[0], "r") as f:
@@ -149,7 +148,6 @@ class Reader:
                     )
 
         elif isinstance(file, bytes):
-
             first_line, comments, data, compression = self._handle_bytes_data(file)
             file = io.BytesIO(file)
 
@@ -710,7 +708,6 @@ class Reader:
         """
 
         def parser():
-
             if isinstance(file, str):
                 with open(file, "rb") as f:
                     first_line, comments, data, comrpession = self._handle_bytes_data(
@@ -864,7 +861,6 @@ class Reader:
 
     def _read_gsa_helper(self, file, source):
         def parser():
-
             # read the comments so we get to the actual data
             if isinstance(file, str):
                 try:
@@ -1155,7 +1151,6 @@ class Reader:
                 compression=compression,
             ) as reader:
                 for chunk in reader:
-
                     # filter for SNPs with rsids
                     tmp = chunk.loc[
                         (chunk.rsid.str.startswith("rs"))
@@ -1355,7 +1350,6 @@ class Reader:
         logged_multi_sample = False
 
         with io.TextIOWrapper(io.BufferedReader(f)) as file:
-
             for line in file:
                 line_strip = line.strip("\n")
 

@@ -731,12 +731,8 @@ class TestSNPsMerge(TestSnps):
                         check_names=True,
                     )
                 else:
-                    pd.testing.assert_index_equal(
-                        result[key],
-                        pd.Index([], name="rsid"),
-                        check_exact=True,
-                        check_names=True,
-                    )
+                    self.assertTrue(result[key].empty)
+                    self.assertEqual(result[key].name, "rsid")
 
     def test_source_snps(self):
         with tempfile.TemporaryDirectory() as tmpdir:

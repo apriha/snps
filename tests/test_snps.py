@@ -731,12 +731,8 @@ class TestSNPsMerge(TestSnps):
                         check_names=True,
                     )
                 else:
-                    pd.testing.assert_index_equal(
-                        result[key],
-                        pd.Index([], name="rsid"),
-                        check_exact=True,
-                        check_names=True,
-                    )
+                    self.assertTrue(result[key].empty)
+                    self.assertEqual(result[key].name, "rsid")
 
     def test_source_snps(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1029,13 +1025,16 @@ class TestSNPsMerge(TestSnps):
 
     def test_merge_chrom(self):
         s1 = SNPs("tests/input/generic.csv")
-        df = s1.snps.append(
-            self.create_snp_df(
-                rsid=["rs100", "rs101", "rs102", "rs103"],
-                chrom=["Y", "Y", "Y", "Y"],
-                pos=[100, 101, 102, 103],
-                genotype=["A", np.nan, "A", "A"],
-            )
+        df = pd.concat(
+            [
+                s1.snps,
+                self.create_snp_df(
+                    rsid=["rs100", "rs101", "rs102", "rs103"],
+                    chrom=["Y", "Y", "Y", "Y"],
+                    pos=[100, 101, 102, 103],
+                    genotype=["A", np.nan, "A", "A"],
+                ),
+            ]
         )
         s1._snps = df.copy()
         s2 = SNPs()

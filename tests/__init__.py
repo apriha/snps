@@ -545,13 +545,16 @@ class BaseSNPsTestCase(TestCase):
 
     def generic_snps_vcf(self):
         df = self.generic_snps()
-        return df.append(
-            self.create_snp_df(
-                rsid=["rs" + str(i) for i in range(12, 18)],
-                chrom=["1"] * 6,
-                pos=list(range(112, 118)),
-                genotype=[np.nan] * 6,
-            )
+        return pd.concat(
+            [
+                df,
+                self.create_snp_df(
+                    rsid=["rs" + str(i) for i in range(12, 18)],
+                    chrom=["1"] * 6,
+                    pos=list(range(112, 118)),
+                    genotype=[np.nan] * 6,
+                ),
+            ]
         )
 
     def run_parsing_tests(

@@ -41,4 +41,5 @@ from snps.snps import SNPs
 
 # set version string with Versioneer
 from . import _version
-__version__ = _version.get_versions()['version']
+
+__version__ = _version.get_versions()["version"]

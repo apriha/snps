@@ -818,9 +818,9 @@ class TestSNPsMerge(TestSnps):
             check_names=True,
         )
         expected = self.snps_NCBI36()
-        expected.loc[
-            "rs11928389", "genotype"
-        ] = np.nan  # discrepant genotype is set to null / NA
+        expected.loc["rs11928389", "genotype"] = (
+            np.nan
+        )  # discrepant genotype is set to null / NA
         pd.testing.assert_frame_equal(s.snps, expected, check_exact=True)
         self.assert_results(
             results,

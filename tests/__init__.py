@@ -711,8 +711,10 @@ class BaseSNPsTestCase(TestCase):
         pd.testing.assert_frame_equal(snps.snps, snps_df, check_exact=True)
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)
         self.assertEqual(snps.build, build)
-        self.assertTrue(snps.build_detected) if build_detected else self.assertFalse(
-            snps.build_detected
+        (
+            self.assertTrue(snps.build_detected)
+            if build_detected
+            else self.assertFalse(snps.build_detected)
         )
         self.make_normalized_dataframe_assertions(snps.snps)
 
@@ -729,16 +731,20 @@ class BaseSNPsTestCase(TestCase):
             self.assertEqual(0, snps.count)
         else:
             self.assertFalse(snps.unannotated_vcf)
-            pd.testing.assert_frame_equal(
-                snps.snps, snps_df.loc[rsids], check_exact=True
-            ) if rsids else pd.testing.assert_frame_equal(
-                snps.snps, snps_df, check_exact=True
+            (
+                pd.testing.assert_frame_equal(
+                    snps.snps, snps_df.loc[rsids], check_exact=True
+                )
+                if rsids
+                else pd.testing.assert_frame_equal(snps.snps, snps_df, check_exact=True)
             )
 
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)
         self.assertEqual(snps.build, build)
-        self.assertTrue(snps.build_detected) if build_detected else self.assertFalse(
-            snps.build_detected
+        (
+            self.assertTrue(snps.build_detected)
+            if build_detected
+            else self.assertFalse(snps.build_detected)
         )
         self.make_normalized_dataframe_assertions(snps.snps)
 

@@ -266,6 +266,9 @@ Acknowledgements
 Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org>`_,
 `Open Humans <https://www.openhumans.org>`_, and `Sano Genetics <https://sanogenetics.com>`_.
 
+``snps`` incorporates code and concepts generated with the assistance of
+`OpenAI's <https://openai.com>`_ `ChatGPT <https://chat.openai.com>`_ (GPT-3.5). ✨
+
 .. https://github.com/rtfd/readthedocs.org/blob/master/docs/badges.rst
 .. |ci| image:: https://github.com/apriha/snps/actions/workflows/ci.yml/badge.svg?branch=master
    :target: https://github.com/apriha/snps/actions/workflows/ci.yml

@@ -103,25 +103,33 @@ class TestResources(BaseSNPsTestCase):
         self.assertEqual(len(gsa_resources["dbsnp_151_37_reverse"]), 2393418)
 
     def _generate_test_gsa_resources(self):
-        s = "Name\tRsID\n"
+        lines = ["Name\tRsID"]
+
         for i in range(1, 618541):
-            s += f"rs{i}\trs{i}\n"
+            lines.append(f"rs{i}\trs{i}")
+
+        s = "\n".join(lines)
         mock = mock_open(read_data=gzip.compress(s.encode()))
         with patch("urllib.request.urlopen", mock):
             self.resource.get_gsa_rsid()
 
-        s = "Name\tChr\tMapInfo\tdeCODE(cM)\n"
+        lines = ["Name\tChr\tMapInfo\tdeCODE(cM)"]
+
         for i in range(1, 665609):
-            s += f"rs{i}\t1\t{i}\t0.0000\n"
+            lines.append(f"rs{i}\t1\t{i}\t0.0000")
+
+        s = "\n".join(lines)
 
         mock = mock_open(read_data=gzip.compress(s.encode()))
         with patch("urllib.request.urlopen", mock):
             self.resource.get_gsa_chrpos()
 
-        s = "# comment\n"
-        s += "rs1 0.0 0.0 0.0 0.0\n"
+        lines = ["# comment", "rs1 0.0 0.0 0.0 0.0"]
+
         for i in range(2, 2393419):
-            s += f"rs{i}\n"
+            lines.append(f"rs{i}")
+
+        s = "\n".join(lines)
 
         mock = mock_open(read_data=gzip.compress(s.encode()))
         with patch("urllib.request.urlopen", mock):

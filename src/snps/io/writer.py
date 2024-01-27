@@ -263,12 +263,16 @@ class Writer:
                     "assembly": self._snps.assembly,
                     "chrom": chrom,
                     "snps": pd.DataFrame(df.loc[(df["chrom"] == chrom)]),
-                    "cluster": self._snps.cluster
-                    if self._vcf_qc_only or self._vcf_qc_filter
-                    else "",
-                    "low_quality_snps": self._snps.low_quality
-                    if self._vcf_qc_only or self._vcf_qc_filter
-                    else get_empty_snps_dataframe(),
+                    "cluster": (
+                        self._snps.cluster
+                        if self._vcf_qc_only or self._vcf_qc_filter
+                        else ""
+                    ),
+                    "low_quality_snps": (
+                        self._snps.low_quality
+                        if self._vcf_qc_only or self._vcf_qc_filter
+                        else get_empty_snps_dataframe()
+                    ),
                 }
             )
 

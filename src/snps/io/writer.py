@@ -44,7 +44,7 @@ import pandas as pd
 
 import snps
 from snps.io import get_empty_snps_dataframe
-from snps.utils import save_df_as_csv, clean_str
+from snps.utils import save_df_as_csv, clean_str, get_utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +201,7 @@ class Writer:
 
         comment = (
             f"##fileformat=VCFv4.2\n"
-            f'##fileDate={datetime.datetime.utcnow().strftime("%Y%m%d")}\n'
+            f'##fileDate={get_utc_now().strftime("%Y%m%d")}\n'
             f'##source="{self._snps.source}; snps v{snps.__version__}; https://pypi.org/project/snps/"\n'
         )
 

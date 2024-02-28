@@ -463,10 +463,8 @@ class TestSnps(BaseSNPsTestCase):
 
     def _make_ancestry_assertions(self, d):
         self.assertEqual(d["population_code"], "ITU")
-        self.assertEqual(d["population_description"], "Indian Telugu in the UK")
         self.assertAlmostEqual(d["population_percent"], 0.2992757864426246)
         self.assertEqual(d["superpopulation_code"], "SAS")
-        self.assertEqual(d["superpopulation_description"], "South Asian Ancestry")
         self.assertAlmostEqual(d["superpopulation_percent"], 0.827977563875996)
         self.assertTrue("predicted_population_population" in d["ezancestry_df"].keys())
         self.assertTrue(
@@ -497,7 +495,6 @@ class TestSnps(BaseSNPsTestCase):
             return_value=pd.DataFrame(
                 {
                     "predicted_population_population": ["ITU"],
-                    "population_description": ["Indian Telugu in the UK"],
                     "ITU": [0.2992757864426246],
                     "predicted_population_superpopulation": ["SAS"],
                     "superpopulation_name": ["South Asian Ancestry"],

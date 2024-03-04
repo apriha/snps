@@ -462,13 +462,13 @@ class TestSnps(BaseSNPsTestCase):
             self.assertTrue(snps.snps.empty)
 
     def _make_ancestry_assertions(self, d):
-        self.assertEqual(d["population_code"], "ITU")
-        self.assertAlmostEqual(d["population_percent"], 0.2992757864426246)
-        self.assertEqual(d["superpopulation_code"], "SAS")
-        self.assertAlmostEqual(d["superpopulation_percent"], 0.827977563875996)
-        self.assertTrue("predicted_population_population" in d["ezancestry_df"].keys())
+        self.assertEqual(d["population_code"], "PUR")
+        self.assertAlmostEqual(d["population_percent"], 0.2661437765657918)
+        self.assertEqual(d["superpopulation_code"], "AMR")
+        self.assertAlmostEqual(d["superpopulation_percent"], 0.9642857142857143)
+        self.assertTrue("predicted_ancestry_population" in d["ezancestry_df"].keys())
         self.assertTrue(
-            "predicted_population_superpopulation" in d["ezancestry_df"].keys()
+            "predicted_ancestry_superpopulation" in d["ezancestry_df"].keys()
         )
 
     def test_ancestry(self):
@@ -494,11 +494,10 @@ class TestSnps(BaseSNPsTestCase):
         sys.modules["ezancestry.commands"].predict = Mock(
             return_value=pd.DataFrame(
                 {
-                    "predicted_population_population": ["ITU"],
-                    "ITU": [0.2992757864426246],
-                    "predicted_population_superpopulation": ["SAS"],
-                    "superpopulation_name": ["South Asian Ancestry"],
-                    "SAS": [0.827977563875996],
+                    "predicted_ancestry_population": ["PUR"],
+                    "PUR": [0.2661437765657918],
+                    "predicted_ancestry_superpopulation": ["AMR"],
+                    "AMR": [0.9642857142857143],
                 }
             )
         )
@@ -1077,6 +1076,9 @@ class TestSNPsMerge(TestSnps):
 
 class TestDeprecatedMethods(TestSnps):
     def run_deprecated_test(self, f, msg):
+        if pd.__version__ == "1.5.3":
+            self.skipTest("Skipping test for pandas version 1.5.3")
+
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             f()

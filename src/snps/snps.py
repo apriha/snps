@@ -1848,11 +1848,6 @@ class SNPs:
         write_predictions=False,
         models_directory=None,
         aisnps_directory=None,
-        n_components=None,
-        k=None,
-        thousand_genomes_directory=None,
-        samples_directory=None,
-        algorithm=None,
         aisnps_set=None,
     ):
         """Predict genetic ancestry for SNPs.
@@ -1875,14 +1870,10 @@ class SNPs:
 
             `population_code` (str)
               max predicted population for the sample
-            `population_description` (str)
-              descriptive name of the population
             `population_percent` (float)
               predicted probability for the max predicted population
             `superpopulation_code` (str)
               max predicted super population (continental) for the sample
-            `superpopulation_description` (str)
-              descriptive name of the super population
             `superpopulation_percent` (float)
               predicted probability for the max predicted super population
             `ezancestry_df` (pandas.DataFrame)
@@ -1891,16 +1882,15 @@ class SNPs:
               `component1`, `component2`, `component3`
                 The coordinates of the sample in the dimensionality-reduced component space. Can be
                 used as (x, y, z,) coordinates for plotting in a 3d scatter plot.
-              `predicted_population_population`
+              `predicted_ancestry_population`
                 The max predicted population for the sample.
               `ACB`, `ASW`, `BEB`, `CDX`, `CEU`, `CHB`, `CHS`, `CLM`, `ESN`, `FIN`, `GBR`, `GIH`, `GWD`, `IBS`, `ITU`, `JPT`, `KHV`, `LWK`, `MSL`, `MXL`, `PEL`, `PJL`, `PUR`, `STU`, `TSI`, `YRI`
                 Predicted probabilities for each of the populations. These sum to 1.0.
-              `predicted_population_superpopulation`
+              `predicted_ancestry_superpopulation`
                 The max predicted super population (continental) for the sample.
               `AFR`, `AMR`, `EAS`, `EUR`, `SAS`
                 Predicted probabilities for each of the super populations. These sum to 1.0.
-              `population_description`, `superpopulation_name`
-                Descriptive names of the population and super population.
+
 
         """
         if not self.valid:
@@ -1914,19 +1904,15 @@ class SNPs:
             )
 
         def max_pop(row):
-            popcode = row["predicted_population_population"]
-            popdesc = row["population_description"]
+            popcode = row["predicted_ancestry_population"]
             poppct = row[popcode]
-            superpopcode = row["predicted_population_superpopulation"]
-            superpopdesc = row["superpopulation_name"]
+            superpopcode = row["predicted_ancestry_superpopulation"]
             superpoppct = row[superpopcode]
 
             return {
                 "population_code": popcode,
-                "population_description": popdesc,
                 "population_percent": poppct,
                 "superpopulation_code": superpopcode,
-                "superpopulation_description": superpopdesc,
                 "superpopulation_percent": superpoppct,
             }
 
@@ -1936,11 +1922,6 @@ class SNPs:
             write_predictions,
             models_directory,
             aisnps_directory,
-            n_components,
-            k,
-            thousand_genomes_directory,
-            samples_directory,
-            algorithm,
             aisnps_set,
         )
 

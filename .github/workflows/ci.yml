@@ -11,12 +11,22 @@ on:
   schedule:
     - cron: '37 4 * * 0'
   push:
-    branches: '**'
+    branches:
+      - '**'
   pull_request:
-    branches: '**'
+    branches:
+      - '**'
 
 jobs:
+  enable-workflow:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || (github.event_name == 'schedule' && github.repository == 'apriha/snps') }}
+    steps:
+      - name: Enable workflow based on preconditions
+        run: echo "Workflow enabled."
+
   lint:
+    needs: [enable-workflow]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -31,6 +41,7 @@ jobs:
         black --check --diff .
 
   build-docs:
+    needs: [enable-workflow]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4

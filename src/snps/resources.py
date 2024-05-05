@@ -287,10 +287,14 @@ class Resources(metaclass=Singleton):
            (GenomePrep) for research, Computational and Structural
            Biotechnology Journal, Volume 19, 2021, Pages 3747-3754, ISSN
            2001-0370, https://doi.org/10.1016/j.csbj.2021.06.040.
+        2. Lu, Tzovaras, & Gough. (2021). OpenSNP data-freeze of 5,393
+           (19.10.2020) [Data set]. In Computational and Structural
+           Biotechnology Journal. Zenodo.
+           https://doi.org/10.1016/j.csbj.2021.06.040
         """
         if self._chip_clusters is None:
             chip_clusters_path = self._download_file(
-                "https://supfam.mrc-lmb.cam.ac.uk/GenomePrep/datadir/the_list.tsv.gz",
+                "https://zenodo.org/records/5047472/files/the_list.tsv.gz",
                 "chip_clusters.tsv.gz",
             )
 
@@ -325,10 +329,14 @@ class Resources(metaclass=Singleton):
            (GenomePrep) for research, Computational and Structural
            Biotechnology Journal, Volume 19, 2021, Pages 3747-3754, ISSN
            2001-0370, https://doi.org/10.1016/j.csbj.2021.06.040.
+        2. Lu, Tzovaras, & Gough. (2021). OpenSNP data-freeze of 5,393
+           (19.10.2020) [Data set]. In Computational and Structural
+           Biotechnology Journal. Zenodo.
+           https://doi.org/10.1016/j.csbj.2021.06.040
         """
         if self._low_quality_snps is None:
             low_quality_snps_path = self._download_file(
-                "https://supfam.mrc-lmb.cam.ac.uk/GenomePrep/datadir/badalleles.tsv.gz",
+                "https://zenodo.org/records/5047472/files/badalleles.tsv.gz",
                 "low_quality_snps.tsv.gz",
             )
 

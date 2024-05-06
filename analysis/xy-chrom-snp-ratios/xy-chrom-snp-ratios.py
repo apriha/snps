@@ -2,15 +2,14 @@ import logging
 import os
 import random
 
-from atomicwrites import atomic_write
-import numpy as np
-from matplotlib import patches
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-
+from atomicwrites import atomic_write
+from matplotlib import patches
 from snps import SNPs
 from snps.resources import Resources
-from snps.utils import Parallelizer, save_df_as_csv, create_dir
+from snps.utils import Parallelizer, create_dir, save_df_as_csv
 
 OUTPUT_DIR = "output"
 

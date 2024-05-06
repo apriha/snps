@@ -26,12 +26,12 @@ import urllib.error
 import urllib.request
 import zipfile
 
-from atomicwrites import atomic_write
 import numpy as np
 import pandas as pd
+from atomicwrites import atomic_write
 
 from snps.ensembl import EnsemblRestClient
-from snps.utils import create_dir, Singleton
+from snps.utils import Singleton, create_dir
 
 logger = logging.getLogger(__name__)
 

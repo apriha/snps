@@ -2,9 +2,9 @@ import os
 import tempfile
 
 from atomicwrites import atomic_write
-
 from snps.resources import Resources
 from snps.utils import gzip_file
+
 from tests import BaseSNPsTestCase
 
 

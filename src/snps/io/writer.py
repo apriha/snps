@@ -8,7 +8,7 @@ import pandas as pd
 
 import snps
 from snps.io import get_empty_snps_dataframe
-from snps.utils import save_df_as_csv, clean_str, get_utc_now
+from snps.utils import clean_str, get_utc_now, save_df_as_csv
 
 logger = logging.getLogger(__name__)
 

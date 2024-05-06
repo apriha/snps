@@ -2,18 +2,18 @@ import gzip
 import os
 import socket
 import tempfile
-from unittest.mock import Mock, mock_open, patch
 import urllib.error
 import warnings
 import zipfile
+from unittest.mock import Mock, mock_open, patch
 
-from atomicwrites import atomic_write
 import numpy as np
 import pandas as pd
-
+from atomicwrites import atomic_write
 from snps import SNPs
-from snps.resources import Resources, ReferenceSequence
+from snps.resources import ReferenceSequence, Resources
 from snps.utils import gzip_file
+
 from tests import BaseSNPsTestCase
 
 

@@ -4,15 +4,15 @@ import datetime
 import gzip
 import io
 import logging
-from multiprocessing import Pool
 import os
 import re
 import shutil
 import tempfile
 import zipfile
+from multiprocessing import Pool
 
-from atomicwrites import atomic_write
 import pandas as pd
+from atomicwrites import atomic_write
 
 import snps
 

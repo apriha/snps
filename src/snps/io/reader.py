@@ -1,7 +1,6 @@
 """Class for reading SNPs."""
 
 import binascii
-from copy import deepcopy
 import gzip
 import io
 import logging
@@ -10,10 +9,10 @@ import re
 import warnings
 import zipfile
 import zlib
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
-
 
 logger = logging.getLogger(__name__)
 

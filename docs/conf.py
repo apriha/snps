@@ -19,6 +19,7 @@
 #
 import os
 import sys
+
 import snps
 
 # http://docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules

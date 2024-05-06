@@ -1,19 +1,19 @@
 """``SNPs`` reads, writes, merges, and remaps genotype / raw data files."""
 
 import copy
-from itertools import groupby, count
 import logging
 import os
 import re
 import warnings
+from itertools import count, groupby
 
 import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 
 from snps.ensembl import EnsemblRestClient
-from snps.resources import Resources
 from snps.io import Reader, Writer, get_empty_snps_dataframe
+from snps.resources import Resources
 from snps.utils import Parallelizer
 
 logger = logging.getLogger(__name__)

@@ -1,4 +1,4 @@
-""" Utility classes and functions. """
+"""Utility classes and functions."""
 
 import datetime
 import gzip

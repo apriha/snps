@@ -1,4 +1,4 @@
-""" Class for downloading and loading required external resources.
+"""Class for downloading and loading required external resources.
 
 References
 ----------

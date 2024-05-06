@@ -1,4 +1,4 @@
-""" Class for writing SNPs. """
+"""Class for writing SNPs."""
 
 import logging
 import warnings

@@ -1,4 +1,4 @@
-""" Class for reading SNPs. """
+"""Class for reading SNPs."""
 
 import binascii
 from copy import deepcopy

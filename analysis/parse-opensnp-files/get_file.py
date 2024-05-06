@@ -1,4 +1,4 @@
-""" Get a file from the openSNP datadump for debugging. """
+"""Get a file from the openSNP datadump for debugging."""
 
 import os
 

@@ -19,6 +19,7 @@
 #
 import os
 import sys
+import snps
 
 # http://docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
 autodoc_mock_imports = [
@@ -30,8 +31,6 @@ autodoc_mock_imports = [
 ]
 
 sys.path.insert(0, os.path.abspath("../"))
-
-import snps
 
 # https://samnicholls.net/2016/06/15/how-to-sphinx-readthedocs/
 

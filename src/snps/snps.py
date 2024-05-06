@@ -1,39 +1,4 @@
-""" ``SNPs`` reads, writes, merges, and remaps genotype / raw data files.
-
-"""
-
-"""
-BSD 3-Clause License
-
-Copyright (c) 2019, Andrew Riha
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-"""
+""" ``SNPs`` reads, writes, merges, and remaps genotype / raw data files. """
 
 import copy
 from itertools import groupby, count
@@ -474,11 +439,11 @@ class SNPs:
 
             # https://codereview.stackexchange.com/a/5202
             def as_range(iterable):
-                l = list(iterable)
-                if len(l) > 1:
-                    return f"{l[0]}-{l[-1]}"
+                list_items = list(iterable)
+                if len(list_items) > 1:
+                    return f"{list_items[0]}-{list_items[-1]}"
                 else:
-                    return f"{l[0]}"
+                    return f"{list_items[0]}"
 
             # create str representations
             int_chroms = ", ".join(
@@ -967,7 +932,7 @@ class SNPs:
         def lookup_build_with_snp_pos(pos, s):
             try:
                 return int(s.loc[s == pos].index[0])
-            except:
+            except Exception:
                 return 0
 
         build = 0

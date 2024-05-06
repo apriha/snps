@@ -269,6 +269,10 @@ Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org
 ``snps`` incorporates code and concepts generated with the assistance of
 `OpenAI's <https://openai.com>`_ `ChatGPT <https://chat.openai.com>`_ (GPT-3.5). ✨
 
+License
+-------
+``snps`` is licensed under the `BSD 3-Clause License <https://github.com/apriha/snps/blob/master/LICENSE.txt>`_.
+
 .. https://github.com/rtfd/readthedocs.org/blob/master/docs/badges.rst
 .. |ci| image:: https://github.com/apriha/snps/actions/workflows/ci.yml/badge.svg?branch=master
    :target: https://github.com/apriha/snps/actions/workflows/ci.yml

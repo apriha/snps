@@ -1,21 +1,21 @@
-""" Parse openSNP datadump files.
+"""Parse openSNP datadump files.
 
 Attempt to parse each file in the openSNP datadump. For files where SNPs were loaded,
 save summary statistics to a dataframe and output as a CSV. For files where no SNPs were
 loaded, save a message for each file indicating the issue and optionally extract these
 files from the datadump for debugging.
+
 """
 
 import logging
 import os
 import random
 
-from atomicwrites import atomic_write
 import pandas as pd
-
+from atomicwrites import atomic_write
 from snps import SNPs
 from snps.resources import Resources
-from snps.utils import Parallelizer, save_df_as_csv, create_dir, clean_str
+from snps.utils import Parallelizer, clean_str, create_dir, save_df_as_csv
 
 OUTPUT_DIR = "output"
 EXTRACT_FILES = True

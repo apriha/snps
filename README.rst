@@ -1,6 +1,6 @@
 .. image:: https://raw.githubusercontent.com/apriha/snps/master/docs/images/snps_banner.png
 
-|ci| |codecov| |docs| |pypi| |python| |downloads| |black|
+|ci| |codecov| |docs| |pypi| |python| |downloads| |ruff|
 
 snps
 ====
@@ -269,6 +269,10 @@ Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org
 ``snps`` incorporates code and concepts generated with the assistance of
 `OpenAI's <https://openai.com>`_ `ChatGPT <https://chat.openai.com>`_ (GPT-3.5). ✨
 
+License
+-------
+``snps`` is licensed under the `BSD 3-Clause License <https://github.com/apriha/snps/blob/master/LICENSE.txt>`_.
+
 .. https://github.com/rtfd/readthedocs.org/blob/master/docs/badges.rst
 .. |ci| image:: https://github.com/apriha/snps/actions/workflows/ci.yml/badge.svg?branch=master
    :target: https://github.com/apriha/snps/actions/workflows/ci.yml
@@ -282,5 +286,6 @@ Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org
    :target: https://www.python.org
 .. |downloads| image:: https://pepy.tech/badge/snps
    :target: https://pepy.tech/project/snps
-.. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
-   :target: https://github.com/psf/black
+.. |ruff| image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
+   :target: https://github.com/astral-sh/ruff
+   :alt: Ruff

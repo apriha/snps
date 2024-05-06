@@ -1,9 +1,8 @@
-""" Get a file from the openSNP datadump for debugging. """
+"""Get a file from the openSNP datadump for debugging."""
 
 import os
 
 from atomicwrites import atomic_write
-
 from snps.resources import Resources
 from snps.utils import create_dir
 

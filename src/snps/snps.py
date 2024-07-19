@@ -1418,7 +1418,11 @@ class SNPs:
             else:
                 # mapping is on same (plus) strand, so just remap based on offset
                 offset = mapped_start - orig_start
-                temp.loc[snp_indices, "pos"] = temp["pos"] + offset
+
+                # Adjust pos by offset based on sign of offset (avoids OverflowError with uint32)
+                temp.loc[snp_indices, "pos"] = (
+                    temp["pos"] - abs(offset) if offset < 0 else temp["pos"] + offset
+                )
 
             # mark these SNPs as remapped
             temp.loc[snp_indices, "remapped"] = True

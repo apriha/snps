@@ -267,7 +267,7 @@ Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org
 `Open Humans <https://www.openhumans.org>`_, and `Sano Genetics <https://sanogenetics.com>`_.
 
 ``snps`` incorporates code and concepts generated with the assistance of
-`OpenAI's <https://openai.com>`_ `ChatGPT <https://chat.openai.com>`_ (GPT-3.5). ✨
+`OpenAI's <https://openai.com>`_ `ChatGPT <https://chat.openai.com>`_. ✨
 
 License
 -------

@@ -10,10 +10,10 @@ from unittest.mock import Mock, mock_open, patch
 import numpy as np
 import pandas as pd
 from atomicwrites import atomic_write
+
 from snps import SNPs
 from snps.resources import ReferenceSequence, Resources
 from snps.utils import gzip_file
-
 from tests import BaseSNPsTestCase
 
 

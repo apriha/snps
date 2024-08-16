@@ -13,6 +13,7 @@ import random
 
 import pandas as pd
 from atomicwrites import atomic_write
+
 from snps import SNPs
 from snps.resources import Resources
 from snps.utils import Parallelizer, clean_str, create_dir, save_df_as_csv

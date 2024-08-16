@@ -7,6 +7,7 @@ from unittest.mock import Mock, PropertyMock, patch
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_object_dtype, is_unsigned_integer_dtype
+
 from snps import SNPs
 from snps.utils import gzip_file, zip_file
 

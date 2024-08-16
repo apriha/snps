@@ -3,6 +3,7 @@
 import os
 
 from atomicwrites import atomic_write
+
 from snps.resources import Resources
 from snps.utils import create_dir
 

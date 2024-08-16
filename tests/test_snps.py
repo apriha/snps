@@ -9,9 +9,9 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
+
 from snps import SNPs
 from snps.io import get_empty_snps_dataframe
-
 from tests import BaseSNPsTestCase
 
 

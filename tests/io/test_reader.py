@@ -154,6 +154,9 @@ class TestReader(BaseSNPsTestCase):
         df.drop("rs5", inplace=True)  # only called genotypes
         self.run_parsing_tests("tests/input/circledna.txt", "CircleDNA", snps_df=df)
 
+    def test_read_plink(self):
+        self.run_parsing_tests("tests/input/plink.txt", "PLINK")
+
     def test_read_ftdna(self):
         # https://www.familytreedna.com
         self.run_parsing_tests("tests/input/ftdna.csv", "FTDNA")
@@ -302,6 +305,11 @@ class TestReader(BaseSNPsTestCase):
             self._setup_gsa_test(tmpdir)
             self.run_parsing_tests("tests/input/sano.txt", "Sano")
             self._teardown_gsa_test()
+
+    def test_read_sano_dtc(self):
+        # https://sanogenetics.com
+        self.run_parsing_tests("tests/input/sano_dtc.txt", "Sano")
+        self.run_parsing_tests("tests/input/sano_dtc_no_comments.txt", "Sano")
 
     def test_read_vcf(self):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")

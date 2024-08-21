@@ -58,6 +58,7 @@ genotype files from the following DNA testing sources:
 - `LivingDNA <https://livingdna.com>`_
 - `Mapmygenome <https://mapmygenome.in>`_
 - `MyHeritage <https://www.myheritage.com>`_
+- `PLINK <https://www.cog-genomics.org/plink/>`_
 - `Sano Genetics <https://sanogenetics.com>`_
 - `tellmeGen <https://www.tellmegen.com>`_
 

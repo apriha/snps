@@ -154,6 +154,9 @@ class TestReader(BaseSNPsTestCase):
         df.drop("rs5", inplace=True)  # only called genotypes
         self.run_parsing_tests("tests/input/circledna.txt", "CircleDNA", snps_df=df)
 
+    def test_read_plink(self):
+        self.run_parsing_tests("tests/input/plink.txt", "PLINK")
+
     def test_read_ftdna(self):
         # https://www.familytreedna.com
         self.run_parsing_tests("tests/input/ftdna.csv", "FTDNA")

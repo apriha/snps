@@ -150,6 +150,14 @@ class Reader:
             d = self.read_snps_csv(file, comments, compression)
         elif "rsid\tChromosome\tposition\tgenotype" == first_line.strip():
             d = self.read_tellmegen(file, compression)
+        elif (
+            "# This file was derived from the corresponding VCF" in comments
+            or re.match(
+                r"^\s*rsid\s+chromosome\s+position\s+allele_1\s+allele_2\s*$",
+                first_line,
+            )
+        ):
+            d = self.read_sano_dtc(file, compression)
         elif re.match("^#*[ \t]*rsid[, \t]*chr", first_line):
             d = self.read_generic(file, compression)
         elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
@@ -1134,6 +1142,45 @@ class Reader:
             return (df,)
 
         return self.read_helper("CircleDNA", parser)
+
+    def read_sano_dtc(self, file, compression):
+        """Read and parse Sano Genetics DTC file.
+
+        https://sanogenetics.com
+
+        Parameters
+        ----------
+        file : str
+            path to file
+
+        Returns
+        -------
+        dict
+            result of `read_helper`
+        """
+
+        def parser():
+            df = pd.read_csv(
+                file,
+                comment="#",
+                header=0,
+                engine="c",
+                sep=r"\s+",
+                na_values="-",
+                names=["rsid", "chrom", "pos", "allele1", "allele2"],
+                index_col=0,
+                dtype=TWO_ALLELE_DTYPES,
+                compression=compression,
+            )
+
+            # create genotype column from allele columns and keep only relevant columns
+            df = df.assign(genotype=df["allele1"] + df["allele2"].fillna(""))[
+                ["chrom", "pos", "genotype"]
+            ]
+
+            return (df,)
+
+        return self.read_helper("Sano", parser)
 
     def read_plink(self, file, compression):
         """Read and parse plink file.

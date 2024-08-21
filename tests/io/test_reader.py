@@ -306,6 +306,11 @@ class TestReader(BaseSNPsTestCase):
             self.run_parsing_tests("tests/input/sano.txt", "Sano")
             self._teardown_gsa_test()
 
+    def test_read_sano_dtc(self):
+        # https://sanogenetics.com
+        self.run_parsing_tests("tests/input/sano_dtc.txt", "Sano")
+        self.run_parsing_tests("tests/input/sano_dtc_no_comments.txt", "Sano")
+
     def test_read_vcf(self):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")
 

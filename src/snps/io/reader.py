@@ -416,8 +416,14 @@ class Reader:
         def parser():
             if joined:
                 columnnames = ["rsid", "chrom", "pos", "genotype"]
+                dtype = NORMALIZED_DTYPES.copy()
             else:
                 columnnames = ["rsid", "chrom", "pos", "allele1", "allele2"]
+                dtype = TWO_ALLELE_DTYPES.copy()
+
+            # Temporarily use nullable UInt32 for 'pos' column
+            dtype["pos"] = pd.UInt32Dtype()
+
             df = pd.read_csv(
                 file,
                 comment="#",
@@ -425,59 +431,15 @@ class Reader:
                 na_values=["--", "-"],
                 names=columnnames,
                 compression=compression,
+                dtype=dtype,
             )
-            # turn number numbers into string numbers
-            df["chrom"] = df["chrom"].map(
-                {
-                    "1": "1",
-                    "2": "2",
-                    "3": "3",
-                    "4": "4",
-                    "5": "5",
-                    "6": "6",
-                    "7": "7",
-                    "8": "8",
-                    "9": "9",
-                    "10": "10",
-                    "11": "11",
-                    "12": "12",
-                    "13": "13",
-                    "14": "14",
-                    "15": "15",
-                    "16": "16",
-                    "17": "17",
-                    "18": "18",
-                    "19": "19",
-                    "20": "20",
-                    "21": "21",
-                    "22": "22",
-                    1: "1",
-                    2: "2",
-                    3: "3",
-                    4: "4",
-                    5: "5",
-                    6: "6",
-                    7: "7",
-                    8: "8",
-                    9: "9",
-                    10: "10",
-                    11: "11",
-                    12: "12",
-                    13: "13",
-                    14: "14",
-                    15: "15",
-                    16: "16",
-                    17: "17",
-                    18: "18",
-                    19: "19",
-                    20: "20",
-                    21: "21",
-                    22: "22",
-                    "X": "X",
-                    "Y": "Y",
-                    "MT": "MT",
-                }
-            )
+
+            # Drop rows with NaN values in 'pos' column
+            df = df.dropna(subset=["pos"])
+
+            # Convert 'pos' column to np.uint32
+            df["pos"] = df["pos"].astype(np.uint32)
+
             if not joined:
                 # stick separate alleles together
                 df["genotype"] = df["allele1"] + df["allele2"]

@@ -299,7 +299,7 @@ class Writer:
         seqs = resources.get_reference_sequences(assembly, [chrom])
         seq = seqs[chrom]
 
-        contig = f'##contig=<ID={seq.ID},URL={seq.url},length={seq.length},assembly={seq.build},md5={seq.md5},species="{seq.species}">\n'
+        contig = f'##contig=<ID={self._vcf_chrom_prefix}{seq.ID},URL={seq.url},length={seq.length},assembly={seq.build},md5={seq.md5},species="{seq.species}">\n'
 
         if self._vcf_qc_only and cluster:
             # drop low quality SNPs if SNPs object maps to a cluster

@@ -237,6 +237,7 @@ class Writer:
                         if self._vcf_qc_only or self._vcf_qc_filter
                         else get_empty_snps_dataframe()
                     ),
+                    "sex": self._snps.determine_sex(),
                 }
             )
 
@@ -288,6 +289,7 @@ class Writer:
         snps = task["snps"]
         cluster = task["cluster"]
         low_quality_snps = task["low_quality_snps"]
+        sex = task["sex"]
 
         if len(snps.loc[snps["genotype"].notnull()]) == 0:
             return {
@@ -376,6 +378,18 @@ class Writer:
         df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
             self._compute_genotype
         )(temp["REF"], temp["ALT"], temp["genotype"])
+
+        if sex == "Female":
+            haploid_chroms = ["Y", "MT"]
+        else:
+            haploid_chroms = ["X", "Y", "MT"]
+
+        # populate null values for haploid chromosomes
+        df.loc[
+            (df["SAMPLE"].isnull())
+            & (df["CHROM"].str.contains("|".join(haploid_chroms))),
+            "SAMPLE",
+        ] = "."
 
         df.loc[df["SAMPLE"].isnull(), "SAMPLE"] = "./."
 

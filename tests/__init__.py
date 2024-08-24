@@ -585,7 +585,7 @@ class BaseSNPsTestCase(TestCase):
         build_detected=False,
         snps_df=None,
     ):
-        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # https://samtools.github.io/hts-specs/VCFv4.3.pdf
         # this tests for homozygous snps, heterozygous snps, multiallelic snps,
         # phased snps, and snps with missing rsID
         self.make_parsing_assertions_vcf(

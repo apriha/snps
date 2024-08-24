@@ -149,8 +149,8 @@ class Writer:
 
         References
         ----------
-        1. The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
-           https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        1. The Variant Call Format (VCF) Version 4.3 Specification, 27 Nov 2022,
+           https://samtools.github.io/hts-specs/VCFv4.3.pdf
 
         Returns
         -------
@@ -164,7 +164,7 @@ class Writer:
             filename = f"{clean_str(self._snps.source)}_{self._snps.assembly}{'.vcf'}"
 
         comment = (
-            f"##fileformat=VCFv4.2\n"
+            f"##fileformat=VCFv4.3\n"
             f'##fileDate={get_utc_now().strftime("%Y%m%d")}\n'
             f'##source="{self._snps.source}; snps v{snps.__version__}; https://pypi.org/project/snps/"\n'
         )

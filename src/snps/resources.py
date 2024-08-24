@@ -592,7 +592,7 @@ class Resources(metaclass=Singleton):
         )
 
     def _create_reference_sequences(self, assembly, chroms, urls, paths):
-        # https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        # https://samtools.github.io/hts-specs/VCFv4.3.pdf
         seqs = {}
 
         for i, path in enumerate(paths):
@@ -861,8 +861,8 @@ class ReferenceSequence:
 
         References
         ----------
-        1. The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
-           https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        1. The Variant Call Format (VCF) Version 4.3 Specification, 27 Nov 2022,
+           https://samtools.github.io/hts-specs/VCFv4.3.pdf
         """
         self._ID = ID
         self._url = url

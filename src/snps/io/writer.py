@@ -120,14 +120,14 @@ class Writer:
 
             filename = f"{clean_str(self._snps.source)}_{self._snps.assembly}{ext}"
 
-        comment = (
-            f"# Source(s): {self._snps.source}\n"
-            f"# Build: {self._snps.build}\n"
-            f"# Build Detected: { self._snps.build_detected}\n"
-            f"# Phased: {self._snps.phased}\n"
-            f"# SNPs: {self._snps.count}\n"
-            f"# Chromosomes: {self._snps.chromosomes_summary}\n"
-        )
+        comment = [
+            f"# Source(s): {self._snps.source}",
+            f"# Build: {self._snps.build}",
+            f"# Build Detected: { self._snps.build_detected}",
+            f"# Phased: {self._snps.phased}",
+            f"# SNPs: {self._snps.count}",
+            f"# Chromosomes: {self._snps.chromosomes_summary}",
+        ]
         if "header" in self._kwargs:
             if isinstance(self._kwargs["header"], bool):
                 if self._kwargs["header"]:
@@ -139,7 +139,7 @@ class Writer:
             self._snps._snps,
             self._snps._output_dir,
             filename,
-            comment=comment,
+            comment="\n".join(comment) + "\n",
             atomic=self._atomic,
             **self._kwargs,
         )
@@ -163,11 +163,11 @@ class Writer:
         if not filename:
             filename = f"{clean_str(self._snps.source)}_{self._snps.assembly}{'.vcf'}"
 
-        comment = (
-            f"##fileformat=VCFv4.3\n"
-            f'##fileDate={get_utc_now().strftime("%Y%m%d")}\n'
-            f'##source="{self._snps.source}; snps v{snps.__version__}; https://pypi.org/project/snps/"\n'
-        )
+        comment = [
+            "##fileformat=VCFv4.3",
+            f'##fileDate={get_utc_now().strftime("%Y%m%d")}',
+            f'##source="{self._snps.source}; snps v{snps.__version__}; https://pypi.org/project/snps/"',
+        ]
 
         reference_sequence_chroms = (
             "1",
@@ -252,27 +252,30 @@ class Writer:
         vcf = [pd.DataFrame()]
         discrepant_vcf_position = [pd.DataFrame()]
         for result in list(results):
-            contigs.append(result["contig"])
+            if result["contig"]:
+                contigs.append(result["contig"])
             vcf.append(result["vcf"])
             discrepant_vcf_position.append(result["discrepant_vcf_position"])
 
         vcf = pd.concat(vcf)
         discrepant_vcf_position = pd.concat(discrepant_vcf_position)
 
-        comment += "".join(contigs)
+        comment.extend(contigs)
 
         if self._vcf_qc_filter and self._snps.cluster:
-            comment += '##FILTER=<ID=lq,Description="Low quality SNP per Lu et al.: https://doi.org/10.1016/j.csbj.2021.06.040">\n'
+            comment.append(
+                '##FILTER=<ID=lq,Description="Low quality SNP per Lu et al.: https://doi.org/10.1016/j.csbj.2021.06.040">'
+            )
 
-        comment += '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n'
-        comment += "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE\n"
+        comment.append('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">')
+        comment.append("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE")
 
         return (
             save_df_as_csv(
                 vcf,
                 self._snps._output_dir,
                 filename,
-                comment=comment,
+                comment="\n".join(comment) + "\n",
                 prepend_info=False,
                 header=False,
                 index=False,
@@ -301,7 +304,7 @@ class Writer:
         seqs = resources.get_reference_sequences(assembly, [chrom])
         seq = seqs[chrom]
 
-        contig = f'##contig=<ID={self._vcf_chrom_prefix}{seq.ID},URL={seq.url},length={seq.length},assembly={seq.build},md5={seq.md5},species="{seq.species}">\n'
+        contig = f'##contig=<ID={self._vcf_chrom_prefix}{seq.ID},URL={seq.url},length={seq.length},assembly={seq.build},md5={seq.md5},species="{seq.species}">'
 
         if self._vcf_qc_only and cluster:
             # drop low quality SNPs if SNPs object maps to a cluster

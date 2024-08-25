@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 import snps
+from snps.constants import REFERENCE_SEQUENCE_CHROMS
 from snps.io import get_empty_snps_dataframe
 from snps.utils import clean_str, get_utc_now, save_df_as_csv
 
@@ -169,34 +170,6 @@ class Writer:
             f'##source="{self._snps.source}; snps v{snps.__version__}; https://pypi.org/project/snps/"',
         ]
 
-        reference_sequence_chroms = (
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "18",
-            "19",
-            "20",
-            "21",
-            "22",
-            "X",
-            "Y",
-            "MT",
-        )
-
         df = self._snps.snps
 
         p = self._snps._parallelizer
@@ -217,7 +190,7 @@ class Writer:
 
         chroms_to_drop = []
         for chrom in df["chrom"].unique():
-            if chrom not in reference_sequence_chroms:
+            if chrom not in REFERENCE_SEQUENCE_CHROMS:
                 chroms_to_drop.append(chrom)
                 continue
 

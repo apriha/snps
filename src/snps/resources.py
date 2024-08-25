@@ -30,6 +30,7 @@ import numpy as np
 import pandas as pd
 from atomicwrites import atomic_write
 
+from snps.constants import REFERENCE_SEQUENCE_CHROMS
 from snps.ensembl import EnsemblRestClient
 from snps.utils import Singleton, create_dir
 
@@ -63,33 +64,7 @@ class Resources(metaclass=Singleton):
     def get_reference_sequences(
         self,
         assembly="GRCh37",
-        chroms=(
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "18",
-            "19",
-            "20",
-            "21",
-            "22",
-            "X",
-            "Y",
-            "MT",
-        ),
+        chroms=REFERENCE_SEQUENCE_CHROMS,
     ):
         """Get Homo sapiens reference sequences for `chroms` of `assembly`.
 

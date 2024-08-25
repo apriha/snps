@@ -175,19 +175,6 @@ class Writer:
         p = self._snps._parallelizer
         tasks = []
 
-        # skip insertions and deletions
-        df = df.drop(
-            df.loc[
-                df["genotype"].notnull()
-                & (
-                    (df["genotype"].str[0] == "I")
-                    | (df["genotype"].str[0] == "D")
-                    | (df["genotype"].str[1] == "I")
-                    | (df["genotype"].str[1] == "D")
-                )
-            ].index
-        )
-
         chroms_to_drop = []
         for chrom in df["chrom"].unique():
             if chrom not in REFERENCE_SEQUENCE_CHROMS:
@@ -218,6 +205,10 @@ class Writer:
         for chrom in chroms_to_drop:
             df = df.drop(df.loc[df["chrom"] == chrom].index)
 
+        # Check for the presence of insertions or deletions
+        has_ins = df["genotype"].str.contains("I", na=False).any()
+        has_del = df["genotype"].str.contains("D", na=False).any()
+
         # create the VCF representation for SNPs
         results = p(self._create_vcf_representation, tasks)
 
@@ -234,6 +225,23 @@ class Writer:
         discrepant_vcf_position = pd.concat(discrepant_vcf_position)
 
         comment.extend(contigs)
+
+        if has_del:
+            comment.append(
+                '##ALT=<ID=DEL,Description="Deletion relative to the reference">'
+            )
+        if has_ins:
+            comment.append(
+                '##ALT=<ID=INS,Description="Insertion of novel sequence relative to the reference">'
+            )
+
+        if has_ins or has_del:
+            comment.append(
+                '##INFO=<ID=SVTYPE,Number=.,Type=String,Description="Type of structural variant: INS (Insertion), DEL (Deletion)">'
+            )
+            comment.append(
+                '##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">'
+            )
 
         if self._vcf_qc_filter and self._snps.cluster:
             comment.append(
@@ -349,6 +357,9 @@ class Writer:
             temp["REF"], temp["genotype"]
         )
 
+        # Populate INFO field
+        df["INFO"] = df["ALT"].apply(self._compute_info)
+
         temp = df.loc[df["genotype"].notnull()]
 
         df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
@@ -377,8 +388,17 @@ class Writer:
             "discrepant_vcf_position": discrepant_vcf_position,
         }
 
+    def _replace_genotype_indels(self, genotype):
+        # Replace 'I' and 'D' with '<INS>' and '<DEL>'
+        return [
+            "<INS>" if allele == "I" else "<DEL>" if allele == "D" else allele
+            for allele in genotype
+        ]
+
     def _compute_alt(self, ref, genotype):
         genotype_alleles = list(set(genotype))
+
+        genotype_alleles = self._replace_genotype_indels(genotype_alleles)
 
         if ref in genotype_alleles:
             if len(genotype_alleles) == 1:
@@ -391,6 +411,10 @@ class Writer:
             return ",".join(genotype_alleles)
 
     def _compute_genotype(self, ref, alt, genotype):
+        genotype = list(genotype)
+
+        genotype = self._replace_genotype_indels(genotype)
+
         alleles = [ref]
 
         if self._snps.phased:
@@ -407,3 +431,22 @@ class Writer:
             )
         else:
             return f"{alleles.index(genotype[0])}"
+
+    def _compute_info(self, alt):
+        """Generate the INFO field based on ALT values."""
+        if pd.isna(alt):
+            return "."
+
+        alt_values = alt.split(",")
+        svtypes = []
+        for alt_value in alt_values:
+            if alt_value == "<INS>":
+                svtypes.append("INS")
+            elif alt_value == "<DEL>":
+                svtypes.append("DEL")
+
+        if not svtypes:
+            return "."
+
+        svtype_str = ",".join(svtypes)
+        return f"SVTYPE={svtype_str};IMPRECISE" if svtype_str else "."

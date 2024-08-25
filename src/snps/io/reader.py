@@ -1366,7 +1366,7 @@ class Reader:
             * SNPs that are not annotated with an RSID are skipped
             * If the VCF contains multiple samples, only the first sample is used to
               lookup the genotype
-            * Insertions and deletions are skipped
+            * Precise insertions and deletions are skipped
             * If a sample allele is not specified, the genotype is reported as NaN
             * If a sample allele refers to a REF or ALT allele that is not specified,
               the genotype is reported as NaN
@@ -1441,9 +1441,13 @@ class Reader:
                 if len(alt.split(",")) > 1 and alt.split(",")[1] == "<NON_REF>":
                     alt = alt.split(",")[0]
 
-                ref_alt = [ref] + alt.split(",")
+                # Handle <INS> and <DEL> alleles (imprecise insertions and deletions)
+                ref_alt = [ref] + [
+                    "I" if allele == "<INS>" else "D" if allele == "<DEL>" else allele
+                    for allele in alt.split(",")
+                ]
 
-                # skip insertions and deletions
+                # skip precise insertions and deletions
                 if sum(map(len, ref_alt)) > len(ref_alt):
                     continue
 

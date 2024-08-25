@@ -261,6 +261,43 @@ class TestWriter(BaseSNPsTestCase):
 
         self.run_low_quality_snps_test(f, self.get_low_quality_snps(), cluster=cluster)
 
+    def run_vcf_indel_test(
+        self, input_data, expected_output, output_includes_ins, output_includes_del
+    ):
+        with tempfile.TemporaryDirectory() as tmpdir1:
+            s = SNPs(input_data.encode(), output_dir=tmpdir1)
+
+            r = Resources()
+            r._reference_sequences["GRCh37"] = {}
+
+            output = os.path.join(tmpdir1, "generic_GRCh37.vcf")
+            with tempfile.TemporaryDirectory() as tmpdir2:
+                dest = os.path.join(tmpdir2, "generic.fa.gz")
+                gzip_file("tests/input/generic.fa", dest)
+
+                seq = ReferenceSequence(ID="1", path=dest)
+
+                r._reference_sequences["GRCh37"]["1"] = seq
+
+                self.assertEqual(s.to_vcf(), output)
+
+                with open(output, "r") as f:
+                    actual = f.read()
+
+                # Check if expected output is included
+                self.assertIn(expected_output, actual)
+
+                # Check for ALT headers
+                if output_includes_ins:
+                    self.assertIn("##ALT=<ID=INS", actual)
+                else:
+                    self.assertNotIn("##ALT=<ID=INS", actual)
+
+                if output_includes_del:
+                    self.assertIn("##ALT=<ID=DEL", actual)
+                else:
+                    self.assertNotIn("##ALT=<ID=DEL", actual)
+
     def test_save_vcf_qc_only_F_qc_filter_F(self):
         self.run_vcf_qc_test(
             "tests/output/vcf_qc/qc_only_F_qc_filter_F.vcf",
@@ -314,3 +351,74 @@ class TestWriter(BaseSNPsTestCase):
             vcf_qc_filter=True,
             cluster="",
         )
+
+    def test_save_vcf_indels(self):
+        test_cases = [
+            {
+                "input": """rsid,chromosome,position,genotype
+rs1,1,101,II
+""",
+                "expected_output": """##ALT=<ID=INS,Description="Insertion of novel sequence relative to the reference">
+##INFO=<ID=SVTYPE,Number=.,Type=String,Description="Type of structural variant: INS (Insertion), DEL (Deletion)">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE
+1\t101\trs1\tA\t<INS>\t.\t.\tSVTYPE=INS;IMPRECISE\tGT\t1/1
+""",
+                "output_includes_ins": True,
+                "output_includes_del": False,
+            },
+            {
+                "input": """rsid,chromosome,position,genotype
+rs1,1,101,DD
+""",
+                "expected_output": """##ALT=<ID=DEL,Description="Deletion relative to the reference">
+##INFO=<ID=SVTYPE,Number=.,Type=String,Description="Type of structural variant: INS (Insertion), DEL (Deletion)">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE
+1\t101\trs1\tA\t<DEL>\t.\t.\tSVTYPE=DEL;IMPRECISE\tGT\t1/1
+""",
+                "output_includes_ins": False,
+                "output_includes_del": True,
+            },
+            {
+                "input": """rsid,chromosome,position,genotype
+rs1,1,101,ID
+""",
+                "expected_output": """##ALT=<ID=DEL,Description="Deletion relative to the reference">
+##ALT=<ID=INS,Description="Insertion of novel sequence relative to the reference">
+##INFO=<ID=SVTYPE,Number=.,Type=String,Description="Type of structural variant: INS (Insertion), DEL (Deletion)">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE
+1\t101\trs1\tA\t<DEL>,<INS>\t.\t.\tSVTYPE=DEL,INS;IMPRECISE\tGT\t2/1
+""",
+                "output_includes_ins": True,
+                "output_includes_del": True,
+            },
+            {
+                "input": """rsid,chromosome,position,genotype
+rs1,1,101,DI
+""",
+                "expected_output": """##ALT=<ID=DEL,Description="Deletion relative to the reference">
+##ALT=<ID=INS,Description="Insertion of novel sequence relative to the reference">
+##INFO=<ID=SVTYPE,Number=.,Type=String,Description="Type of structural variant: INS (Insertion), DEL (Deletion)">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE
+1\t101\trs1\tA\t<DEL>,<INS>\t.\t.\tSVTYPE=DEL,INS;IMPRECISE\tGT\t1/2
+""",
+                "output_includes_ins": True,
+                "output_includes_del": True,
+            },
+        ]
+
+        for case in test_cases:
+            with self.subTest(case=case):
+                self.run_vcf_indel_test(
+                    case["input"],
+                    case["expected_output"],
+                    case["output_includes_ins"],
+                    case["output_includes_del"],
+                )

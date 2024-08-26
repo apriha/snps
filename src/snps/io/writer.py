@@ -167,7 +167,8 @@ class Writer:
         comment = [
             "##fileformat=VCFv4.3",
             f'##fileDate={get_utc_now().strftime("%Y%m%d")}',
-            f'##source="{self._snps.source}; snps v{snps.__version__}; https://pypi.org/project/snps/"',
+            f'##source="snps v{snps.__version__}; https://pypi.org/project/snps/"',
+            f'##detectedCompany="{self._snps.source}"',
         ]
 
         df = self._snps.snps

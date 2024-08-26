@@ -174,6 +174,9 @@ class Writer:
         if self._snps.build_original:
             comment.append(f"##detectedOriginalBuild={self._snps.build_original}")
 
+        if self._snps.determine_sex():
+            comment.append(f"##detectedSex={self._snps.determine_sex()}")
+
         df = self._snps.snps
 
         p = self._snps._parallelizer

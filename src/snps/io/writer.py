@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 import snps
+from snps.constants import REFERENCE_SEQUENCE_CHROMS
 from snps.io import get_empty_snps_dataframe
 from snps.utils import clean_str, get_utc_now, save_df_as_csv
 
@@ -120,14 +121,14 @@ class Writer:
 
             filename = f"{clean_str(self._snps.source)}_{self._snps.assembly}{ext}"
 
-        comment = (
-            f"# Source(s): {self._snps.source}\n"
-            f"# Build: {self._snps.build}\n"
-            f"# Build Detected: { self._snps.build_detected}\n"
-            f"# Phased: {self._snps.phased}\n"
-            f"# SNPs: {self._snps.count}\n"
-            f"# Chromosomes: {self._snps.chromosomes_summary}\n"
-        )
+        comment = [
+            f"# Source(s): {self._snps.source}",
+            f"# Build: {self._snps.build}",
+            f"# Build Detected: { self._snps.build_detected}",
+            f"# Phased: {self._snps.phased}",
+            f"# SNPs: {self._snps.count}",
+            f"# Chromosomes: {self._snps.chromosomes_summary}",
+        ]
         if "header" in self._kwargs:
             if isinstance(self._kwargs["header"], bool):
                 if self._kwargs["header"]:
@@ -139,7 +140,7 @@ class Writer:
             self._snps._snps,
             self._snps._output_dir,
             filename,
-            comment=comment,
+            comment="\n".join(comment) + "\n",
             atomic=self._atomic,
             **self._kwargs,
         )
@@ -149,8 +150,8 @@ class Writer:
 
         References
         ----------
-        1. The Variant Call Format (VCF) Version 4.2 Specification, 8 Mar 2019,
-           https://samtools.github.io/hts-specs/VCFv4.2.pdf
+        1. The Variant Call Format (VCF) Version 4.3 Specification, 27 Nov 2022,
+           https://samtools.github.io/hts-specs/VCFv4.3.pdf
 
         Returns
         -------
@@ -163,61 +164,37 @@ class Writer:
         if not filename:
             filename = f"{clean_str(self._snps.source)}_{self._snps.assembly}{'.vcf'}"
 
-        comment = (
-            f"##fileformat=VCFv4.2\n"
-            f'##fileDate={get_utc_now().strftime("%Y%m%d")}\n'
-            f'##source="{self._snps.source}; snps v{snps.__version__}; https://pypi.org/project/snps/"\n'
-        )
+        comment = [
+            "##fileformat=VCFv4.3",
+            f'##fileDate={get_utc_now().strftime("%Y%m%d")}',
+            f'##source="snps v{snps.__version__}; https://pypi.org/project/snps/"',
+            f'##detectedCompany="{self._snps.source}"',
+        ]
 
-        reference_sequence_chroms = (
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "18",
-            "19",
-            "20",
-            "21",
-            "22",
-            "X",
-            "Y",
-            "MT",
-        )
+        if self._snps.build_original:
+            comment.append(f"##detectedOriginalBuild={self._snps.build_original}")
+
+        if self._snps.determine_sex():
+            comment.append(f"##detectedSex={self._snps.determine_sex()}")
+
+        if self._vcf_qc_only or self._vcf_qc_filter:
+            chip_version = ""
+            if self._snps.chip_version:
+                chip_version = f" {self._snps.chip_version}"
+
+            if self._snps.chip:
+                comment.append(
+                    f'##detectedChip="{self._snps.chip}{chip_version} per Lu et al.: https://doi.org/10.1016/j.csbj.2021.06.040"'
+                )
 
         df = self._snps.snps
 
         p = self._snps._parallelizer
         tasks = []
 
-        # skip insertions and deletions
-        df = df.drop(
-            df.loc[
-                df["genotype"].notnull()
-                & (
-                    (df["genotype"].str[0] == "I")
-                    | (df["genotype"].str[0] == "D")
-                    | (df["genotype"].str[1] == "I")
-                    | (df["genotype"].str[1] == "D")
-                )
-            ].index
-        )
-
         chroms_to_drop = []
         for chrom in df["chrom"].unique():
-            if chrom not in reference_sequence_chroms:
+            if chrom not in REFERENCE_SEQUENCE_CHROMS:
                 chroms_to_drop.append(chrom)
                 continue
 
@@ -237,12 +214,17 @@ class Writer:
                         if self._vcf_qc_only or self._vcf_qc_filter
                         else get_empty_snps_dataframe()
                     ),
+                    "sex": self._snps.determine_sex(),
                 }
             )
 
         # drop chromosomes without reference sequence data (e.g., unassigned PAR)
         for chrom in chroms_to_drop:
             df = df.drop(df.loc[df["chrom"] == chrom].index)
+
+        # Check for the presence of insertions or deletions
+        has_ins = df["genotype"].str.contains("I", na=False).any()
+        has_del = df["genotype"].str.contains("D", na=False).any()
 
         # create the VCF representation for SNPs
         results = p(self._create_vcf_representation, tasks)
@@ -251,27 +233,47 @@ class Writer:
         vcf = [pd.DataFrame()]
         discrepant_vcf_position = [pd.DataFrame()]
         for result in list(results):
-            contigs.append(result["contig"])
+            if result["contig"]:
+                contigs.append(result["contig"])
             vcf.append(result["vcf"])
             discrepant_vcf_position.append(result["discrepant_vcf_position"])
 
         vcf = pd.concat(vcf)
         discrepant_vcf_position = pd.concat(discrepant_vcf_position)
 
-        comment += "".join(contigs)
+        comment.extend(contigs)
+
+        if has_del:
+            comment.append(
+                '##ALT=<ID=DEL,Description="Deletion relative to the reference">'
+            )
+        if has_ins:
+            comment.append(
+                '##ALT=<ID=INS,Description="Insertion of novel sequence relative to the reference">'
+            )
+
+        if has_ins or has_del:
+            comment.append(
+                '##INFO=<ID=SVTYPE,Number=.,Type=String,Description="Type of structural variant: INS (Insertion), DEL (Deletion)">'
+            )
+            comment.append(
+                '##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">'
+            )
 
         if self._vcf_qc_filter and self._snps.cluster:
-            comment += '##FILTER=<ID=lq,Description="Low quality SNP per Lu et al.: https://doi.org/10.1016/j.csbj.2021.06.040">\n'
+            comment.append(
+                '##FILTER=<ID=lq,Description="Low quality SNP per Lu et al.: https://doi.org/10.1016/j.csbj.2021.06.040">'
+            )
 
-        comment += '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n'
-        comment += "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE\n"
+        comment.append('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">')
+        comment.append("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE")
 
         return (
             save_df_as_csv(
                 vcf,
                 self._snps._output_dir,
                 filename,
-                comment=comment,
+                comment="\n".join(comment) + "\n",
                 prepend_info=False,
                 header=False,
                 index=False,
@@ -288,6 +290,7 @@ class Writer:
         snps = task["snps"]
         cluster = task["cluster"]
         low_quality_snps = task["low_quality_snps"]
+        sex = task["sex"]
 
         if len(snps.loc[snps["genotype"].notnull()]) == 0:
             return {
@@ -299,7 +302,7 @@ class Writer:
         seqs = resources.get_reference_sequences(assembly, [chrom])
         seq = seqs[chrom]
 
-        contig = f'##contig=<ID={seq.ID},URL={seq.url},length={seq.length},assembly={seq.build},md5={seq.md5},species="{seq.species}">\n'
+        contig = f'##contig=<ID={self._vcf_chrom_prefix}{seq.ID},URL={seq.url},length={seq.length},assembly={seq.build},md5={seq.md5},species="{seq.species}">'
 
         if self._vcf_qc_only and cluster:
             # drop low quality SNPs if SNPs object maps to a cluster
@@ -371,11 +374,26 @@ class Writer:
             temp["REF"], temp["genotype"]
         )
 
+        # Populate INFO field
+        df["INFO"] = df["ALT"].apply(self._compute_info)
+
         temp = df.loc[df["genotype"].notnull()]
 
         df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
             self._compute_genotype
         )(temp["REF"], temp["ALT"], temp["genotype"])
+
+        if sex == "Female":
+            haploid_chroms = ["Y", "MT"]
+        else:
+            haploid_chroms = ["X", "Y", "MT"]
+
+        # populate null values for haploid chromosomes
+        df.loc[
+            (df["SAMPLE"].isnull())
+            & (df["CHROM"].str.contains("|".join(haploid_chroms))),
+            "SAMPLE",
+        ] = "."
 
         df.loc[df["SAMPLE"].isnull(), "SAMPLE"] = "./."
 
@@ -387,8 +405,17 @@ class Writer:
             "discrepant_vcf_position": discrepant_vcf_position,
         }
 
+    def _replace_genotype_indels(self, genotype):
+        # Replace 'I' and 'D' with '<INS>' and '<DEL>'
+        return [
+            "<INS>" if allele == "I" else "<DEL>" if allele == "D" else allele
+            for allele in genotype
+        ]
+
     def _compute_alt(self, ref, genotype):
         genotype_alleles = list(set(genotype))
+
+        genotype_alleles = self._replace_genotype_indels(genotype_alleles)
 
         if ref in genotype_alleles:
             if len(genotype_alleles) == 1:
@@ -401,6 +428,10 @@ class Writer:
             return ",".join(genotype_alleles)
 
     def _compute_genotype(self, ref, alt, genotype):
+        genotype = list(genotype)
+
+        genotype = self._replace_genotype_indels(genotype)
+
         alleles = [ref]
 
         if self._snps.phased:
@@ -417,3 +448,22 @@ class Writer:
             )
         else:
             return f"{alleles.index(genotype[0])}"
+
+    def _compute_info(self, alt):
+        """Generate the INFO field based on ALT values."""
+        if pd.isna(alt):
+            return "."
+
+        alt_values = alt.split(",")
+        svtypes = []
+        for alt_value in alt_values:
+            if alt_value == "<INS>":
+                svtypes.append("INS")
+            elif alt_value == "<DEL>":
+                svtypes.append("DEL")
+
+        if not svtypes:
+            return "."
+
+        svtype_str = ",".join(svtypes)
+        return f"SVTYPE={svtype_str};IMPRECISE" if svtype_str else "."

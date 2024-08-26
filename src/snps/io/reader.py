@@ -163,7 +163,7 @@ class Reader:
         elif re.match("^rs[0-9]*[, \t]{1}[1]", first_line):
             d = self.read_generic(file, compression, skip=0)
         elif "vcf" in comments.lower() or "##contig" in comments.lower():
-            d = self.read_vcf(file, compression, "vcf", self._rsids)
+            d = self.read_vcf(file, compression, "vcf", self._rsids, comments)
         elif ("Genes for Good" in comments) | ("PLINK" in comments):
             d = self.read_genes_for_good(file, compression)
         elif "DNA.Land" in comments:
@@ -1355,7 +1355,7 @@ class Reader:
 
         return self.read_helper("generic", parser)
 
-    def read_vcf(self, file, compression, provider, rsids=()):
+    def read_vcf(self, file, compression, provider, rsids=(), comments=""):
         """Read and parse VCF file.
 
         Notes
@@ -1366,7 +1366,7 @@ class Reader:
             * SNPs that are not annotated with an RSID are skipped
             * If the VCF contains multiple samples, only the first sample is used to
               lookup the genotype
-            * Insertions and deletions are skipped
+            * Precise insertions and deletions are skipped
             * If a sample allele is not specified, the genotype is reported as NaN
             * If a sample allele refers to a REF or ALT allele that is not specified,
               the genotype is reported as NaN
@@ -1392,6 +1392,17 @@ class Reader:
                 df, phased = self._parse_vcf(file, rsids)
 
             return (df, phased)
+
+        header_lines = comments.replace("\r\n", "\n").split("\n")
+
+        detected_company = ""
+        for line in header_lines:
+            if line.startswith("##detectedCompany="):
+                detected_company = line.split("=")[1].strip('"')
+                break
+
+        if detected_company:
+            provider = detected_company
 
         return self.read_helper(provider, parser)
 
@@ -1441,9 +1452,13 @@ class Reader:
                 if len(alt.split(",")) > 1 and alt.split(",")[1] == "<NON_REF>":
                     alt = alt.split(",")[0]
 
-                ref_alt = [ref] + alt.split(",")
+                # Handle <INS> and <DEL> alleles (imprecise insertions and deletions)
+                ref_alt = [ref] + [
+                    "I" if allele == "<INS>" else "D" if allele == "<DEL>" else allele
+                    for allele in alt.split(",")
+                ]
 
-                # skip insertions and deletions
+                # skip precise insertions and deletions
                 if sum(map(len, ref_alt)) > len(ref_alt):
                     continue
 

@@ -76,6 +76,7 @@ class SNPs:
         self._phased = False
         self._build = 0
         self._build_detected = False
+        self._build_original = 0
         self._output_dir = output_dir
         self._resources = Resources(resources_dir=resources_dir)
         self._parallelizer = Parallelizer(parallelize=parallelize, processes=processes)
@@ -102,6 +103,9 @@ class SNPs:
             self._phased = d["phased"]
             self._build = d["build"]
             self._build_detected = True if d["build"] else False
+
+            if self._build_detected:
+                self._build_original = self._build
 
             if not self._snps.empty:
                 self.sort()
@@ -380,6 +384,16 @@ class SNPs:
         bool
         """
         return self._build_detected
+
+    @property
+    def build_original(self):
+        """Original build of SNPs, before any remapping.
+
+        Returns
+        -------
+        int
+        """
+        return self._build_original
 
     @property
     def assembly(self):

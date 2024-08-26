@@ -171,6 +171,9 @@ class Writer:
             f'##detectedCompany="{self._snps.source}"',
         ]
 
+        if self._snps.build_original:
+            comment.append(f"##detectedOriginalBuild={self._snps.build_original}")
+
         df = self._snps.snps
 
         p = self._snps._parallelizer

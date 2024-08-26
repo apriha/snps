@@ -83,6 +83,7 @@ class SNPs:
         self._cluster = ""
         self._chip = ""
         self._chip_version = ""
+        self._cluster_overlap_computed = False
 
         if file:
             d = self._read_raw_data(file, only_detect_source, rsids)
@@ -2020,6 +2021,8 @@ class SNPs:
                 logger.warning(
                     "Detected SNPs data source not found in cluster's company composition"
                 )
+
+        self._cluster_overlap_computed = True
 
         return df
 

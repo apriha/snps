@@ -177,6 +177,16 @@ class Writer:
         if self._snps.determine_sex():
             comment.append(f"##detectedSex={self._snps.determine_sex()}")
 
+        if self._vcf_qc_only or self._vcf_qc_filter:
+            chip_version = ""
+            if self._snps.chip_version:
+                chip_version = f" {self._snps.chip_version}"
+
+            if self._snps.chip:
+                comment.append(
+                    f'##detectedChip="{self._snps.chip}{chip_version} per Lu et al.: https://doi.org/10.1016/j.csbj.2021.06.040"'
+                )
+
         df = self._snps.snps
 
         p = self._snps._parallelizer

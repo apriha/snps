@@ -767,18 +767,15 @@ class Resources(metaclass=Singleton):
             try:
                 # get file if it hasn't already been downloaded
                 # http://stackoverflow.com/a/7244263
-                with urllib.request.urlopen(
-                    url, timeout=timeout
-                ) as response, atomic_write(
-                    destination, mode="wb", overwrite=True
-                ) as f:
-                    self._print_download_msg(destination)
-                    data = response.read()  # a `bytes` object
+                with urllib.request.urlopen(url, timeout=timeout) as response:
+                    with atomic_write(destination, mode="wb", overwrite=True) as f:
+                        self._print_download_msg(destination)
+                        data = response.read()  # a `bytes` object
 
-                    if compress:
-                        self._write_data_to_gzip(f, data)
-                    else:
-                        f.write(data)
+                        if compress:
+                            self._write_data_to_gzip(f, data)
+                        else:
+                            f.write(data)
             except urllib.error.URLError as err:
                 logger.warning(err)
                 destination = ""

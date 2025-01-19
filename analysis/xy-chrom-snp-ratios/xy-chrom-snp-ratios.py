@@ -185,7 +185,7 @@ def create_analysis_plot(
         va="top",
     )
     ax_scatter.annotate(
-        f"n={ len(df_ratios.loc[(df_ratios.heterozygous_x_snps_ratio < heterozygous_x_snps_threshold)& (df_ratios.y_snps_not_null_ratio >= y_snps_not_null_threshold)])}",
+        f"n={len(df_ratios.loc[(df_ratios.heterozygous_x_snps_ratio < heterozygous_x_snps_threshold) & (df_ratios.y_snps_not_null_ratio >= y_snps_not_null_threshold)])}",
         (
             heterozygous_x_snps_threshold - x_offset,
             y_snps_not_null_threshold + y_offset,
@@ -194,7 +194,7 @@ def create_analysis_plot(
         va="bottom",
     )
     ax_scatter.annotate(
-        f"n={len(df_ratios.loc[ (df_ratios.heterozygous_x_snps_ratio >= heterozygous_x_snps_threshold) & (df_ratios.y_snps_not_null_ratio >= y_snps_not_null_threshold)])}",
+        f"n={len(df_ratios.loc[(df_ratios.heterozygous_x_snps_ratio >= heterozygous_x_snps_threshold) & (df_ratios.y_snps_not_null_ratio >= y_snps_not_null_threshold)])}",
         (
             heterozygous_x_snps_threshold + x_offset,
             y_snps_not_null_threshold + y_offset,

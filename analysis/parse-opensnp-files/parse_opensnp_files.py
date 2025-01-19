@@ -29,7 +29,7 @@ r = Resources(resources_dir="../../resources")
 
 # setup logger to output to file in output directory
 logging.basicConfig(
-    filename=f'{os.path.join(OUTPUT_DIR, "parse-opensnp-files.txt")}',
+    filename=f"{os.path.join(OUTPUT_DIR, 'parse-opensnp-files.txt')}",
     format="%(asctime)s: %(message)s",
     filemode="w",
     level=logging.INFO,

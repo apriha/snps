@@ -174,7 +174,7 @@ class TestReader(BaseSNPsTestCase):
         # generate content of second file
         s2 = "RSID,CHROMOSOME,POSITION,RESULT\r\n"
         for i in range(0, total_snps2):
-            s2 += f'"rs{total_snps1 + 1 + i}","1","{ total_snps1 + 101 + i}","AA"\r\n'
+            s2 += f'"rs{total_snps1 + 1 + i}","1","{total_snps1 + 101 + i}","AA"\r\n'
         snps_df = self.create_snp_df(
             rsid=[f"rs{1 + i}" for i in range(0, total_snps1 + total_snps2)],
             chrom="1",

@@ -124,7 +124,7 @@ class Writer:
         comment = [
             f"# Source(s): {self._snps.source}",
             f"# Build: {self._snps.build}",
-            f"# Build Detected: { self._snps.build_detected}",
+            f"# Build Detected: {self._snps.build_detected}",
             f"# Phased: {self._snps.phased}",
             f"# SNPs: {self._snps.count}",
             f"# Chromosomes: {self._snps.chromosomes_summary}",
@@ -166,7 +166,7 @@ class Writer:
 
         comment = [
             "##fileformat=VCFv4.3",
-            f'##fileDate={get_utc_now().strftime("%Y%m%d")}',
+            f"##fileDate={get_utc_now().strftime('%Y%m%d')}",
             f'##source="snps v{snps.__version__}; https://pypi.org/project/snps/"',
             f'##detectedCompany="{self._snps.source}"',
         ]

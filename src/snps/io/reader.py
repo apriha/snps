@@ -1145,7 +1145,7 @@ class Reader:
             return (df,)
 
         return self.read_helper("Sano", parser)
-        
+
     def read_selfdecode(self, file, compression):
        """Read and parse SelfDecode file.
 

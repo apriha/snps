@@ -118,7 +118,7 @@ class Reader:
         else:
             return d
 
-        if "23andMe" in first_line:
+            if "23andMe" in first_line:
             # some 23andMe files have separate alleles
             if comments.endswith(
                 "# rsid\tchromosome\tposition\tallele1\tallele2\n"
@@ -150,6 +150,8 @@ class Reader:
             d = self.read_snps_csv(file, comments, compression)
         elif "rsid\tChromosome\tposition\tgenotype" == first_line.strip():
             d = self.read_tellmegen(file, compression)
+        elif "23Mofang" in first_line or "23Mofang" in comments:
+            d = self.read_23Mofang(file, compression)
         elif (
             "# This file was derived from the corresponding VCF" in comments
             or re.match(
@@ -1143,6 +1145,61 @@ class Reader:
             return (df,)
 
         return self.read_helper("Sano", parser)
+
+    def read_23Mofang(self, file, compression, joined=True):
+        """Read and parse 23Mofang file.
+
+        https://www.23mofang.com/
+
+        Parameters
+        ----------
+        file : str
+            path to file
+
+        Returns
+        -------
+        dict
+            result of `read_helper`
+        """
+
+        def parser():
+            if joined:
+                columnnames = ["rsid", "chrom", "pos", "genotype"]
+                dtype = NORMALIZED_DTYPES.copy()
+            else:
+                columnnames = ["rsid", "chrom", "pos", "allele1", "allele2"]
+                dtype = TWO_ALLELE_DTYPES.copy()
+
+            # Temporarily use nullable UInt32 for 'pos' column
+            dtype["pos"] = pd.UInt32Dtype()
+
+            df = pd.read_csv(
+                file,
+                comment="#",
+                sep="\t",
+                na_values=["--", "-"],
+                names=columnnames,
+                compression=compression,
+                dtype=dtype,
+            )
+
+            # Drop rows with NaN values in 'pos' column
+            df = df.dropna(subset=["pos"])
+
+            # Convert 'pos' column to np.uint32
+            df["pos"] = df["pos"].astype(np.uint32)
+
+            if not joined:
+                # stick separate alleles together
+                df["genotype"] = df["allele1"] + df["allele2"]
+                del df["allele1"]
+                del df["allele2"]
+            df = df.dropna(subset=["rsid", "chrom", "pos"])
+            df = df.astype(dtype=NORMALIZED_DTYPES)
+            df = df.set_index("rsid")
+            return (df,)
+
+        return self.read_helper("23Mofang", parser)
 
     def read_plink(self, file, compression):
         """Read and parse plink file.

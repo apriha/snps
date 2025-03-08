@@ -118,7 +118,7 @@ class Reader:
         else:
             return d
 
-            if "23andMe" in first_line:
+        if "23andMe" in first_line:
             # some 23andMe files have separate alleles
             if comments.endswith(
                 "# rsid\tchromosome\tposition\tallele1\tallele2\n"

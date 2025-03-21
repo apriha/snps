@@ -157,6 +157,10 @@ class TestReader(BaseSNPsTestCase):
     def test_read_plink(self):
         self.run_parsing_tests("tests/input/plink.txt", "PLINK")
 
+    def test_read_SelfDecode(self):
+        # https://selfdecode.com
+        self.run_parsing_tests("tests/input/selfdecode.txt", "SelfDecode")
+
     def test_read_ftdna(self):
         # https://www.familytreedna.com
         self.run_parsing_tests("tests/input/ftdna.csv", "FTDNA")

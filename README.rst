@@ -60,6 +60,7 @@ genotype files from the following DNA testing sources:
 - `MyHeritage <https://www.myheritage.com>`_
 - `PLINK <https://www.cog-genomics.org/plink/>`_
 - `Sano Genetics <https://sanogenetics.com>`_
+- `SelfDecode <https://selfdecode.com>`_
 - `tellmeGen <https://www.tellmegen.com>`_
 
 Additionally, ``snps`` can read a variety of "generic" CSV and TSV files.

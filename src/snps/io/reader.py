@@ -168,6 +168,8 @@ class Reader:
             d = self.read_genes_for_good(file, compression)
         elif "DNA.Land" in comments:
             d = self.read_dnaland(file, compression)
+        elif "SelfDecode" in comments:
+            d = self.read_selfdecode(file, compression)
         elif first_line.startswith("[Header]"):
             # Global Screening Array, includes SANO and CODIGO46
             d = self.read_gsa(file, compression, comments)
@@ -1143,6 +1145,48 @@ class Reader:
             return (df,)
 
         return self.read_helper("Sano", parser)
+
+    def read_selfdecode(self, file, compression):
+        """Read and parse SelfDecode file.
+
+        https://selfdecode.com/
+
+        Parameters
+        ----------
+        file : str
+            path to file
+        Returns
+        -------
+        dict
+            result of `read_helper`
+        """
+
+        def parser():
+            columnnames = ["rsid", "chrom", "pos", "genotype"]
+            dtype = NORMALIZED_DTYPES.copy()
+
+            # Temporarily use nullable UInt32 for 'pos' column
+            dtype["pos"] = pd.UInt32Dtype()
+            df = pd.read_csv(
+                file,
+                comment="#",
+                sep="\t",
+                na_values="--",
+                names=columnnames,
+                compression=compression,
+                dtype=dtype,
+            )
+            # Drop rows with NaN values in 'pos' column
+            df = df.dropna(subset=["pos"])
+            # Convert 'pos' column to np.uint32
+            df["pos"] = df["pos"].astype(np.uint32)
+
+            df = df.dropna(subset=["rsid", "chrom", "pos"])
+            df = df.astype(dtype=NORMALIZED_DTYPES)
+            df = df.set_index("rsid")
+            return (df,)
+
+        return self.read_helper("SelfDecode", parser)
 
     def read_plink(self, file, compression):
         """Read and parse plink file.

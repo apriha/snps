@@ -1,4 +1,4 @@
-.. image:: https://raw.githubusercontent.com/apriha/snps/master/docs/images/snps_banner.png
+.. image:: https://raw.githubusercontent.com/apriha/snps/main/docs/images/snps_banner.png
 
 |ci| |codecov| |docs| |pypi| |python| |downloads| |ruff|
 
@@ -20,7 +20,7 @@ Input / Output
 - Merge raw data files from different DNA tests, identifying discrepant SNPs in the process
 - Read data in a variety of formats (e.g., files, bytes, compressed with `gzip` or `zip`)
 - Handle several variations of file types, validated via
-  `openSNP parsing analysis <https://github.com/apriha/snps/tree/master/analysis/parse-opensnp-files>`_
+  `openSNP parsing analysis <https://github.com/apriha/snps/tree/main/analysis/parse-opensnp-files>`_
 
 Build / Assembly Detection and Remapping
 ````````````````````````````````````````
@@ -60,6 +60,7 @@ genotype files from the following DNA testing sources:
 - `MyHeritage <https://www.myheritage.com>`_
 - `PLINK <https://www.cog-genomics.org/plink/>`_
 - `Sano Genetics <https://sanogenetics.com>`_
+- `SelfDecode <https://selfdecode.com>`_
 - `tellmeGen <https://www.tellmegen.com>`_
 
 Additionally, ``snps`` can read a variety of "generic" CSV and TSV files.
@@ -272,12 +273,12 @@ Thanks to Mike Agostino, Padma Reddy, Kevin Arvai, `openSNP <https://opensnp.org
 
 License
 -------
-``snps`` is licensed under the `BSD 3-Clause License <https://github.com/apriha/snps/blob/master/LICENSE.txt>`_.
+``snps`` is licensed under the `BSD 3-Clause License <https://github.com/apriha/snps/blob/main/LICENSE.txt>`_.
 
 .. https://github.com/rtfd/readthedocs.org/blob/master/docs/badges.rst
-.. |ci| image:: https://github.com/apriha/snps/actions/workflows/ci.yml/badge.svg?branch=master
+.. |ci| image:: https://github.com/apriha/snps/actions/workflows/ci.yml/badge.svg?branch=main
    :target: https://github.com/apriha/snps/actions/workflows/ci.yml
-.. |codecov| image:: https://codecov.io/gh/apriha/snps/branch/master/graph/badge.svg
+.. |codecov| image:: https://codecov.io/gh/apriha/snps/branch/main/graph/badge.svg
    :target: https://codecov.io/gh/apriha/snps
 .. |docs| image:: https://readthedocs.org/projects/snps/badge/?version=stable
    :target: https://snps.readthedocs.io/

@@ -49,6 +49,7 @@ Supported Genotype Files
 genotype files from the following DNA testing sources:
 
 - `23andMe <https://www.23andme.com>`_
+- `23Mofang <https://www.23mofang.com>`_
 - `Ancestry <https://www.ancestry.com>`_
 - `CircleDNA <https://circledna.com/>`_
 - `Código 46 <https://codigo46.com.mx>`_

@@ -161,6 +161,10 @@ class TestReader(BaseSNPsTestCase):
         # https://selfdecode.com
         self.run_parsing_tests("tests/input/selfdecode.txt", "SelfDecode")
 
+    def test_read_23Mofang(self):
+        # https://www.23mofang.com
+        self.run_parsing_tests("tests/input/23mofang.txt", "23Mofang")
+
     def test_read_ftdna(self):
         # https://www.familytreedna.com
         self.run_parsing_tests("tests/input/ftdna.csv", "FTDNA")

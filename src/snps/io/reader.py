@@ -1190,7 +1190,7 @@ class Reader:
 
         return self.read_helper("SelfDecode", parser)
 
-    def read_23Mofang(self, file, compression, joined=True):
+    def read_23Mofang(self, file, compression):
         """Read and parse 23Mofang file.
 
         https://www.23mofang.com/
@@ -1207,12 +1207,8 @@ class Reader:
         """
 
         def parser():
-            if joined:
-                columnnames = ["rsid", "chrom", "pos", "genotype"]
-                dtype = NORMALIZED_DTYPES.copy()
-            else:
-                columnnames = ["rsid", "chrom", "pos", "allele1", "allele2"]
-                dtype = TWO_ALLELE_DTYPES.copy()
+            columnnames = ["rsid", "chrom", "pos", "genotype"]
+            dtype = NORMALIZED_DTYPES.copy()
 
             # Temporarily use nullable UInt32 for 'pos' column
             dtype["pos"] = pd.UInt32Dtype()
@@ -1233,11 +1229,6 @@ class Reader:
             # Convert 'pos' column to np.uint32
             df["pos"] = df["pos"].astype(np.uint32)
 
-            if not joined:
-                # stick separate alleles together
-                df["genotype"] = df["allele1"] + df["allele2"]
-                del df["allele1"]
-                del df["allele2"]
             df = df.dropna(subset=["rsid", "chrom", "pos"])
             df = df.astype(dtype=NORMALIZED_DTYPES)
             df = df.set_index("rsid")

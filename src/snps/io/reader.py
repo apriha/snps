@@ -144,7 +144,11 @@ class Reader:
             d = self.read_myheritage(file, compression)
         elif "Living DNA" in first_line:
             d = self.read_livingdna(file, compression)
-        elif "SNP Name\trsID" in first_line or "SNP.Name\tSample.ID" in first_line or "Mapmygenome" in comments:
+        elif (
+            "SNP Name\trsID" in first_line
+            or "SNP.Name\tSample.ID" in first_line
+            or "Mapmygenome" in comments
+        ):
             d = self.read_mapmygenome(file, compression, first_line, comments)
         elif "lineage" in first_line or "snps" in first_line:
             d = self.read_snps_csv(file, comments, compression)
@@ -734,7 +738,10 @@ class Reader:
         """
 
         def parser():
-            if "rsid\tchromosome\tposition\tgenotype" in header or "Mapmygenome" in comments:
+            if (
+                "rsid\tchromosome\tposition\tgenotype" in header
+                or "Mapmygenome" in comments
+            ):
                 df = pd.read_csv(
                     file,
                     comment="#",
@@ -749,11 +756,14 @@ class Reader:
                     },
                     compression=compression,
                 )
-                df.rename(columns={"chromosome": "chrom", "position": "pos"}, inplace=True)
+                df.rename(
+                    columns={"chromosome": "chrom", "position": "pos"}, inplace=True
+                )
                 df = df.astype(dtype=NORMALIZED_DTYPES)
                 df.set_index("rsid", inplace=True)
                 return (df,)
             else:
+
                 def parse(rsid_col_name, rsid_col_idx):
                     return pd.read_csv(
                         file,

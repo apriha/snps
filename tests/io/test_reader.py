@@ -299,6 +299,10 @@ class TestReader(BaseSNPsTestCase):
         # https://mapmygenome.in
         self.run_parsing_tests("tests/input/mapmygenome_alt_header.txt", "Mapmygenome")
 
+    def test_read_mapmygenome_new_format(self):
+        # https://mapmygenome.in
+        self.run_parsing_tests("tests/input/mapmygenome_new_format.txt", "Mapmygenome", build_detected=True)
+
     def test_read_myheritage(self):
         # https://www.myheritage.com
         self.run_parsing_tests("tests/input/myheritage.csv", "MyHeritage")

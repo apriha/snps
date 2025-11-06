@@ -144,8 +144,8 @@ class Reader:
             d = self.read_myheritage(file, compression)
         elif "Living DNA" in first_line:
             d = self.read_livingdna(file, compression)
-        elif "SNP Name\trsID" in first_line or "SNP.Name\tSample.ID" in first_line:
-            d = self.read_mapmygenome(file, compression, first_line)
+        elif "SNP Name\trsID" in first_line or "SNP.Name\tSample.ID" in first_line or "Mapmygenome" in comments:
+            d = self.read_mapmygenome(file, compression, first_line, comments)
         elif "lineage" in first_line or "snps" in first_line:
             d = self.read_snps_csv(file, comments, compression)
         elif "rsid\tChromosome\tposition\tgenotype" == first_line.strip():
@@ -717,7 +717,7 @@ class Reader:
 
         return self.read_helper("LivingDNA", parser)
 
-    def read_mapmygenome(self, file, compression, header):
+    def read_mapmygenome(self, file, compression, header, comments):
         """Read and parse Mapmygenome file.
 
         https://mapmygenome.in
@@ -734,36 +734,55 @@ class Reader:
         """
 
         def parser():
-            def parse(rsid_col_name, rsid_col_idx):
-                return pd.read_csv(
+            if "rsid\tchromosome\tposition\tgenotype" in header or "Mapmygenome" in comments:
+                df = pd.read_csv(
                     file,
                     comment="#",
                     sep="\t",
                     na_values="--",
                     header=0,
-                    index_col=rsid_col_idx,
                     dtype={
-                        rsid_col_name: object,
-                        "Chr": object,
-                        "Position": np.uint32,
-                        "Allele1...Top": object,
-                        "Allele2...Top": object,
+                        "rsid": object,
+                        "chromosome": object,
+                        "position": np.uint32,
+                        "genotype": object,
                     },
                     compression=compression,
                 )
-
-            if "rsID" in header:
-                df = parse("rsID", 1)
+                df.rename(columns={"chromosome": "chrom", "position": "pos"}, inplace=True)
+                df = df.astype(dtype=NORMALIZED_DTYPES)
+                df.set_index("rsid", inplace=True)
+                return (df,)
             else:
-                df = parse("SNP.Name", 0)
+                def parse(rsid_col_name, rsid_col_idx):
+                    return pd.read_csv(
+                        file,
+                        comment="#",
+                        sep="\t",
+                        na_values="--",
+                        header=0,
+                        index_col=rsid_col_idx,
+                        dtype={
+                            rsid_col_name: object,
+                            "Chr": object,
+                            "Position": np.uint32,
+                            "Allele1...Top": object,
+                            "Allele2...Top": object,
+                        },
+                        compression=compression,
+                    )
 
-            # uses Illumina definition of "Plus" from https://emea.support.illumina.com/bulletins/2017/06/how-to-interpret-dna-strand-and-allele-information-for-infinium-.html
-            df["genotype"] = df["Allele1...Plus"] + df["Allele2...Plus"]
-            df.rename(columns={"Chr": "chrom", "Position": "pos"}, inplace=True)
-            df.index.name = "rsid"
-            df = df[["chrom", "pos", "genotype"]]
+                if "rsID" in header:
+                    df = parse("rsID", 1)
+                else:
+                    df = parse("SNP.Name", 0)
 
-            return (df,)
+                df["genotype"] = df["Allele1...Plus"] + df["Allele2...Plus"]
+                df.rename(columns={"Chr": "chrom", "Position": "pos"}, inplace=True)
+                df.index.name = "rsid"
+                df = df[["chrom", "pos", "genotype"]]
+
+                return (df,)
 
         return self.read_helper("Mapmygenome", parser)
 

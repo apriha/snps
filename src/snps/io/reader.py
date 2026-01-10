@@ -14,6 +14,8 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 
+from snps.build_constants import CHROM_SIZES
+
 logger = logging.getLogger(__name__)
 
 NORMALIZED_DTYPES = {
@@ -265,10 +267,13 @@ class Reader:
                             elif "38" in part_value:
                                 return 38
                         elif part_key.lower() == "length":
-                            if "249250621" == part_value:
-                                return 37  # length of chromosome 1
-                            elif "248956422" == part_value:
-                                return 38  # length of chromosome 1
+                            # Check chromosome 1 length against known builds
+                            if part_value == str(CHROM_SIZES[37]["1"]):
+                                return 37
+                            elif part_value == str(CHROM_SIZES[38]["1"]):
+                                return 38
+                            elif part_value == str(CHROM_SIZES[36]["1"]):
+                                return 36
             # couldn't find anything
             return 0
         else:
@@ -292,10 +297,13 @@ class Reader:
                 return 38
             elif "grch37" in comments.lower():
                 return 37
-            elif "249250621" in comments.lower():
-                return 37  # length of chromosome 1
-            elif "248956422" in comments.lower():
-                return 38  # length of chromosome 1
+            # Check for chromosome 1 length in comments
+            elif str(CHROM_SIZES[37]["1"]) in comments.lower():
+                return 37
+            elif str(CHROM_SIZES[38]["1"]) in comments.lower():
+                return 38
+            elif str(CHROM_SIZES[36]["1"]) in comments.lower():
+                return 36
             else:
                 return 0
 

@@ -2,6 +2,17 @@ xy-chrom-snp-ratios
 ===================
 an analysis of heterozygous X SNP and not-null Y SNP ratios
 
+.. note::
+
+   **Historical Analysis**
+
+   This analysis was conducted using openSNP data dump functionality that has been
+   removed from the library. The code in this directory is **non-functional** with
+   current versions of ``snps`` and is preserved for historical reference only.
+
+   The analysis results and visualization remain valid as a demonstration of sex
+   determination from SNP data.
+
 Method
 ------
 All files in the `openSNP <https://opensnp.org>`_ data dump that ``snps`` could read were

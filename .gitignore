@@ -103,10 +103,12 @@ ENV/
 
 # development
 .idea/
+.DS_Store
 
 # snps
 output*/
 resources/*
+synthetic_23andme.txt.gz
 
 # snps tests
 tests/output/*

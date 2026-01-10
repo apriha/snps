@@ -3,13 +3,9 @@ import os
 import socket
 import tempfile
 import urllib.error
-import warnings
-import zipfile
 from unittest.mock import Mock, mock_open, patch
 
 import numpy as np
-import pandas as pd
-from atomicwrites import atomic_write
 
 from snps import SNPs
 from snps.resources import ReferenceSequence, Resources
@@ -121,20 +117,6 @@ class TestResources(BaseSNPsTestCase):
 
         for k, v in resources.items():
             self.assertGreater(len(v), 0)
-
-    def test_download_example_datasets(self):
-        def f():
-            with patch("urllib.request.urlopen", mock_open(read_data=b"")):
-                return self.resource.download_example_datasets()
-
-        paths = (
-            self.resource.download_example_datasets() if self.downloads_enabled else f()
-        )
-
-        for path in paths:
-            if not path or not os.path.exists(path):
-                warnings.warn("Example dataset(s) not currently available")
-                return
 
     def test_get_paths_reference_sequences_invalid_assembly(self):
         assembly, chroms, urls, paths = self.resource._get_paths_reference_sequences(
@@ -415,53 +397,50 @@ class TestResources(BaseSNPsTestCase):
             self.assertEqual(seq.end, 117)
             self.assertEqual(seq.length, 117)
 
-    def test_get_opensnp_datadump_filenames(self):
+    def test_create_example_datasets(self):
+        """Test creating synthetic example datasets."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            # temporarily set resources dir to tests
-            self.resource._resources_dir = tmpdir
+            paths = self.resource.create_example_datasets(tmpdir)
 
-            # write test openSNP datadump zip
-            with atomic_write(
-                os.path.join(tmpdir, "opensnp_datadump.current.zip"),
-                mode="wb",
-                overwrite=True,
-            ) as f:
-                with zipfile.ZipFile(f, "w") as f_zip:
-                    f_zip.write("tests/input/generic.csv", arcname="generic1.csv")
-                    f_zip.write("tests/input/generic.csv", arcname="generic2.csv")
+            # Verify two files were created
+            self.assertEqual(len(paths), 2)
+            self.assertTrue(os.path.exists(paths[0]))
+            self.assertTrue(os.path.exists(paths[1]))
 
-            filenames = self.resource.get_opensnp_datadump_filenames()
+            # Verify filenames
+            self.assertTrue(paths[0].endswith("sample1.23andme.txt.gz"))
+            self.assertTrue(paths[1].endswith("sample2.ftdna.csv.gz"))
 
-            self.assertListEqual(filenames, ["generic1.csv", "generic2.csv"])
+            # Verify files can be loaded
+            s1 = SNPs(paths[0])
+            s2 = SNPs(paths[1])
 
-            self.resource._resources_dir = "resources"
+            # Verify file sources are detected correctly
+            self.assertEqual(s1.source, "23andMe")
+            self.assertEqual(s2.source, "FTDNA")
 
-    def test_load_opensnp_datadump_file(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # temporarily set resources dir to tests
-            self.resource._resources_dir = tmpdir
+            # Build detection should work with injected marker SNPs
+            self.assertEqual(s1.build, 37)
+            self.assertTrue(s1.build_detected)
+            self.assertEqual(s2.build, 37)
+            self.assertTrue(s2.build_detected)
 
-            # write test openSNP datadump zip
-            with atomic_write(
-                os.path.join(tmpdir, "opensnp_datadump.current.zip"),
-                mode="wb",
-                overwrite=True,
-            ) as f:
-                with zipfile.ZipFile(f, "w") as f_zip:
-                    f_zip.write("tests/input/generic.csv", arcname="generic1.csv")
-                    f_zip.write("tests/input/generic.csv", arcname="generic2.csv")
+            # Verify SNP counts are approximately correct
+            self.assertGreater(s1.count, 900000)
+            # FTDNA file only contains autosomal chromosomes (1-22), so count is lower
+            self.assertGreater(s2.count, 650000)
 
-            snps1 = SNPs(self.resource.load_opensnp_datadump_file("generic1.csv"))
-            snps2 = SNPs(self.resource.load_opensnp_datadump_file("generic2.csv"))
+            # Verify 23andMe file includes all chromosomes
+            s1_chroms = set(s1.snps["chrom"].unique())
+            self.assertIn("X", s1_chroms)
+            self.assertIn("Y", s1_chroms)
+            self.assertIn("MT", s1_chroms)
 
-            pd.testing.assert_frame_equal(
-                snps1.snps, self.generic_snps(), check_exact=True
-            )
-            pd.testing.assert_frame_equal(
-                snps2.snps, self.generic_snps(), check_exact=True
-            )
-
-            self.resource._resources_dir = "resources"
+            # Verify FTDNA file only includes autosomal chromosomes (1-22)
+            s2_chroms = set(s2.snps["chrom"].unique())
+            self.assertNotIn("X", s2_chroms)
+            self.assertNotIn("Y", s2_chroms)
+            self.assertNotIn("MT", s2_chroms)
 
     def _generate_test_chip_clusters(self):
         s = "1:1\tc1\n" * 2135214

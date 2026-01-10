@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 
+from snps.build_constants import BUILD_MARKER_SNPS
 from snps.ensembl import EnsemblRestClient
 from snps.io import Reader, Writer, get_empty_snps_dataframe
 from snps.resources import Resources
@@ -943,67 +944,14 @@ class SNPs:
            rs11928389, rs2500347, rs964481, rs2341354, rs3850290, and rs1329546
            (dbSNP Build ID: 151). Available from: http://www.ncbi.nlm.nih.gov/SNP/
         """
-
-        def lookup_build_with_snp_pos(pos, s):
-            try:
-                return int(s.loc[s == pos].index[0])
-            except Exception:
-                return 0
-
-        build = 0
-
-        rsids = [
-            "rs3094315",
-            "rs11928389",
-            "rs2500347",
-            "rs964481",
-            "rs2341354",
-            "rs3850290",
-            "rs1329546",
-        ]
-        df = pd.DataFrame(
-            {
-                36: [
-                    742429,
-                    50908372,
-                    143649677,
-                    27566744,
-                    908436,
-                    22315141,
-                    135302086,
-                ],
-                37: [
-                    752566,
-                    50927009,
-                    144938320,
-                    27656823,
-                    918573,
-                    23245301,
-                    135474420,
-                ],
-                38: [
-                    817186,
-                    50889578,
-                    148946169,
-                    27638706,
-                    983193,
-                    22776092,
-                    136392261,
-                ],
-            },
-            index=rsids,
-        )
-
-        for rsid in rsids:
+        # Check each marker SNP until we find a matching build
+        for rsid, marker_data in BUILD_MARKER_SNPS.items():
             if rsid in self._snps.index:
-                build = lookup_build_with_snp_pos(
-                    self._snps.loc[rsid].pos, df.loc[rsid]
-                )
-
-            if build:
-                break
-
-        return build
+                pos = self._snps.loc[rsid].pos
+                for build in (37, 38, 36):  # Check most common builds first
+                    if marker_data[build] == pos:
+                        return build
+        return 0
 
     def get_count(self, chrom=""):
         """Count of SNPs.

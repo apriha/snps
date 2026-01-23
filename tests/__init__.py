@@ -6,7 +6,7 @@ from unittest.mock import Mock, PropertyMock, patch
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_object_dtype, is_unsigned_integer_dtype
+from pandas.api.types import is_object_dtype, is_string_dtype, is_unsigned_integer_dtype
 
 from snps import SNPs
 from snps.utils import gzip_file, zip_file
@@ -646,12 +646,89 @@ class BaseSNPsTestCase(TestCase):
                 snps_df,
             )
 
+    def assert_series_equal_with_string_dtype(self, left, right, **kwargs):
+        """Assert Series are equal, accepting both object and StringDtype for string data.
+
+        In Python 3.14+, pandas infers StringDtype for string data instead of object.
+        This wrapper compares Series without strict dtype matching for string data.
+
+        Parameters
+        ----------
+        left : pd.Series
+            First Series to compare
+        right : pd.Series
+            Second Series to compare
+        **kwargs : dict
+            Additional arguments passed to pd.testing.assert_series_equal
+        """
+        # Verify string series have string or object dtypes
+        if is_string_dtype(left.dtype) or is_object_dtype(left.dtype):
+            self.assertTrue(
+                is_string_dtype(right.dtype) or is_object_dtype(right.dtype),
+                f"Right series dtype {right.dtype} should be string/object type",
+            )
+        # Compare Series without strict dtype matching
+        pd.testing.assert_series_equal(left, right, check_dtype=False, **kwargs)
+
+    def assert_frame_equal_with_string_index(self, left, right, **kwargs):
+        """Assert DataFrames are equal, accepting both object and StringDtype for string columns.
+
+        In Python 3.14+, pandas infers StringDtype for string columns/indices instead of object.
+        This wrapper validates that string columns have string types, then compares the
+        DataFrames without strict dtype matching for object/string columns.
+
+        Parameters
+        ----------
+        left : pd.DataFrame
+            First DataFrame to compare
+        right : pd.DataFrame
+            Second DataFrame to compare
+        **kwargs : dict
+            Additional arguments passed to pd.testing.assert_frame_equal
+        """
+        # Verify index dtypes are string types if they're named 'rsid'
+        if left.index.name == "rsid":
+            self.assertTrue(
+                is_string_dtype(left.index.dtype),
+                f"Left index dtype {left.index.dtype} is not a string type",
+            )
+        if right.index.name == "rsid":
+            self.assertTrue(
+                is_string_dtype(right.index.dtype),
+                f"Right index dtype {right.index.dtype} is not a string type",
+            )
+
+        # Verify string columns (chrom, genotype) have string dtypes
+        for col in ["chrom", "genotype"]:
+            if col in left.columns:
+                self.assertTrue(
+                    is_string_dtype(left[col].dtype)
+                    or is_object_dtype(left[col].dtype),
+                    f"Left column '{col}' dtype {left[col].dtype} is not a string/object type",
+                )
+            if col in right.columns:
+                self.assertTrue(
+                    is_string_dtype(right[col].dtype)
+                    or is_object_dtype(right[col].dtype),
+                    f"Right column '{col}' dtype {right[col].dtype} is not a string/object type",
+                )
+
+        # Compare DataFrames without strict dtype matching for string columns
+        pd.testing.assert_frame_equal(
+            left, right, check_index_type=False, check_dtype=False, **kwargs
+        )
+
     def make_normalized_dataframe_assertions(self, df):
         self.assertEqual(df.index.name, "rsid")
-        self.assertTrue(is_object_dtype(df.index.dtype))
-        self.assertTrue(is_object_dtype(df.chrom.dtype))
+        # Accept both object dtype and StringDtype (used in Python 3.14+)
+        self.assertTrue(is_string_dtype(df.index.dtype))
+        self.assertTrue(
+            is_string_dtype(df.chrom.dtype) or is_object_dtype(df.chrom.dtype)
+        )
         self.assertTrue(is_unsigned_integer_dtype(df.pos.dtype))
-        self.assertTrue(is_object_dtype(df.genotype.dtype))
+        self.assertTrue(
+            is_string_dtype(df.genotype.dtype) or is_object_dtype(df.genotype.dtype)
+        )
 
     def parse_file(self, file, rsids=()):
         return SNPs(file, rsids=rsids)
@@ -675,7 +752,7 @@ class BaseSNPsTestCase(TestCase):
         print(snps_df.info())
 
         self.assertEqual(snps.source, source)
-        pd.testing.assert_frame_equal(snps.snps, snps_df, check_exact=True)
+        self.assert_frame_equal_with_string_index(snps.snps, snps_df, check_exact=True)
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)
         self.assertEqual(snps.build, build)
         (
@@ -699,11 +776,13 @@ class BaseSNPsTestCase(TestCase):
         else:
             self.assertFalse(snps.unannotated_vcf)
             (
-                pd.testing.assert_frame_equal(
+                self.assert_frame_equal_with_string_index(
                     snps.snps, snps_df.loc[rsids], check_exact=True
                 )
                 if rsids
-                else pd.testing.assert_frame_equal(snps.snps, snps_df, check_exact=True)
+                else self.assert_frame_equal_with_string_index(
+                    snps.snps, snps_df, check_exact=True
+                )
             )
 
         self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)

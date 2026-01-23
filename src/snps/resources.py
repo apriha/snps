@@ -24,7 +24,6 @@ import tarfile
 import tempfile
 import urllib.error
 import urllib.request
-import zipfile
 
 import numpy as np
 import pandas as pd
@@ -57,7 +56,6 @@ class Resources(metaclass=Singleton):
         self._gsa_rsid_map = None
         self._gsa_chrpos_map = None
         self._dbsnp_151_37_reverse = None
-        self._opensnp_datadump_filenames = []
         self._chip_clusters = None
         self._low_quality_snps = None
 
@@ -125,48 +123,52 @@ class Resources(metaclass=Singleton):
             self._get_path_assembly_mapping_data(source_assembly, target_assembly)
         )
 
-    def download_example_datasets(self):
-        """Download example datasets from `openSNP <https://opensnp.org>`_.
+    def create_example_datasets(self, output_dir=None):
+        """Create synthetic example datasets for demonstrations.
 
-        Per openSNP, "the data is donated into the public domain using `CC0 1.0
-        <http://creativecommons.org/publicdomain/zero/1.0/>`_."
+        Generates two correlated genotype files in different formats and builds,
+        suitable for demonstrating merging and remapping functionality. The files
+        share ~700K common SNPs with intentional discrepancies to demonstrate
+        merge conflict detection.
+
+        Parameters
+        ----------
+        output_dir : str, optional
+            Directory for output files (default: resources directory)
 
         Returns
         -------
-        paths : list of str or empty str
-            paths to example datasets
+        paths : list of str
+            Paths to created example datasets
 
-        References
-        ----------
-        1. Greshake B, Bayer PE, Rausch H, Reda J (2014), "openSNP-A Crowdsourced Web Resource
-           for Personal Genomics," PLOS ONE, 9(3): e89204,
-           https://doi.org/10.1371/journal.pone.0089204
+        Examples
+        --------
+        >>> from snps.resources import Resources
+        >>> r = Resources()
+        >>> paths = r.create_example_datasets()
+        Creating resources/sample1.23andme.txt.gz
+        Creating resources/sample2.ftdna.csv.gz
         """
-        paths = []
-        paths.append(
-            self._download_file(
-                "https://opensnp.org/data/662.23andme.340",
-                "662.23andme.340.txt.gz",
-                compress=True,
-            )
-        )
-        paths.append(
-            self._download_file(
-                "https://opensnp.org/data/662.ftdna-illumina.341",
-                "662.ftdna-illumina.341.csv.gz",
-                compress=True,
-            )
-        )
+        from snps.io.generator import SyntheticSNPGenerator
 
-        return paths
+        if output_dir is None:
+            output_dir = self._resources_dir
+
+        # Ensure output directory exists
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Create correlated dataset pair with realistic merge characteristics
+        gen = SyntheticSNPGenerator(build=37, seed=47)
+        path1, path2 = gen.create_example_dataset_pair(output_dir)
+
+        return [path1, path2]
 
     def get_all_resources(self):
         """Get / download all resources used throughout `snps`.
 
         Notes
         -----
-        This function does not download reference sequences and the openSNP datadump,
-        due to their large sizes.
+        This function does not download reference sequences due to their large sizes.
 
         Returns
         -------
@@ -357,84 +359,6 @@ class Resources(metaclass=Singleton):
             self._dbsnp_151_37_reverse = rsids
 
         return self._dbsnp_151_37_reverse
-
-    def get_opensnp_datadump_filenames(self):
-        """Get filenames internal to the `openSNP <https://opensnp.org>`_ datadump zip.
-
-        Per openSNP, "the data is donated into the public domain using `CC0 1.0
-        <http://creativecommons.org/publicdomain/zero/1.0/>`_."
-
-        Notes
-        -----
-        This function can download over 27GB of data. If the download is not successful,
-        try using a different tool like `wget` or `curl` to download the file and move it
-        to the resources directory (see `_get_path_opensnp_datadump`).
-
-        Returns
-        -------
-        filenames : list of str
-            filenames internal to the openSNP datadump
-
-        References
-        ----------
-        1. Greshake B, Bayer PE, Rausch H, Reda J (2014), "openSNP-A Crowdsourced Web Resource
-           for Personal Genomics," PLOS ONE, 9(3): e89204,
-           https://doi.org/10.1371/journal.pone.0089204
-        """
-        if not self._opensnp_datadump_filenames:
-            self._opensnp_datadump_filenames = self._get_opensnp_datadump_filenames(
-                self._get_path_opensnp_datadump()
-            )
-        return self._opensnp_datadump_filenames
-
-    def load_opensnp_datadump_file(self, filename):
-        """Load the specified file from the openSNP datadump.
-
-        Per openSNP, "the data is donated into the public domain using `CC0 1.0
-        <http://creativecommons.org/publicdomain/zero/1.0/>`_."
-
-        Parameters
-        ----------
-        filename : str
-            filename internal to the openSNP datadump
-
-        Returns
-        -------
-        bytes
-            content of specified file internal to the openSNP datadump
-
-        References
-        ----------
-        1. Greshake B, Bayer PE, Rausch H, Reda J (2014), "openSNP-A Crowdsourced Web Resource
-           for Personal Genomics," PLOS ONE, 9(3): e89204,
-           https://doi.org/10.1371/journal.pone.0089204
-        """
-        if self._get_path_opensnp_datadump():
-            with zipfile.ZipFile(self._get_path_opensnp_datadump()) as z:
-                with z.open(filename, "r") as f:
-                    return f.read()
-        else:
-            return bytes()
-
-    @staticmethod
-    def _get_opensnp_datadump_filenames(filename):
-        """Get list of filenames internal to the openSNP datadump zip.
-
-        Parameters
-        ----------
-        filename : str
-            path to openSNP datadump
-
-        Returns
-        -------
-        filenames : list of str
-            filenames internal to the openSNP datadump
-        """
-        if filename:
-            with zipfile.ZipFile(filename) as z:
-                return z.namelist()
-        else:
-            return []
 
     @staticmethod
     def _write_data_to_gzip(f, data):
@@ -727,12 +651,6 @@ class Resources(metaclass=Singleton):
 
             self._gsa_chrpos_map = chrpos
         return self._gsa_chrpos_map
-
-    def _get_path_opensnp_datadump(self):
-        return self._download_file(
-            "https://opensnp.org/data/zip/opensnp_datadump.current.zip",
-            "opensnp_datadump.current.zip",
-        )
 
     def _download_file(self, url, filename, compress=False, timeout=30):
         """Download a file to the resources folder.

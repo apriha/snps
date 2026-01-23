@@ -5,7 +5,7 @@
 
 `snps`
 ======
-*tools for reading, writing, merging, and remapping SNPs*
+*tools for reading, writing, generating, merging, and remapping SNPs*
 
 
 .. toctree::

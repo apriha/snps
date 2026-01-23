@@ -2,7 +2,6 @@ import os
 import tempfile
 
 import numpy as np
-import pandas as pd
 
 from snps import SNPs
 from snps.resources import ReferenceSequence, Resources
@@ -169,7 +168,7 @@ class TestWriter(BaseSNPsTestCase):
 
                 self.assertEqual(s.to_vcf(), output)
 
-            pd.testing.assert_frame_equal(
+            self.assert_frame_equal_with_string_index(
                 s.discrepant_vcf_position,
                 self.create_snp_df(
                     rsid=["rs1", "rs17"],

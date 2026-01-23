@@ -5,7 +5,6 @@ from __future__ import annotations
 import gzip
 import os
 import tempfile
-from unittest import TestCase
 
 import numpy as np
 import pandas as pd
@@ -13,9 +12,10 @@ import pandas as pd
 from snps import SNPs
 from snps.build_constants import BUILD_MARKER_SNPS
 from snps.io.generator import SyntheticSNPGenerator
+from tests import BaseSNPsTestCase
 
 
-class TestSyntheticSNPGenerator(TestCase):
+class TestSyntheticSNPGenerator(BaseSNPsTestCase):
     def test_init_build_37(self) -> None:
         """Test generator initialization with Build 37."""
         gen = SyntheticSNPGenerator(build=37, seed=123)
@@ -107,7 +107,7 @@ class TestSyntheticSNPGenerator(TestCase):
         df2 = gen2.generate_snps(num_snps=1000)
 
         # Verify identical output
-        pd.testing.assert_frame_equal(df1, df2)
+        self.assert_frame_equal_with_string_index(df1, df2)
 
     def test_generate_snps_rsid_format(self) -> None:
         """Test that rsIDs are correctly formatted."""

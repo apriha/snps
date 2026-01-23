@@ -45,7 +45,7 @@ setup(
     name="snps",
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    description="tools for reading, writing, merging, and remapping SNPs",
+    description="tools for reading, writing, generating, merging, and remapping SNPs",
     long_description=long_description,
     url="https://github.com/apriha/snps",
     author="Andrew Riha",

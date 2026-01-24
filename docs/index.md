@@ -15,7 +15,7 @@ snps_banner
 changelog
 contributing
 contributors
-snps
+api
 ```
 
 ## Indices and tables

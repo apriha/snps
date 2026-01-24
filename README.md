@@ -136,8 +136,8 @@ The SNPs are available as a `pandas.DataFrame`:
 
 ```python
 >>> df = s.snps
->>> df.columns.values
-array(['chrom', 'pos', 'genotype'], dtype=object)
+>>> df.columns.tolist()
+['chrom', 'pos', 'genotype']
 >>> len(df)
 991767
 ```

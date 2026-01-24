@@ -57,7 +57,7 @@ To set up `snps` for local development:
 5. When you're done making changes, run all the tests with:
 
    ```bash
-   $ pipenv run pytest --cov-report=html --cov=snps tests
+   $ pipenv run pytest --cov-report=html --cov=snps tests README.md
    ```
 
    > **Note:** Downloads during tests are disabled by default. To enable downloads, set the

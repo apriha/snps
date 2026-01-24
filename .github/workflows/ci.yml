@@ -105,17 +105,17 @@ jobs:
         fi
     - name: Install dependencies
       run: |
-        pip install pytest-cov
+        pip install pytest-cov sybil
         pip install .
     - name: Test with pytest (Ubuntu & macOS)
       if: ${{ matrix.os != 'windows-latest' }}
       run: |
-        pytest --cov=snps tests
+        pytest --cov=snps tests README.md
     - name: Test with pytest (Windows)
       if: ${{ matrix.os == 'windows-latest' }}
       working-directory: C:\a\snps\snps
       run: |
-        pytest --cov=snps tests
+        pytest --cov=snps tests README.md
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
@@ -141,8 +141,8 @@ jobs:
     - name: Install dependencies
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install pytest-cov
+        pip install pytest-cov sybil
         pip install .[ezancestry]
     - name: Test with pytest
       run: |
-        pytest --cov=snps tests
+        pytest --cov=snps tests README.md

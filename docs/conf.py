@@ -49,6 +49,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
     "sphinx.ext.napoleon",
+    "myst_parser",
 ]
 
 napoleon_google_docstring = False
@@ -59,10 +60,14 @@ napoleon_use_ivar = True
 templates_path = ["_templates"]
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
-source_suffix = ".rst"
+source_suffix = ".md"
+
+# MyST configuration
+myst_enable_extensions = [
+    "colon_fence",
+    "deflist",
+]
+myst_heading_anchors = 3
 
 # The master toctree document.
 master_doc = "index"

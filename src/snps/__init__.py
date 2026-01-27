@@ -10,3 +10,5 @@ from snps.snps import SNPs as SNPs
 from . import _version
 
 __version__ = _version.get_versions()["version"]
+
+__all__ = ["SNPs", "__version__"]

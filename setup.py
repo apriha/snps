@@ -38,15 +38,16 @@ import versioneer
 here = abspath(dirname(__file__))
 
 # Get the long description from the README file
-with open(join(here, "README.rst"), encoding="utf-8") as f:
+with open(join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
     name="snps",
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    description="tools for reading, writing, merging, and remapping SNPs",
+    description="tools for reading, writing, generating, merging, and remapping SNPs",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     url="https://github.com/apriha/snps",
     author="Andrew Riha",
     author_email="apriha@gmail.com",

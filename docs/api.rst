@@ -100,3 +100,11 @@ Helper functions and utilities.
    :members:
    :undoc-members:
    :show-inheritance:
+
+snps.testing
+~~~~~~~~~~~~
+
+.. automodule:: snps.testing
+   :members:
+   :undoc-members:
+   :show-inheritance:

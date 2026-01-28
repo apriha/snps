@@ -69,6 +69,7 @@ myst_enable_extensions = [
     "colon_fence",
     "deflist",
     "fieldlist",
+    "linkify",
     "substitution",
     "tasklist",
 ]
@@ -142,7 +143,7 @@ texinfo_documents = [
         "snps Documentation",
         author,
         "snps",
-        "Tools for reading, writing, merging, and remapping SNPs.",
+        "tools for reading, writing, generating, merging, and remapping SNPs",
         "Miscellaneous",
     )
 ]

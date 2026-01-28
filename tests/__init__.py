@@ -9,10 +9,11 @@ import pandas as pd
 from pandas.api.types import is_object_dtype, is_string_dtype, is_unsigned_integer_dtype
 
 from snps import SNPs
+from snps.testing import SNPsTestMixin, create_simulated_snp_df
 from snps.utils import gzip_file, zip_file
 
 
-class BaseSNPsTestCase(TestCase):
+class BaseSNPsTestCase(SNPsTestMixin, TestCase):
     def simulate_snps(
         self,
         chrom="1",
@@ -27,96 +28,21 @@ class BaseSNPsTestCase(TestCase):
         complement_snp_step=50,
     ):
         s = SNPs()
-
         s._build = 37
-
-        positions = np.arange(pos_start, pos_max, pos_step, dtype=np.uint32)
-        snps = pd.DataFrame(
-            {"chrom": chrom},
-            index=pd.Index(
-                ["rs" + str(x + 1) for x in range(len(positions))], name="rsid"
-            ),
+        s._snps = create_simulated_snp_df(
+            chrom=chrom,
+            pos_start=pos_start,
+            pos_max=pos_max,
+            pos_step=pos_step,
+            pos_dtype=np.uint32,
+            genotype=genotype,
+            insert_nulls=insert_nulls,
+            null_snp_step=null_snp_step,
+            complement_genotype_one_allele=complement_genotype_one_chrom,
+            complement_genotype_two_alleles=complement_genotype_two_chroms,
+            complement_snp_step=complement_snp_step,
         )
-        snps["pos"] = positions
-        snps["genotype"] = genotype
-
-        if insert_nulls:
-            snps.loc[snps.iloc[0::null_snp_step, :].index, "genotype"] = np.nan
-
-        indices = snps.iloc[0::complement_snp_step, :].index
-        if complement_genotype_two_chroms:
-            snps.loc[indices, "genotype"] = snps.loc[indices, "genotype"].apply(
-                self.complement_two_chroms
-            )
-        elif complement_genotype_one_chrom:
-            snps.loc[indices, "genotype"] = snps.loc[indices, "genotype"].apply(
-                self.complement_one_chrom
-            )
-
-        s._snps = snps
-
         return s
-
-    @property
-    def downloads_enabled(self):
-        """Property indicating if downloads are enabled.
-
-        Only download from external resources when an environment variable named
-        "DOWNLOADS_ENABLED" is set to "true".
-
-        Returns
-        -------
-        bool
-        """
-        return True if os.getenv("DOWNLOADS_ENABLED") == "true" else False
-
-    @staticmethod
-    def get_complement(base):
-        if base == "A":
-            return "T"
-        elif base == "G":
-            return "C"
-        elif base == "C":
-            return "G"
-        elif base == "T":
-            return "A"
-        else:
-            return base
-
-    def complement_one_chrom(self, genotype):
-        if pd.isnull(genotype):
-            return np.nan
-
-        complement = ""
-
-        for base in list(genotype):
-            complement += self.get_complement(base)
-            complement += genotype[1]
-            return complement
-
-    def complement_two_chroms(self, genotype):
-        if pd.isnull(genotype):
-            return np.nan
-
-        complement = ""
-
-        for base in list(genotype):
-            complement += self.get_complement(base)
-
-        return complement
-
-    @staticmethod
-    def create_snp_df(rsid, chrom, pos, genotype):
-        df = pd.DataFrame(
-            {"rsid": rsid, "chrom": chrom, "pos": pos, "genotype": genotype},
-            columns=["rsid", "chrom", "pos", "genotype"],
-        )
-        df.rsid = df.rsid.astype(object)
-        df.chrom = df.chrom.astype(object)
-        df.pos = df.pos.astype(np.uint32)
-        df.genotype = df.genotype.astype(object)
-        df = df.set_index("rsid")
-        return df
 
     def load_assign_PAR_SNPs(self, path):
         """Load and assign PAR SNPs.
@@ -502,14 +428,6 @@ class BaseSNPsTestCase(TestCase):
             genotype=["AA", "AA", "AA"],
         )
 
-    def generic_snps(self):
-        return self.create_snp_df(
-            rsid=["rs" + str(i) for i in range(1, 9)],
-            chrom=["1"] * 8,
-            pos=list(range(101, 109)),
-            genotype=["AA", "CC", "GG", "TT", np.nan, "GC", "TC", "AT"],
-        )
-
     def generic_snps_vcf(self):
         df = self.generic_snps()
         return pd.concat(
@@ -645,78 +563,6 @@ class BaseSNPsTestCase(TestCase):
                 build_detected,
                 snps_df,
             )
-
-    def assert_series_equal_with_string_dtype(self, left, right, **kwargs):
-        """Assert Series are equal, accepting both object and StringDtype for string data.
-
-        In Python 3.14+, pandas infers StringDtype for string data instead of object.
-        This wrapper compares Series without strict dtype matching for string data.
-
-        Parameters
-        ----------
-        left : pd.Series
-            First Series to compare
-        right : pd.Series
-            Second Series to compare
-        **kwargs : dict
-            Additional arguments passed to pd.testing.assert_series_equal
-        """
-        # Verify string series have string or object dtypes
-        if is_string_dtype(left.dtype) or is_object_dtype(left.dtype):
-            self.assertTrue(
-                is_string_dtype(right.dtype) or is_object_dtype(right.dtype),
-                f"Right series dtype {right.dtype} should be string/object type",
-            )
-        # Compare Series without strict dtype matching
-        pd.testing.assert_series_equal(left, right, check_dtype=False, **kwargs)
-
-    def assert_frame_equal_with_string_index(self, left, right, **kwargs):
-        """Assert DataFrames are equal, accepting both object and StringDtype for string columns.
-
-        In Python 3.14+, pandas infers StringDtype for string columns/indices instead of object.
-        This wrapper validates that string columns have string types, then compares the
-        DataFrames without strict dtype matching for object/string columns.
-
-        Parameters
-        ----------
-        left : pd.DataFrame
-            First DataFrame to compare
-        right : pd.DataFrame
-            Second DataFrame to compare
-        **kwargs : dict
-            Additional arguments passed to pd.testing.assert_frame_equal
-        """
-        # Verify index dtypes are string types if they're named 'rsid'
-        if left.index.name == "rsid":
-            self.assertTrue(
-                is_string_dtype(left.index.dtype),
-                f"Left index dtype {left.index.dtype} is not a string type",
-            )
-        if right.index.name == "rsid":
-            self.assertTrue(
-                is_string_dtype(right.index.dtype),
-                f"Right index dtype {right.index.dtype} is not a string type",
-            )
-
-        # Verify string columns (chrom, genotype) have string dtypes
-        for col in ["chrom", "genotype"]:
-            if col in left.columns:
-                self.assertTrue(
-                    is_string_dtype(left[col].dtype)
-                    or is_object_dtype(left[col].dtype),
-                    f"Left column '{col}' dtype {left[col].dtype} is not a string/object type",
-                )
-            if col in right.columns:
-                self.assertTrue(
-                    is_string_dtype(right[col].dtype)
-                    or is_object_dtype(right[col].dtype),
-                    f"Right column '{col}' dtype {right[col].dtype} is not a string/object type",
-                )
-
-        # Compare DataFrames without strict dtype matching for string columns
-        pd.testing.assert_frame_equal(
-            left, right, check_index_type=False, check_dtype=False, **kwargs
-        )
 
     def make_normalized_dataframe_assertions(self, df):
         self.assertEqual(df.index.name, "rsid")

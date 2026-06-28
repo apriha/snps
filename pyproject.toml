@@ -1,7 +1,77 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta:__legacy__"
+requires = ["setuptools>=77", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snps"
+dynamic = ["version"]
+description = "tools for reading, writing, generating, merging, and remapping SNPs"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "BSD-3-Clause"
+license-files = ["LICENSE.txt"]
+authors = [{ name = "Andrew Riha", email = "apriha@gmail.com" }]
+keywords = ["snps", "dna", "chromosomes", "bioinformatics", "vcf"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Healthcare Industry",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Utilities",
+]
+dependencies = ["numpy", "pandas", "atomicwrites"]
+
+[project.optional-dependencies]
+ezancestry = ["ezancestry"]
+
+[project.urls]
+Homepage = "https://github.com/apriha/snps"
+Documentation = "https://snps.readthedocs.io/"
+Changelog = "https://github.com/apriha/snps/releases"
+"Issue Tracker" = "https://github.com/apriha/snps/issues"
+
+# Docs dependencies live in docs/requirements.txt (used by Read the Docs and CI), not here.
+[dependency-groups]
+test = ["pytest", "pytest-cov", "sybil"]
+dev = [
+    "ruff",
+    "pre-commit",
+    { include-group = "test" },
+]
+
+# ezancestry requires pandas/numpy <2.0, so it resolves separately from the dev group.
+[tool.uv]
+conflicts = [[{ extra = "ezancestry" }, { group = "dev" }]]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]
 
 # https://github.com/astral-sh/ruff/issues/465#issuecomment-1783684428
 [tool.ruff.lint]
 extend-select = ["I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py", "tests.py"]
+addopts = "-ra --strict-markers --tb=short -p no:doctest"
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+precision = 2

@@ -47,17 +47,24 @@ To set up `snps` for local development:
    $ git checkout -b name-of-your-bugfix-or-feature
    ```
 
-4. Setup a development environment:
+4. Install [uv](https://docs.astral.sh/uv/) (see the
+   [installation guide](https://docs.astral.sh/uv/getting-started/installation/)) if you don't
+   already have it, then set up a development environment and install the
+   [pre-commit](https://pre-commit.com) hooks:
 
    ```bash
-   $ pip install pipenv
-   $ pipenv install --dev
+   $ uv sync
+   $ uv run pre-commit install
    ```
+
+   `uv sync` creates a virtual environment and installs `snps` (editable) plus the development
+   dependencies. `pre-commit install` registers the git hook so linting and formatting run
+   automatically on every commit.
 
 5. When you're done making changes, run all the tests with:
 
    ```bash
-   $ pipenv run pytest --cov-report=html --cov=snps tests README.md
+   $ uv run pytest --cov-report=html --cov=snps tests README.md
    ```
 
    > **Note:** Downloads during tests are disabled by default. To enable downloads, set the
@@ -69,11 +76,11 @@ To set up `snps` for local development:
    > **Note:** After running the tests, a coverage report can be viewed by opening
    > `htmlcov/index.html` in a browser.
 
-6. Perform code linting and formatting:
+6. Lint and format. The pre-commit hook runs these automatically on commit; you can also run them on
+   demand:
 
    ```bash
-   $ pipenv run ruff check --fix
-   $ pipenv run ruff format
+   $ uv run pre-commit run --all-files   # ruff lint, formatting, and file checks
    ```
 
 7. Commit your changes and push your branch to GitHub:
@@ -100,10 +107,10 @@ For merging, you should:
 ## Documentation
 
 After the development environment has been setup, documentation can be generated via the
-following command:
+following command (the docs dependencies are listed in `docs/requirements.txt`):
 
 ```bash
-$ pipenv run sphinx-build -T -E -D language=en docs docs/_build
+$ uv run --with-requirements docs/requirements.txt sphinx-build -T -E -D language=en docs docs/_build
 ```
 
 Then, the documentation can be viewed by opening `docs/_build/index.html` in a browser.

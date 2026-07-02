@@ -69,10 +69,6 @@ jobs:
           - os: windows-latest
             python-version: '3.14'
 
-    env:
-      JOB_ID: ${{ strategy.job-index }}
-      NUM_JOBS: ${{ strategy.job-total }}
-
     steps:
     - uses: actions/checkout@v7
       with:
@@ -88,19 +84,6 @@ jobs:
       run: |
         mkdir C:\a
         xcopy D:\a C:\a /s /e
-    - name: Determine if downloads are enabled for this job
-      # for testing, limit downloads from the resource servers to only the selected job for
-      # PRs and the main branch; note that the main branch is tested weekly via `cron`,
-      # so this ensures all Python versions will be periodically integration tested with the
-      # resource servers
-      if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
-      shell: bash
-      run: |
-        SELECTED_JOB=$((10#$(date +%V) % $NUM_JOBS))
-        if [[ $SELECTED_JOB == $JOB_ID ]]; then
-          # set environment variable to download resources for selected job
-          echo "DOWNLOADS_ENABLED=true" >> $GITHUB_ENV
-        fi
     - name: Install dependencies
       run: |
         pip install pytest-cov sybil
@@ -142,5 +125,76 @@ jobs:
         pip install pytest-cov sybil
         pip install .[ezancestry]
     - name: Test with pytest
+      run: |
+        pytest --cov=snps tests README.md
+
+  # Everyday CI runs fully offline against fixture-backed resources. The live-integration
+  # job below is the only one that contacts the real resource servers (Zenodo, S3,
+  # Ensembl, NCBI). It runs weekly and on changes to `main`.
+  #
+  # To exercise every OS x Python combination against the live servers (and the full
+  # offline suite) over time without running them all every week, this job picks one
+  # combination per ISO week; over a full rotation all combinations are covered.
+  live-matrix:
+    needs: [test]
+    if: ${{ github.repository == 'apriha/snps' && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.base_ref == 'main')) }}
+    runs-on: ubuntu-latest
+    outputs:
+      os: ${{ steps.pick.outputs.os }}
+      python-version: ${{ steps.pick.outputs.python-version }}
+    steps:
+    - name: Pick this week's OS / Python combination
+      id: pick
+      shell: bash
+      run: |
+        oses=(ubuntu-latest macos-latest windows-latest)
+        pys=(3.9 3.10 3.11 3.12 3.13 3.14)
+        n=$(( ${#oses[@]} * ${#pys[@]} ))
+        idx=$(( 10#$(date -u +%V) % n ))
+        os="${oses[$(( idx / ${#pys[@]} ))]}"
+        py="${pys[$(( idx % ${#pys[@]} ))]}"
+        echo "Selected for this week: $os / Python $py"
+        echo "os=$os" >> "$GITHUB_OUTPUT"
+        echo "python-version=$py" >> "$GITHUB_OUTPUT"
+
+  # A single-entry matrix from the selector so the chosen combination shows in the
+  # job name (e.g. "live-integration (ubuntu-latest, 3.14)").
+  live-integration:
+    needs: [live-matrix]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["${{ needs.live-matrix.outputs.os }}"]
+        python-version: ["${{ needs.live-matrix.outputs.python-version }}"]
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Ensure Python and source code are on same drive (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: cmd
+      run: |
+        mkdir C:\a
+        xcopy D:\a C:\a /s /e
+    - name: Install dependencies
+      run: |
+        pip install pytest-cov sybil
+        pip install .
+    - name: Test with pytest against the resource servers (Ubuntu & macOS)
+      if: ${{ runner.os != 'Windows' }}
+      env:
+        DOWNLOADS_ENABLED: "true"
+      run: |
+        pytest --cov=snps tests README.md
+    - name: Test with pytest against the resource servers (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      working-directory: C:\a\snps\snps
+      env:
+        DOWNLOADS_ENABLED: "true"
       run: |
         pytest --cov=snps tests README.md

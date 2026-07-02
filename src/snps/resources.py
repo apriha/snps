@@ -19,36 +19,70 @@ import itertools
 import json
 import logging
 import os
-import socket
 import tarfile
 import tempfile
-import urllib.error
-import urllib.request
+from typing import Protocol
 
 import numpy as np
 import pandas as pd
-from atomicwrites import atomic_write
+import pooch
 
 from snps.constants import REFERENCE_SEQUENCE_CHROMS
 from snps.ensembl import EnsemblRestClient
-from snps.utils import Singleton, create_dir
+from snps.utils import create_dir
 
 logger = logging.getLogger(__name__)
 
 
-class Resources(metaclass=Singleton):
+class ResourceProvider(Protocol):
+    """Interface consumed by ``snps`` operations to obtain external resources.
+
+    Operations depend on this interface rather than on the network directly, so they
+    can be exercised with any implementation (e.g., the pooch-backed :class:`Resources`
+    or a fixture-backed test double).
+    """
+
+    def get_assembly_mapping_data(self, source_assembly, target_assembly): ...
+
+    def get_chip_clusters(self): ...
+
+    def get_low_quality_snps(self): ...
+
+    def get_gsa_rsid(self): ...
+
+    def get_gsa_chrpos(self): ...
+
+    def get_dbsnp_151_37_reverse(self): ...
+
+    def get_reference_sequences(
+        self, assembly="GRCh37", chroms=REFERENCE_SEQUENCE_CHROMS
+    ): ...
+
+    def get_par_lookup(self, rsid): ...
+
+
+class Resources:
     """Object used to manage resources required by `snps`."""
 
-    def __init__(self, resources_dir="resources"):
+    def __init__(self, resources_dir=None):
         """Initialize a ``Resources`` object.
 
         Parameters
         ----------
-        resources_dir : str
-            name / path of resources directory
+        resources_dir : str, optional
+            path to the directory used to cache downloaded resources; defaults to the
+            ``SNPS_DATA_DIR`` environment variable if set, else an OS-specific cache
+            directory (``pooch.os_cache("snps")``)
         """
+        if resources_dir is None:
+            resources_dir = os.environ.get("SNPS_DATA_DIR") or pooch.os_cache("snps")
         self._resources_dir = os.path.abspath(resources_dir)
         self._ensembl_rest_client = EnsemblRestClient()
+        # NCBI Variation Services client for PAR SNP lookups; reused across lookups so
+        # its rate limiter is preserved (a fresh client per lookup would reset it)
+        self._ncbi_rest_client = EnsemblRestClient(
+            server="https://api.ncbi.nlm.nih.gov", reqs_per_sec=1
+        )
         self._init_resource_attributes()
 
     def _init_resource_attributes(self):
@@ -145,9 +179,7 @@ class Resources(metaclass=Singleton):
         --------
         >>> from snps.resources import Resources
         >>> r = Resources()
-        >>> paths = r.create_example_datasets()
-        Creating resources/sample1.23andme.txt.gz
-        Creating resources/sample2.ftdna.csv.gz
+        >>> paths = r.create_example_datasets()  # doctest: +SKIP
         """
         from snps.io.generator import SyntheticSNPGenerator
 
@@ -237,7 +269,7 @@ class Resources(metaclass=Singleton):
            https://doi.org/10.1016/j.csbj.2021.06.040
         """
         if self._chip_clusters is None:
-            chip_clusters_path = self._download_file(
+            chip_clusters_path = self._fetch(
                 "https://zenodo.org/records/5047472/files/the_list.tsv.gz",
                 "chip_clusters.tsv.gz",
             )
@@ -279,7 +311,7 @@ class Resources(metaclass=Singleton):
            https://doi.org/10.1016/j.csbj.2021.06.040
         """
         if self._low_quality_snps is None:
-            low_quality_snps_path = self._download_file(
+            low_quality_snps_path = self._fetch(
                 "https://zenodo.org/records/5047472/files/badalleles.tsv.gz",
                 "low_quality_snps.tsv.gz",
             )
@@ -327,7 +359,7 @@ class Resources(metaclass=Singleton):
         """
         if self._dbsnp_151_37_reverse is None:
             # download the file from the cloud, if not done already
-            dbsnp_rev_path = self._download_file(
+            dbsnp_rev_path = self._fetch(
                 "https://sano-public.s3.eu-west-2.amazonaws.com/dbsnp151.b37.snps_reverse.txt.gz",
                 "dbsnp_151_37_reverse.txt.gz",
             )
@@ -359,18 +391,6 @@ class Resources(metaclass=Singleton):
             self._dbsnp_151_37_reverse = rsids
 
         return self._dbsnp_151_37_reverse
-
-    @staticmethod
-    def _write_data_to_gzip(f, data):
-        """Write `data` to `f` in `gzip` format.
-
-        Parameters
-        ----------
-        f : file object opened with `mode="wb"`
-        data : `bytes` object
-        """
-        with gzip.open(f, "wb") as f_gzip:
-            f_gzip.write(data)
 
     @staticmethod
     def _load_assembly_mapping_data(filename):
@@ -487,7 +507,7 @@ class Resources(metaclass=Singleton):
             assembly,
             chroms,
             urls,
-            list(map(self._download_file, urls, local_filenames)),
+            list(map(self._fetch, urls, local_filenames)),
         )
 
     def _create_reference_sequences(self, assembly, chroms, urls, paths):
@@ -560,8 +580,10 @@ class Resources(metaclass=Singleton):
     def _download_assembly_mapping_data(
         self, destination, chroms, source_assembly, target_assembly, retries
     ):
-        with atomic_write(destination, mode="wb", overwrite=True) as f:
-            with tarfile.open(fileobj=f, mode="w:gz") as out_tar:
+        fd, tmp_path = tempfile.mkstemp(dir=self._resources_dir, suffix=".tar.gz")
+        os.close(fd)
+        try:
+            with tarfile.open(tmp_path, mode="w:gz") as out_tar:
                 for chrom in chroms:
                     file = chrom + ".json"
 
@@ -591,6 +613,12 @@ class Resources(metaclass=Singleton):
                         # remove temp file
                         os.remove(f_tmp.name)
 
+            os.replace(tmp_path, destination)
+        except BaseException:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            raise
+
     def get_gsa_rsid(self):
         """Get and load GSA RSID map.
 
@@ -602,7 +630,7 @@ class Resources(metaclass=Singleton):
         """
         if self._gsa_rsid_map is None:
             # download the file from the cloud, if not done already
-            rsid_path = self._download_file(
+            rsid_path = self._fetch(
                 "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_rsid_map.txt.gz",
                 "gsa_rsid_map.txt.gz",
             )
@@ -629,7 +657,7 @@ class Resources(metaclass=Singleton):
         """
         if self._gsa_chrpos_map is None:
             # download the file from the cloud, if not done already
-            chrpos_path = self._download_file(
+            chrpos_path = self._fetch(
                 "https://sano-public.s3.eu-west-2.amazonaws.com/gsa_chrpos_map.txt.gz",
                 "gsa_chrpos_map.txt.gz",
             )
@@ -652,80 +680,121 @@ class Resources(metaclass=Singleton):
             self._gsa_chrpos_map = chrpos
         return self._gsa_chrpos_map
 
-    def _download_file(self, url, filename, compress=False, timeout=30):
-        """Download a file to the resources folder.
+    def get_par_lookup(self, rsid):
+        """Look up the dbSNP RefSNP snapshot for a PAR SNP via the NCBI Variation Services API.
 
-        Download data from `url`, save as `filename`, and optionally compress with gzip.
+        Parameters
+        ----------
+        rsid : str
+            RSID to look up (e.g., "rs28736870")
+
+        Returns
+        -------
+        dict
+            RefSNP snapshot (following merges), else None
+
+        References
+        ----------
+        1. National Center for Biotechnology Information, Variation Services, RefSNP,
+           https://api.ncbi.nlm.nih.gov/variation/v0/
+        """
+        return self._lookup_refsnp_snapshot(rsid, self._ncbi_rest_client)
+
+    def _lookup_refsnp_snapshot(self, rsid, rest_client):
+        id = rsid.split("rs")[1]
+        response = rest_client.perform_rest_action("/variation/v0/refsnp/" + id)
+        if "merged_snapshot_data" in response:
+            # this RefSnp id was merged into another
+            # we'll pick the first one to decide which chromosome this PAR will be assigned to
+            merged_id = "rs" + response["merged_snapshot_data"]["merged_into"][0]
+            logger.info(f"SNP id {rsid} has been merged into id {merged_id}")
+            return self._lookup_refsnp_snapshot(merged_id, rest_client)
+        elif "nosnppos_snapshot_data" in response:
+            logger.warning(f"Unable to look up SNP id {rsid}")
+            return None
+        else:
+            return response
+
+    def _fetch(self, url, filename):
+        """Fetch a file into the resources cache, downloading only if not already present.
 
         Parameters
         ----------
         url : str
-            URL to download data from
+            URL to download data from (``http(s)://`` or ``ftp://``)
         filename : str
-            name of file to save; if compress, ensure '.gz' is appended
-        compress : bool
-            compress with gzip
-        timeout : int
-            seconds for timeout of download request
+            relative path / name under the resources directory to save as
 
         Returns
         -------
         str
-            path to downloaded file, empty str if error
+            path to the cached file, empty str if an error occurred
         """
-        if compress and filename[-3:] != ".gz":
-            filename += ".gz"
-
         destination = os.path.join(self._resources_dir, filename)
+
+        if os.path.exists(destination):
+            return destination
 
         if not create_dir(os.path.dirname(destination)):
             return ""
 
-        if not os.path.exists(destination):
-            try:
-                # get file if it hasn't already been downloaded
-                # http://stackoverflow.com/a/7244263
-                with urllib.request.urlopen(url, timeout=timeout) as response:
-                    with atomic_write(destination, mode="wb", overwrite=True) as f:
-                        self._print_download_msg(destination)
-                        data = response.read()  # a `bytes` object
+        downloader = (
+            pooch.FTPDownloader(timeout=30)
+            if url.startswith("ftp://")
+            else pooch.HTTPDownloader(timeout=30)
+        )
 
-                        if compress:
-                            self._write_data_to_gzip(f, data)
-                        else:
-                            f.write(data)
-            except urllib.error.URLError as err:
-                logger.warning(err)
-                destination = ""
-                # try HTTP if an FTP error occurred
-                if "ftp://" in url:
-                    destination = self._download_file(
-                        url.replace("ftp://", "http://"),
-                        filename,
-                        compress=compress,
-                        timeout=timeout,
-                    )
-            except socket.timeout:
-                logger.warning(f"Timeout downloading {url}")
-                destination = ""
-            except FileExistsError:
-                # if the file exists, another process has created it while it was
-                # being downloaded
-                # in such a case, the other copy is identical, so ignore this error
-                pass
+        try:
+            return pooch.retrieve(
+                url,
+                known_hash=None,
+                fname=filename,
+                path=self._resources_dir,
+                downloader=downloader,
+            )
+        except Exception as err:
+            logger.warning(err)
+            # fall back to HTTP if an FTP download failed (Ensembl serves both)
+            if url.startswith("ftp://"):
+                return self._fetch(url.replace("ftp://", "http://", 1), filename)
+            return ""
 
-        return destination
 
-    @staticmethod
-    def _print_download_msg(path):
-        """Print download message.
+_default_provider = None
 
-        Parameters
-        ----------
-        path : str
-            path to file being downloaded
-        """
-        logger.info(f"Downloading {os.path.relpath(path)}")
+
+def set_default_provider(provider):
+    """Set the process-wide default resource provider used by ``SNPs`` when none is injected.
+
+    Intended for tests (to inject a fixture-backed provider); production leaves this unset.
+
+    Parameters
+    ----------
+    provider : ResourceProvider or None
+        provider to use as the default, or None to clear the override
+    """
+    global _default_provider
+    _default_provider = provider
+
+
+def get_default_provider(resources_dir=None):
+    """Get the default resource provider.
+
+    Returns the override set via :func:`set_default_provider` if one is set, else a new
+    pooch-backed :class:`Resources` instance.
+
+    Parameters
+    ----------
+    resources_dir : str, optional
+        cache directory passed through to a new ``Resources`` when no override is set
+
+    Returns
+    -------
+    ResourceProvider
+    """
+    if _default_provider is not None:
+        return _default_provider
+    return Resources(resources_dir=resources_dir)
 
 
 class ReferenceSequence:

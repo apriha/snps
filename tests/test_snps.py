@@ -5,14 +5,16 @@ import os
 import sys
 import tempfile
 import warnings
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import numpy as np
 import pandas as pd
 
 from snps import SNPs
 from snps.io import get_empty_snps_dataframe
+from snps.resources import set_default_provider
 from tests import BaseSNPsTestCase
+from tests.support import FakeResources, chip_clusters_df
 
 
 class TestSnps(BaseSNPsTestCase):
@@ -233,12 +235,8 @@ class TestSnps(BaseSNPsTestCase):
         self.assertEqual(s.count, 0)
 
     def _run_remap_test(self, f, mappings):
-        if self.downloads_enabled:
-            f()
-        else:
-            mock = Mock(return_value=mappings)
-            with patch("snps.resources.Resources.get_assembly_mapping_data", mock):
-                f()
+        set_default_provider(FakeResources(assembly_mapping_data=mappings))
+        f()
 
     def test_remap_36_to_37(self):
         def f():
@@ -510,19 +508,11 @@ class TestSnps(BaseSNPsTestCase):
             self.assertDictEqual(snps.predict_ancestry(), {})
 
     def _get_chip_clusters(self, pos=tuple(range(101, 109)), cluster="c1", length=8):
-        df = pd.DataFrame(
-            {"chrom": ["1"] * length, "pos": pos, "clusters": [cluster] * length},
-            columns=["chrom", "pos", "clusters"],
-        )
-        df.chrom = df.chrom.astype(pd.CategoricalDtype(ordered=False))
-        df.pos = df.pos.astype(np.uint32)
-        df.clusters = df.clusters.astype(pd.CategoricalDtype(ordered=False))
-        return df
+        return chip_clusters_df(pos=pos, cluster=cluster, length=length)
 
     def run_cluster_test(self, f, chip_clusters):
-        mock = Mock(return_value=chip_clusters)
-        with patch("snps.resources.Resources.get_chip_clusters", mock):
-            f()
+        set_default_provider(FakeResources(chip_clusters=chip_clusters))
+        f()
 
     def test_cluster(self):
         def f():
@@ -592,18 +582,20 @@ class TestSnps(BaseSNPsTestCase):
             self.assertEqual(s.cluster, "c1")
             self.assertEqual(s.build, 36)  # ensure copy gets remapped
 
-        mock = Mock(
-            return_value=self._get_test_assembly_mapping_data(
-                "NCBI36",
-                "GRCh37",
-                [1] * 8,
-                [101, 101, 102, 102, 103, 103, 0, 0],
+        set_default_provider(
+            FakeResources(
+                chip_clusters=self._get_chip_clusters(
+                    pos=tuple(range(101, 104)), length=3
+                ),
+                assembly_mapping_data=self._get_test_assembly_mapping_data(
+                    "NCBI36",
+                    "GRCh37",
+                    [1] * 8,
+                    [101, 101, 102, 102, 103, 103, 0, 0],
+                ),
             )
         )
-        with patch("snps.resources.Resources.get_assembly_mapping_data", mock):
-            self.run_cluster_test(
-                f, self._get_chip_clusters(pos=tuple(range(101, 104)), length=3)
-            )
+        f()
 
     def test_snps_qc(self):
         def f():
@@ -656,18 +648,23 @@ class TestSnps(BaseSNPsTestCase):
             )
             self.assertEqual(s.build, 36)  # ensure copy gets remapped
 
-        mock = Mock(
-            return_value=self._get_test_assembly_mapping_data(
-                "NCBI36",
-                "GRCh37",
-                [1] * 8,
-                [101, 101, 102, 102, 103, 103, 0, 0],
+        # cluster detection runs on the remapped (build 37) SNPs rs1-rs3 at positions
+        # 101-103, so the injected chip clusters match those positions to yield "c1".
+        set_default_provider(
+            FakeResources(
+                chip_clusters=self._get_chip_clusters(
+                    pos=tuple(range(101, 104)), length=3
+                ),
+                assembly_mapping_data=self._get_test_assembly_mapping_data(
+                    "NCBI36",
+                    "GRCh37",
+                    [1] * 8,
+                    [101, 101, 102, 102, 103, 103, 0, 0],
+                ),
+                low_quality_snps=self.get_low_quality_snps(pos=(102, 1001)),
             )
         )
-        with patch("snps.resources.Resources.get_assembly_mapping_data", mock):
-            self.run_low_quality_snps_test(
-                f, self.get_low_quality_snps(pos=(102, 1001))
-            )
+        f()
 
 
 class TestSNPsMerge(TestSnps):

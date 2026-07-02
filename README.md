@@ -73,14 +73,10 @@ genotype files from the following DNA testing sources:
 
 Additionally, `snps` can read a variety of "generic" CSV and TSV files.
 
-## Dependencies
+## Requirements
 
-`snps` requires [Python](https://www.python.org) 3.9+ and the following Python
-packages:
-
-- [numpy](http://www.numpy.org)
-- [pandas](http://pandas.pydata.org)
-- [atomicwrites](https://github.com/untitaker/python-atomicwrites)
+`snps` requires [Python](https://www.python.org) 3.9+; its dependencies are specified in
+`pyproject.toml` and installed automatically by `pip`.
 
 ## Installation
 
@@ -116,7 +112,7 @@ Load a raw data file exported from a DNA testing source (e.g.,
 
 ```python
 >>> from snps import SNPs
->>> s = SNPs("resources/sample1.23andme.txt.gz")
+>>> s = SNPs(paths[0])
 ```
 
 `snps` automatically detects the source format and [normalizes](https://snps.readthedocs.io/en/stable/snps.html#snps.snps.SNPs.snps) the data:
@@ -147,7 +143,7 @@ The SNPs are available as a `pandas.DataFrame`:
 Combine SNPs from multiple files (e.g., combine data from different testing companies):
 
 ```python
->>> results = s.merge([SNPs("resources/sample2.ftdna.csv.gz")])
+>>> results = s.merge([SNPs(paths[1])])
 >>> s.count
 1006949
 ```
@@ -189,6 +185,9 @@ assembly. This ensures the REF alleles in the VCF are accurate:
 ```
 
 All output files are saved to the [output directory](https://snps.readthedocs.io/en/stable/output_files.html).
+
+Downloaded resources are cached automatically; set the `SNPS_DATA_DIR` environment
+variable to control where they are stored.
 
 ### Generate Synthetic Data
 

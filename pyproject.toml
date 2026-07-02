@@ -31,7 +31,12 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Information Analysis",
     "Topic :: Utilities",
 ]
-dependencies = ["numpy", "pandas", "atomicwrites"]
+dependencies = [
+    "numpy",
+    "pandas",
+    "atomicwrites",
+    "pooch",
+]
 
 [project.optional-dependencies]
 ezancestry = ["ezancestry"]

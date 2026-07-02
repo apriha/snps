@@ -2,15 +2,17 @@ import os
 import shutil
 import tempfile
 from unittest import TestCase
-from unittest.mock import Mock, PropertyMock, patch
 
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_object_dtype, is_string_dtype, is_unsigned_integer_dtype
 
 from snps import SNPs
+from snps.resources import set_default_provider
 from snps.testing import SNPsTestMixin, create_simulated_snp_df
 from snps.utils import gzip_file, zip_file
+from tests.support import FakeResources, chip_clusters_df, low_quality_snps_df
+from tests.support import data as _data
 
 
 class BaseSNPsTestCase(SNPsTestMixin, TestCase):
@@ -45,9 +47,7 @@ class BaseSNPsTestCase(SNPsTestMixin, TestCase):
         return s
 
     def load_assign_PAR_SNPs(self, path):
-        """Load and assign PAR SNPs.
-
-        If downloads are not enabled, use a minimal subset of the real responses.
+        """Load and assign PAR SNPs offline via the fixture-backed resource provider.
 
         Parameters
         ----------
@@ -61,9 +61,6 @@ class BaseSNPsTestCase(SNPsTestMixin, TestCase):
         ----------
         1. National Center for Biotechnology Information, Variation Services, RefSNP,
            https://api.ncbi.nlm.nih.gov/variation/v0/
-        2. Yates et. al. (doi:10.1093/bioinformatics/btu613),
-           `<http://europepmc.org/search/?query=DOI:10.1093/bioinformatics/btu613>`_
-        3. Zerbino et. al. (doi.org/10.1093/nar/gkx1098), https://doi.org/10.1093/nar/gkx1098
         4. Sherry ST, Ward MH, Kholodov M, Baker J, Phan L, Smigielski EM, Sirotkin K.
            dbSNP: the NCBI database of genetic variation. Nucleic Acids Res. 2001 Jan 1;
            29(1):308-11.
@@ -72,321 +69,24 @@ class BaseSNPsTestCase(SNPsTestMixin, TestCase):
            rs28736870, rs113313554, rs758419898, and rs113378274 (dbSNP Build ID: 151).
            Available from: http://www.ncbi.nlm.nih.gov/SNP/
         """
-        effects = [
-            {
-                "refsnp_id": "758419898",
-                "create_date": "2015-04-1T22:25Z",
-                "last_update_date": "2019-07-14T04:19Z",
-                "last_update_build_id": "153",
-                "primary_snapshot_data": {
-                    "placements_with_allele": [
-                        {
-                            "seq_id": "NC_000024.9",
-                            "placement_annot": {
-                                "seq_id_traits_by_assembly": [
-                                    {"assembly_name": "GRCh37.p13"}
-                                ]
-                            },
-                            "alleles": [
-                                {
-                                    "allele": {
-                                        "spdi": {
-                                            "seq_id": "NC_000024.9",
-                                            "position": 7364103,
-                                        }
-                                    }
-                                }
-                            ],
-                        }
-                    ]
-                },
-            },
-            {
-                "refsnp_id": "28736870",
-                "create_date": "2005-05-24T14:43Z",
-                "last_update_date": "2019-07-14T04:18Z",
-                "last_update_build_id": "153",
-                "primary_snapshot_data": {
-                    "placements_with_allele": [
-                        {
-                            "seq_id": "NC_000023.10",
-                            "placement_annot": {
-                                "seq_id_traits_by_assembly": [
-                                    {"assembly_name": "GRCh37.p13"}
-                                ]
-                            },
-                            "alleles": [
-                                {
-                                    "allele": {
-                                        "spdi": {
-                                            "seq_id": "NC_000023.10",
-                                            "position": 220769,
-                                        }
-                                    }
-                                }
-                            ],
-                        }
-                    ]
-                },
-            },
-            {
-                "refsnp_id": "113313554",
-                "create_date": "2010-07-4T18:13Z",
-                "last_update_date": "2019-07-14T04:18Z",
-                "last_update_build_id": "153",
-                "primary_snapshot_data": {
-                    "placements_with_allele": [
-                        {
-                            "seq_id": "NC_000024.9",
-                            "placement_annot": {
-                                "seq_id_traits_by_assembly": [
-                                    {"assembly_name": "GRCh37.p13"}
-                                ]
-                            },
-                            "alleles": [
-                                {
-                                    "allele": {
-                                        "spdi": {
-                                            "seq_id": "NC_000024.9",
-                                            "position": 535257,
-                                        }
-                                    }
-                                }
-                            ],
-                        }
-                    ]
-                },
-            },
-            {
-                "refsnp_id": "113378274",
-                "create_date": "2010-07-4T18:14Z",
-                "last_update_date": "2016-03-3T10:51Z",
-                "last_update_build_id": "147",
-                "merged_snapshot_data": {"merged_into": ["72608386"]},
-            },
-            {
-                "refsnp_id": "72608386",
-                "create_date": "2009-02-14T01:08Z",
-                "last_update_date": "2019-07-14T04:05Z",
-                "last_update_build_id": "153",
-                "primary_snapshot_data": {
-                    "placements_with_allele": [
-                        {
-                            "seq_id": "NC_000023.10",
-                            "placement_annot": {
-                                "seq_id_traits_by_assembly": [
-                                    {"assembly_name": "GRCh37.p13"}
-                                ]
-                            },
-                            "alleles": [
-                                {
-                                    "allele": {
-                                        "spdi": {
-                                            "seq_id": "NC_000023.10",
-                                            "position": 91941055,
-                                        }
-                                    }
-                                }
-                            ],
-                        }
-                    ]
-                },
-            },
-        ]
-
-        if self.downloads_enabled:
-            return SNPs(path, assign_par_snps=True, deduplicate_XY_chrom=False)
-        else:
-            mock = Mock(side_effect=effects)
-            with patch("snps.ensembl.EnsemblRestClient.perform_rest_action", mock):
-                return SNPs(path, assign_par_snps=True, deduplicate_XY_chrom=False)
+        # PAR lookups are served by the active (fixture-backed) default provider; do not
+        # replace it here so callers can inject specific data (e.g., remap mappings).
+        return SNPs(path, assign_par_snps=True, deduplicate_XY_chrom=False)
 
     def _get_test_assembly_mapping_data(self, source, target, strands, mappings):
-        return {
-            "1": {
-                "mappings": [
-                    {
-                        "original": {
-                            "seq_region_name": "1",
-                            "strand": strands[0],
-                            "start": mappings[0],
-                            "end": mappings[0],
-                            "assembly": f"{source}",
-                        },
-                        "mapped": {
-                            "seq_region_name": "1",
-                            "strand": strands[1],
-                            "start": mappings[1],
-                            "end": mappings[1],
-                            "assembly": f"{target}",
-                        },
-                    },
-                    {
-                        "original": {
-                            "seq_region_name": "1",
-                            "strand": strands[2],
-                            "start": mappings[2],
-                            "end": mappings[2],
-                            "assembly": f"{source}",
-                        },
-                        "mapped": {
-                            "seq_region_name": "1",
-                            "strand": strands[3],
-                            "start": mappings[3],
-                            "end": mappings[3],
-                            "assembly": f"{target}",
-                        },
-                    },
-                    {
-                        "original": {
-                            "seq_region_name": "1",
-                            "strand": strands[4],
-                            "start": mappings[4],
-                            "end": mappings[4],
-                            "assembly": f"{source}",
-                        },
-                        "mapped": {
-                            "seq_region_name": "1",
-                            "strand": strands[5],
-                            "start": mappings[5],
-                            "end": mappings[5],
-                            "assembly": f"{target}",
-                        },
-                    },
-                ]
-            },
-            "3": {
-                "mappings": [
-                    {
-                        "original": {
-                            "seq_region_name": "3",
-                            "strand": strands[6],
-                            "start": mappings[6],
-                            "end": mappings[6],
-                            "assembly": f"{source}",
-                        },
-                        "mapped": {
-                            "seq_region_name": "3",
-                            "strand": strands[7],
-                            "start": mappings[7],
-                            "end": mappings[7],
-                            "assembly": f"{target}",
-                        },
-                    }
-                ]
-            },
-        }
+        return _data.get_test_assembly_mapping_data(source, target, strands, mappings)
 
     def NCBI36_GRCh37(self):
-        return self._get_test_assembly_mapping_data(
-            "NCBI36",
-            "GRCh37",
-            [1, 1, 1, 1, 1, 1, 1, -1],
-            [
-                742429,
-                752566,
-                143649677,
-                144938320,
-                143649678,
-                144938321,
-                50908372,
-                50927009,
-            ],
-        )
+        return _data.NCBI36_GRCh37()
 
     def GRCh37_NCBI36(self):
-        return self._get_test_assembly_mapping_data(
-            "GRCh37",
-            "NCBI36",
-            [1, 1, 1, 1, 1, 1, 1, -1],
-            [
-                752566,
-                742429,
-                144938320,
-                143649677,
-                144938321,
-                143649678,
-                50927009,
-                50908372,
-            ],
-        )
+        return _data.GRCh37_NCBI36()
 
     def GRCh37_GRCh38(self):
-        return self._get_test_assembly_mapping_data(
-            "GRCh37",
-            "GRCh38",
-            [1, 1, 1, -1, 1, -1, 1, 1],
-            [
-                752566,
-                817186,
-                144938320,
-                148946169,
-                144938321,
-                148946168,
-                50927009,
-                50889578,
-            ],
-        )
+        return _data.GRCh37_GRCh38()
 
     def GRCh37_GRCh38_PAR(self):
-        return {
-            "X": {
-                "mappings": [
-                    {
-                        "original": {
-                            "seq_region_name": "X",
-                            "strand": 1,
-                            "start": 220770,
-                            "end": 220770,
-                            "assembly": "GRCh37",
-                        },
-                        "mapped": {
-                            "seq_region_name": "X",
-                            "strand": 1,
-                            "start": 304103,
-                            "end": 304103,
-                            "assembly": "GRCh38",
-                        },
-                    },
-                    {
-                        "original": {
-                            "seq_region_name": "X",
-                            "strand": 1,
-                            "start": 91941056,
-                            "end": 91941056,
-                            "assembly": "GRCh37",
-                        },
-                        "mapped": {
-                            "seq_region_name": "X",
-                            "strand": 1,
-                            "start": 92686057,
-                            "end": 92686057,
-                            "assembly": "GRCh38",
-                        },
-                    },
-                ]
-            },
-            "Y": {
-                "mappings": [
-                    {
-                        "original": {
-                            "seq_region_name": "Y",
-                            "strand": 1,
-                            "start": 535258,
-                            "end": 535258,
-                            "assembly": "GRCh37",
-                        },
-                        "mapped": {
-                            "seq_region_name": "Y",
-                            "strand": 1,
-                            "start": 624523,
-                            "end": 624523,
-                            "assembly": "GRCh38",
-                        },
-                    }
-                ]
-            },
-        }
+        return _data.GRCh37_GRCh38_PAR()
 
     def snps_NCBI36(self):
         return self.create_snp_df(
@@ -641,18 +341,20 @@ class BaseSNPsTestCase(SNPsTestMixin, TestCase):
         self.make_normalized_dataframe_assertions(snps.snps)
 
     def get_low_quality_snps(self, pos=(104, 106, 1001), cluster="c1"):
-        df = pd.DataFrame(
-            {"chrom": ["1"] * len(pos), "pos": pos, "cluster": [cluster] * len(pos)},
-            columns=["chrom", "pos", "cluster"],
-        )
-        df.chrom = df.chrom.astype(pd.CategoricalDtype(ordered=False))
-        df.pos = df.pos.astype(np.uint32)
-        df.cluster = df.cluster.astype(pd.CategoricalDtype(ordered=False))
-        return df
+        return low_quality_snps_df(pos=pos, cluster=cluster)
 
     def run_low_quality_snps_test(self, f, low_quality_snps, cluster="c1"):
-        mock1 = PropertyMock(return_value=cluster)
-        mock2 = Mock(return_value=low_quality_snps)
-        with patch("snps.SNPs.cluster", mock1):
-            with patch("snps.resources.Resources.get_low_quality_snps", mock2):
-                f()
+        # Cluster detection runs the real overlap computation (no mocks) against these
+        # chip clusters. The generic test SNPs are rs1-rs8 at positions 101-108.
+        if cluster:
+            # clusters overlap the SNPs, so `cluster` is detected
+            chip_clusters = chip_clusters_df(tuple(range(101, 109)), cluster, 8)
+        else:
+            # clusters do not overlap the SNPs, so no cluster is detected
+            chip_clusters = chip_clusters_df(tuple(range(1001, 1009)), "c1", 8)
+        set_default_provider(
+            FakeResources(
+                chip_clusters=chip_clusters, low_quality_snps=low_quality_snps
+            )
+        )
+        f()

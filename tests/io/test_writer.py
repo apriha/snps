@@ -4,12 +4,13 @@ import tempfile
 import numpy as np
 
 from snps import SNPs
-from snps.resources import ReferenceSequence, Resources
-from snps.utils import gzip_file
 from tests import BaseSNPsTestCase
 
 
 class TestWriter(BaseSNPsTestCase):
+    # Reference sequences for VCF output are served offline by the default
+    # fixture-backed resource provider (the committed generic.fa for chrom "1").
+
     def run_writer_test(
         self, func_str, filename="", output_file="", expected_output="", **kwargs
     ):
@@ -17,37 +18,29 @@ class TestWriter(BaseSNPsTestCase):
             with tempfile.TemporaryDirectory() as tmpdir1:
                 s = SNPs("tests/input/testvcf.vcf", output_dir=tmpdir1)
 
-                r = Resources()
-                r._reference_sequences["GRCh37"] = {}
-
                 output = os.path.join(tmpdir1, output_file)
-                with tempfile.TemporaryDirectory() as tmpdir2:
-                    dest = os.path.join(tmpdir2, "generic.fa.gz")
-                    gzip_file("tests/input/generic.fa", dest)
 
-                    seq = ReferenceSequence(ID="1", path=dest)
+                if not filename:
+                    result = s.to_vcf(**kwargs)
+                else:
+                    result = s.to_vcf(filename, **kwargs)
 
-                    r._reference_sequences["GRCh37"]["1"] = seq
+                self.assertEqual(result, output)
 
-                    if not filename:
-                        result = s.to_vcf(**kwargs)
-                    else:
-                        result = s.to_vcf(filename, **kwargs)
+                if expected_output:
+                    # read result
+                    with open(output, "r") as f:
+                        actual = f.read()
 
-                    self.assertEqual(result, output)
+                    # read expected result
+                    with open(expected_output, "r") as f:
+                        expected = f.read()
 
-                    if expected_output:
-                        # read result
-                        with open(output, "r") as f:
-                            actual = f.read()
+                    self.assertIn(expected, actual)
 
-                        # read expected result
-                        with open(expected_output, "r") as f:
-                            expected = f.read()
-
-                        self.assertIn(expected, actual)
-
-                self.run_parsing_tests_vcf(output)
+                # the generated VCF records the reference assembly in its contig lines,
+                # so the build is detected when the output is re-parsed
+                self.run_parsing_tests_vcf(output, build_detected=True)
         else:
             with tempfile.TemporaryDirectory() as tmpdir:
                 snps = SNPs("tests/input/generic.csv", output_dir=tmpdir)
@@ -116,57 +109,36 @@ class TestWriter(BaseSNPsTestCase):
         with tempfile.TemporaryDirectory() as tmpdir1:
             snps = SNPs("tests/input/testvcf.vcf", output_dir=tmpdir1)
 
-            r = Resources()
-            r._reference_sequences["GRCh37"] = {}
-
             output = os.path.join(tmpdir1, "vcf_GRCh37.vcf")
-            with tempfile.TemporaryDirectory() as tmpdir2:
-                dest = os.path.join(tmpdir2, "generic.fa.gz")
-                gzip_file("tests/input/generic.fa", dest)
+            self.assertEqual(snps.to_vcf(), output)
 
-                seq = ReferenceSequence(ID="1", path=dest)
+            s = ""
+            with open(output, "r") as f:
+                for line in f.readlines():
+                    if "snps v" in line:
+                        s += '##source="vcf; snps v1.2.3.post85.dev0+gb386302; https://pypi.org/project/snps/"\n'
+                    else:
+                        s += line
 
-                r._reference_sequences["GRCh37"]["1"] = seq
+            with open(output, "w") as f:
+                f.write(s)
 
-                self.assertEqual(snps.to_vcf(), output)
-
-                s = ""
-                with open(output, "r") as f:
-                    for line in f.readlines():
-                        if "snps v" in line:
-                            s += '##source="vcf; snps v1.2.3.post85.dev0+gb386302; https://pypi.org/project/snps/"\n'
-                        else:
-                            s += line
-
-                with open(output, "w") as f:
-                    f.write(s)
-
-            self.run_parsing_tests_vcf(output)
+            self.run_parsing_tests_vcf(output, build_detected=True)
 
     def test_save_snps_vcf_discrepant_pos(self):
         with tempfile.TemporaryDirectory() as tmpdir1:
             s = SNPs("tests/input/testvcf.vcf", output_dir=tmpdir1)
 
-            r = Resources()
-            r._reference_sequences["GRCh37"] = {}
-
             output = os.path.join(tmpdir1, "vcf_GRCh37.vcf")
-            with tempfile.TemporaryDirectory() as tmpdir2:
-                dest = os.path.join(tmpdir2, "generic.fa.gz")
-                gzip_file("tests/input/generic.fa", dest)
 
-                seq = ReferenceSequence(ID="1", path=dest)
+            # create discrepant SNPs by setting positions outside reference sequence
+            s._snps.loc["rs1", "pos"] = 0
+            s._snps.loc["rs17", "pos"] = 118
 
-                r._reference_sequences["GRCh37"]["1"] = seq
+            # esnure this is the right type after manual tweaking
+            s._snps = s._snps.astype({"pos": np.uint32})
 
-                # create discrepant SNPs by setting positions outside reference sequence
-                s._snps.loc["rs1", "pos"] = 0
-                s._snps.loc["rs17", "pos"] = 118
-
-                # esnure this is the right type after manual tweaking
-                s._snps = s._snps.astype({"pos": np.uint32})
-
-                self.assertEqual(s.to_vcf(), output)
+            self.assertEqual(s.to_vcf(), output)
 
             self.assert_frame_equal_with_string_index(
                 s.discrepant_vcf_position,
@@ -180,31 +152,20 @@ class TestWriter(BaseSNPsTestCase):
             )
 
             expected = self.generic_snps_vcf().drop(["rs1", "rs17"])
-            self.run_parsing_tests_vcf(output, snps_df=expected)
+            self.run_parsing_tests_vcf(output, snps_df=expected, build_detected=True)
 
     def test_save_snps_vcf_phased(self):
         with tempfile.TemporaryDirectory() as tmpdir1:
             # read phased data
             s = SNPs("tests/input/testvcf_phased.vcf", output_dir=tmpdir1)
 
-            # setup resource to use test FASTA reference sequence
-            r = Resources()
-            r._reference_sequences["GRCh37"] = {}
-
             output = os.path.join(tmpdir1, "vcf_GRCh37.vcf")
-            with tempfile.TemporaryDirectory() as tmpdir2:
-                dest = os.path.join(tmpdir2, "generic.fa.gz")
-                gzip_file("tests/input/generic.fa", dest)
 
-                seq = ReferenceSequence(ID="1", path=dest)
-
-                r._reference_sequences["GRCh37"]["1"] = seq
-
-                # save phased data to VCF
-                self.assertEqual(s.to_vcf(), output)
+            # save phased data to VCF
+            self.assertEqual(s.to_vcf(), output)
 
             # read saved VCF
-            self.run_parsing_tests_vcf(output, phased=True)
+            self.run_parsing_tests_vcf(output, phased=True, build_detected=True)
 
     def test_save_snps_phased(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -223,40 +184,28 @@ class TestWriter(BaseSNPsTestCase):
             with tempfile.TemporaryDirectory() as tmpdir1:
                 s = SNPs("tests/input/generic.csv", output_dir=tmpdir1)
 
-                # setup resource to use test FASTA reference sequence
-                r = Resources()
-                r._reference_sequences["GRCh37"] = {}
-
                 output = os.path.join(tmpdir1, "generic_GRCh37.vcf")
-                with tempfile.TemporaryDirectory() as tmpdir2:
-                    dest = os.path.join(tmpdir2, "generic.fa.gz")
-                    gzip_file("tests/input/generic.fa", dest)
 
-                    seq = ReferenceSequence(ID="1", path=dest)
+                self.assertEqual(
+                    s.to_vcf(
+                        qc_only=vcf_qc_only,
+                        qc_filter=vcf_qc_filter,
+                    ),
+                    output,
+                )
 
-                    r._reference_sequences["GRCh37"]["1"] = seq
+                # read result
+                with open(output, "r") as f:
+                    actual = f.read()
 
-                    # save phased data to VCF
-                    self.assertEqual(
-                        s.to_vcf(
-                            qc_only=vcf_qc_only,
-                            qc_filter=vcf_qc_filter,
-                        ),
-                        output,
-                    )
+                # read expected result
+                with open(expected_output, "r") as f:
+                    expected = f.read()
 
-                    # read result
-                    with open(output, "r") as f:
-                        actual = f.read()
+                self.assertIn(expected, actual)
 
-                    # read expected result
-                    with open(expected_output, "r") as f:
-                        expected = f.read()
-
-                    self.assertIn(expected, actual)
-
-                    if not vcf_qc_filter or not cluster:
-                        self.assertNotIn("##FILTER=<ID=lq", actual)
+                if not vcf_qc_filter or not cluster:
+                    self.assertNotIn("##FILTER=<ID=lq", actual)
 
         self.run_low_quality_snps_test(f, self.get_low_quality_snps(), cluster=cluster)
 
@@ -266,36 +215,26 @@ class TestWriter(BaseSNPsTestCase):
         with tempfile.TemporaryDirectory() as tmpdir1:
             s = SNPs(input_data.encode(), output_dir=tmpdir1)
 
-            r = Resources()
-            r._reference_sequences["GRCh37"] = {}
-
             output = os.path.join(tmpdir1, "generic_GRCh37.vcf")
-            with tempfile.TemporaryDirectory() as tmpdir2:
-                dest = os.path.join(tmpdir2, "generic.fa.gz")
-                gzip_file("tests/input/generic.fa", dest)
 
-                seq = ReferenceSequence(ID="1", path=dest)
+            self.assertEqual(s.to_vcf(), output)
 
-                r._reference_sequences["GRCh37"]["1"] = seq
+            with open(output, "r") as f:
+                actual = f.read()
 
-                self.assertEqual(s.to_vcf(), output)
+            # Check if expected output is included
+            self.assertIn(expected_output, actual)
 
-                with open(output, "r") as f:
-                    actual = f.read()
+            # Check for ALT headers
+            if output_includes_ins:
+                self.assertIn("##ALT=<ID=INS", actual)
+            else:
+                self.assertNotIn("##ALT=<ID=INS", actual)
 
-                # Check if expected output is included
-                self.assertIn(expected_output, actual)
-
-                # Check for ALT headers
-                if output_includes_ins:
-                    self.assertIn("##ALT=<ID=INS", actual)
-                else:
-                    self.assertNotIn("##ALT=<ID=INS", actual)
-
-                if output_includes_del:
-                    self.assertIn("##ALT=<ID=DEL", actual)
-                else:
-                    self.assertNotIn("##ALT=<ID=DEL", actual)
+            if output_includes_del:
+                self.assertIn("##ALT=<ID=DEL", actual)
+            else:
+                self.assertNotIn("##ALT=<ID=DEL", actual)
 
     def test_save_vcf_qc_only_F_qc_filter_F(self):
         self.run_vcf_qc_test(

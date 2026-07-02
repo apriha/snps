@@ -12,9 +12,8 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 
 from snps.build_constants import BUILD_MARKER_SNPS
-from snps.ensembl import EnsemblRestClient
 from snps.io import Reader, Writer, get_empty_snps_dataframe
-from snps.resources import Resources
+from snps.resources import get_default_provider
 from snps.utils import Parallelizer
 
 logger = logging.getLogger(__name__)
@@ -27,13 +26,14 @@ class SNPs:
         only_detect_source=False,
         assign_par_snps=False,
         output_dir="output",
-        resources_dir="resources",
+        resources_dir=None,
         deduplicate=True,
         deduplicate_XY_chrom=True,
         deduplicate_MT_chrom=True,
         parallelize=False,
         processes=os.cpu_count(),
         rsids=(),
+        resources=None,
     ):
         """Object used to read, write, and remap genotype / raw data files.
 
@@ -47,8 +47,9 @@ class SNPs:
             assign PAR SNPs to the X and Y chromosomes
         output_dir : str
             path to output directory
-        resources_dir : str
-            name / path of resources directory
+        resources_dir : str, optional
+            path to the resources cache directory used by the default provider; if not
+            set, an OS-specific cache directory is used (ignored if `resources` is given)
         deduplicate : bool
             deduplicate RSIDs and make SNPs available as `SNPs.duplicate`
         deduplicate_MT_chrom : bool
@@ -62,6 +63,10 @@ class SNPs:
             processes to launch if multiprocessing
         rsids : tuple, optional
             rsids to extract if loading a VCF file
+        resources : ResourceProvider, optional
+            provider used to obtain external resources (assembly maps, GSA maps,
+            chip clusters, reference sequences, etc.); defaults to a pooch-backed
+            provider that downloads and caches resources as needed
         """
         self._file = file
         self._only_detect_source = only_detect_source
@@ -79,7 +84,7 @@ class SNPs:
         self._build_detected = False
         self._build_original = 0
         self._output_dir = output_dir
-        self._resources = Resources(resources_dir=resources_dir)
+        self._resources = resources or get_default_provider(resources_dir)
         self._parallelizer = Parallelizer(parallelize=parallelize, processes=processes)
         self._cluster = ""
         self._chip = ""
@@ -854,12 +859,9 @@ class SNPs:
            rs28736870, rs113313554, and rs758419898 (dbSNP Build ID: 151). Available from:
            http://www.ncbi.nlm.nih.gov/SNP/
         """
-        rest_client = EnsemblRestClient(
-            server="https://api.ncbi.nlm.nih.gov", reqs_per_sec=1
-        )
         for rsid in self._snps.loc[self._snps["chrom"] == "PAR"].index.values:
             if "rs" in rsid:
-                response = self._lookup_refsnp_snapshot(rsid, rest_client)
+                response = self._resources.get_par_lookup(rsid)
 
                 if response is not None:
                     for item in response["primary_snapshot_data"][
@@ -877,21 +879,6 @@ class SNPs:
                                 self._build = self._extract_build(item)
                                 self._build_detected = True
                             break
-
-    def _lookup_refsnp_snapshot(self, rsid, rest_client):
-        id = rsid.split("rs")[1]
-        response = rest_client.perform_rest_action("/variation/v0/refsnp/" + id)
-        if "merged_snapshot_data" in response:
-            # this RefSnp id was merged into another
-            # we'll pick the first one to decide which chromosome this PAR will be assigned to
-            merged_id = "rs" + response["merged_snapshot_data"]["merged_into"][0]
-            logger.info(f"SNP id {rsid} has been merged into id {merged_id}")
-            return self._lookup_refsnp_snapshot(merged_id, rest_client)
-        elif "nosnppos_snapshot_data" in response:
-            logger.warning(f"Unable to look up SNP id {rsid}")
-            return None
-        else:
-            return response
 
     def _assign_snp(self, rsid, alleles, chrom):
         # only assign SNP if positions match (i.e., same build)
@@ -1185,10 +1172,10 @@ class SNPs:
     def remap(self, target_assembly, complement_bases=True):
         """Remap SNP coordinates from one assembly to another.
 
-        This method uses the assembly map endpoint of the Ensembl REST API service (via
-        ``Resources``'s ``EnsemblRestClient``) to convert SNP coordinates / positions from one
-        assembly to another. After remapping, the coordinates / positions for the
-        SNPs will be that of the target assembly.
+        This method converts SNP coordinates / positions from one assembly to another
+        using assembly mapping data from the resource provider (by default sourced from
+        the Ensembl REST API assembly map endpoint). After remapping, the coordinates /
+        positions for the SNPs will be that of the target assembly.
 
         If the SNPs are already mapped relative to the target assembly, remapping will not be
         performed.

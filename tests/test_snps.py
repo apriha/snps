@@ -73,6 +73,20 @@ class TestSnps(BaseSNPsTestCase):
             snps.snps, self.snps_GRCh37_PAR(), check_exact=True
         )
 
+    def test_build_detected_markers_disagree(self):
+        # the first marker found matches Build 38, but the other markers match Build 37
+        data = (
+            "rsid,chromosome,position,genotype\n"
+            "rs3094315,1,817186,AA\n"
+            "rs2500347,1,144938320,AC\n"
+            "rs964481,20,27656823,AG\n"
+        )
+        with self.assertLogs("snps.snps", level=logging.WARNING) as cm:
+            s = SNPs(data.encode())
+        self.assertEqual(s.build, 37)
+        self.assertTrue(s.build_detected)
+        self.assertIn("Build marker SNPs match different builds", cm.output[0])
+
     def test_build_no_snps(self):
         for snps in self.empty_snps():
             self.assertFalse(snps.build)

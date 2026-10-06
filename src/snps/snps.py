@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import warnings
+from collections import Counter
 from itertools import count, groupby
 
 import numpy as np
@@ -931,14 +932,28 @@ class SNPs:
            rs11928389, rs2500347, rs964481, rs2341354, rs3850290, and rs1329546
            (dbSNP Build ID: 151). Available from: http://www.ncbi.nlm.nih.gov/SNP/
         """
-        # Check each marker SNP until we find a matching build
+        # Tally the build matched by each marker SNP, so that a single marker with an
+        # unexpected position doesn't determine the build
+        votes = Counter()
         for rsid, marker_data in BUILD_MARKER_SNPS.items():
             if rsid in self._snps.index:
                 pos = self._snps.loc[rsid].pos
                 for build in (37, 38, 36):  # Check most common builds first
                     if marker_data[build] == pos:
-                        return build
-        return 0
+                        votes[build] += 1
+                        break
+
+        if not votes:
+            return 0
+
+        if len(votes) > 1:
+            logger.warning(
+                f"Build marker SNPs match different builds {dict(votes)}; "
+                "using the build matched by the most markers"
+            )
+
+        # ties go to the build matched by the first marker found
+        return votes.most_common(1)[0][0]
 
     def get_count(self, chrom=""):
         """Count of SNPs.

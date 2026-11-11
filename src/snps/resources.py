@@ -282,7 +282,7 @@ class Resources:
             )
             clusters = df.clusters
             df = df.locus.str.split(":", expand=True)
-            df.rename({0: "chrom", 1: "pos"}, axis=1, inplace=True)
+            df = df.rename({0: "chrom", 1: "pos"}, axis=1)
             df.pos = df.pos.astype(np.uint32)
             df.chrom = df.chrom.astype(pd.CategoricalDtype(ordered=False))
             df["clusters"] = clusters
@@ -330,10 +330,10 @@ class Resources:
                 )
 
             df = pd.concat(cluster_dfs)
-            df.reset_index(inplace=True, drop=True)
+            df = df.reset_index(drop=True)
             cluster = df.cluster.astype(pd.CategoricalDtype(ordered=False))
             df = df.locus.str.split(":", expand=True)
-            df.rename({0: "chrom", 1: "pos"}, axis=1, inplace=True)
+            df = df.rename({0: "chrom", 1: "pos"}, axis=1)
             df.pos = df.pos.astype(np.uint32)
             df.chrom = df.chrom.astype(pd.CategoricalDtype(ordered=False))
             df["cluster"] = cluster

@@ -102,7 +102,7 @@ class SNPs:
                     filter(lambda x: len(x.split(",")) > 1, d["snps"].index)
                 )
             }
-            d["snps"].rename(index=multi_rsids, inplace=True)
+            d["snps"] = d["snps"].rename(index=multi_rsids)
 
             self._snps = d["snps"]
             self._source = (
@@ -727,8 +727,7 @@ class SNPs:
         path, *extra = w.write()
 
         if len(extra) == 1 and not extra[0].empty:
-            self._discrepant_vcf_position = extra[0]
-            self._discrepant_vcf_position.set_index("rsid", inplace=True)
+            self._discrepant_vcf_position = extra[0].set_index("rsid")
             logger.warning(
                 f"{len(self.discrepant_vcf_position)} SNP positions were found to be discrepant when saving VCF"
             )
@@ -1075,7 +1074,7 @@ class SNPs:
         )
 
         # drop discrepant XY SNPs since it's ambiguous for which allele to deduplicate
-        self._snps.drop(discrepant_XY_snps, inplace=True)
+        self._snps = self._snps.drop(discrepant_XY_snps)
 
         # get remaining non-PAR SNPs with two alleles
         non_par_snps = self._get_non_par_snps(chrom, heterozygous=False)
@@ -1097,7 +1096,7 @@ class SNPs:
         )
 
         # drop heterozygous MT SNPs since it's ambiguous for which allele to deduplicate
-        self._snps.drop(heterozygous_MT_snps, inplace=True)
+        self._snps = self._snps.drop(heterozygous_MT_snps)
 
         self._deduplicate_alleles(self.homozygous("MT").index)
 
@@ -1520,12 +1519,20 @@ class SNPs:
 
             # identify common SNPs (i.e., any rsids being added that already exist in self.snps)
             df = (
-                self.snps.join(s.snps, how="inner", rsuffix="_added")
+                self.snps.merge(
+                    s.snps,
+                    how="inner",
+                    left_index=True,
+                    right_index=True,
+                    suffixes=("", "_added"),
+                )
                 if not merge_chrom
-                else self.snps.loc[self.snps.chrom == merge_chrom].join(
+                else self.snps.loc[self.snps.chrom == merge_chrom].merge(
                     s.snps.loc[s.snps.chrom == merge_chrom],
                     how="inner",
-                    rsuffix="_added",
+                    left_index=True,
+                    right_index=True,
+                    suffixes=("", "_added"),
                 )
             )
 
@@ -1776,94 +1783,6 @@ class SNPs:
         )
         return self.valid
 
-    def predict_ancestry(
-        self,
-        output_directory=None,
-        write_predictions=False,
-        models_directory=None,
-        aisnps_directory=None,
-        aisnps_set=None,
-    ):
-        """Predict genetic ancestry for SNPs.
-
-        Predictions by `ezancestry <https://github.com/arvkevi/ezancestry>`_.
-
-        Notes
-        -----
-        Populations below are described `here <https://www.internationalgenome.org/faq/what-do-the-population-codes-mean/>`_.
-
-        Parameters
-        ----------
-        various : optional
-            See the available settings for `predict` at `ezancestry <https://github.com/arvkevi/ezancestry>`_.
-
-        Returns
-        -------
-        dict
-            dict with the following keys:
-
-            `population_code` (str)
-              max predicted population for the sample
-            `population_percent` (float)
-              predicted probability for the max predicted population
-            `superpopulation_code` (str)
-              max predicted super population (continental) for the sample
-            `superpopulation_percent` (float)
-              predicted probability for the max predicted super population
-            `ezancestry_df` (pandas.DataFrame)
-              pandas.DataFrame with the following columns:
-
-              `component1`, `component2`, `component3`
-                The coordinates of the sample in the dimensionality-reduced component space. Can be
-                used as (x, y, z,) coordinates for plotting in a 3d scatter plot.
-              `predicted_ancestry_population`
-                The max predicted population for the sample.
-              `ACB`, `ASW`, `BEB`, `CDX`, `CEU`, `CHB`, `CHS`, `CLM`, `ESN`, `FIN`, `GBR`, `GIH`, `GWD`, `IBS`, `ITU`, `JPT`, `KHV`, `LWK`, `MSL`, `MXL`, `PEL`, `PJL`, `PUR`, `STU`, `TSI`, `YRI`
-                Predicted probabilities for each of the populations. These sum to 1.0.
-              `predicted_ancestry_superpopulation`
-                The max predicted super population (continental) for the sample.
-              `AFR`, `AMR`, `EAS`, `EUR`, `SAS`
-                Predicted probabilities for each of the super populations. These sum to 1.0.
-
-
-        """
-        if not self.valid:
-            return {}
-
-        try:
-            from ezancestry.commands import predict
-        except ModuleNotFoundError:
-            raise ModuleNotFoundError(
-                "Ancestry prediction requires the ezancestry package; please install it using pip install ezancestry"
-            )
-
-        def max_pop(row):
-            popcode = row["predicted_ancestry_population"]
-            poppct = row[popcode]
-            superpopcode = row["predicted_ancestry_superpopulation"]
-            superpoppct = row[superpopcode]
-
-            return {
-                "population_code": popcode,
-                "population_percent": poppct,
-                "superpopulation_code": superpopcode,
-                "superpopulation_percent": superpoppct,
-            }
-
-        predictions = predict(
-            self.snps,
-            output_directory,
-            write_predictions,
-            models_directory,
-            aisnps_directory,
-            aisnps_set,
-        )
-
-        d = dict(predictions.apply(max_pop, axis=1).iloc[0])
-        d["ezancestry_df"] = predictions
-
-        return d
-
     def compute_cluster_overlap(self, cluster_overlap_threshold=0.95):
         """Compute overlap with chip clusters.
 
@@ -1929,7 +1848,7 @@ class SNPs:
                 "snps_in_common": [0] * 5,
             }
         )
-        df.set_index("cluster_id", inplace=True)
+        df = df.set_index("cluster_id")
 
         if self.build != 37:
             to_remap = copy.deepcopy(self)

@@ -117,8 +117,7 @@ class TestReader(BaseSNPsTestCase):
 
     def test_read_circledna(self):
         # https://circledna.com/
-        df = self.generic_snps()
-        df.drop("rs5", inplace=True)  # only called genotypes
+        df = self.generic_snps().drop("rs5")  # only called genotypes
         self.run_parsing_tests("tests/input/circledna.txt", "CircleDNA", snps_df=df)
 
     def test_read_plink(self):

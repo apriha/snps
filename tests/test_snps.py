@@ -1,11 +1,8 @@
-import importlib.util
 import io
 import logging
 import os
-import sys
 import tempfile
 import warnings
-from unittest.mock import Mock
 
 import numpy as np
 import pandas as pd
@@ -239,8 +236,7 @@ class TestSnps(BaseSNPsTestCase):
 
     def test_notnull(self):
         s = SNPs("tests/input/generic.csv")
-        snps = self.generic_snps()
-        snps.drop("rs5", inplace=True)
+        snps = self.generic_snps().drop("rs5")
         self.assert_frame_equal_with_string_index(s.notnull(), snps, check_exact=True)
 
     def test_only_detect_source(self):
@@ -454,73 +450,6 @@ class TestSnps(BaseSNPsTestCase):
             self.assertEqual(snps.count, 0)
             self.assertTrue(snps.snps.empty)
 
-    def _make_ancestry_assertions(self, d):
-        self.assertEqual(d["population_code"], "PUR")
-        self.assertAlmostEqual(d["population_percent"], 0.2661437765657918)
-        self.assertEqual(d["superpopulation_code"], "AMR")
-        self.assertAlmostEqual(d["superpopulation_percent"], 0.9642857142857143)
-        self.assertTrue("predicted_ancestry_population" in d["ezancestry_df"].keys())
-        self.assertTrue(
-            "predicted_ancestry_superpopulation" in d["ezancestry_df"].keys()
-        )
-
-    def test_ancestry(self):
-        def pop_modules(modules):
-            d = {}
-            for m in modules:
-                if m in sys.modules:
-                    d[m] = sys.modules.pop(m)
-            return d
-
-        if importlib.util.find_spec("ezancestry") is not None:
-            # test with ezancestry if installed
-            s = SNPs("tests/input/generic.csv")
-            self._make_ancestry_assertions(s.predict_ancestry())
-
-        ezancestry_mods = ["ezancestry", "ezancestry.commands"]
-        popped_mods = pop_modules(ezancestry_mods)
-
-        # mock ezancestry modules
-        for mod in ezancestry_mods:
-            sys.modules[mod] = Mock()
-
-        sys.modules["ezancestry.commands"].predict = Mock(
-            return_value=pd.DataFrame(
-                {
-                    "predicted_ancestry_population": ["PUR"],
-                    "PUR": [0.2661437765657918],
-                    "predicted_ancestry_superpopulation": ["AMR"],
-                    "AMR": [0.9642857142857143],
-                }
-            )
-        )
-
-        # test with mocked ezancestry
-        s = SNPs("tests/input/generic.csv")
-        self._make_ancestry_assertions(s.predict_ancestry())
-
-        # unload mocked ezancestry modules
-        pop_modules(ezancestry_mods)
-
-        # restore ezancestry modules if ezancestry installed
-        sys.modules.update(popped_mods)
-
-    def test_ancestry_module_not_found_error(self):
-        if importlib.util.find_spec("ezancestry") is None:
-            # test when ezancestry not installed
-            s = SNPs("tests/input/generic.csv")
-            with self.assertRaises(ModuleNotFoundError) as err:
-                _ = s.predict_ancestry()
-
-            self.assertEqual(
-                err.exception.msg,
-                "Ancestry prediction requires the ezancestry package; please install it using pip install ezancestry",
-            )
-
-    def test_ancestry_no_snps(self):
-        for snps in self.empty_snps():
-            self.assertDictEqual(snps.predict_ancestry(), {})
-
     def _get_chip_clusters(self, pos=tuple(range(101, 109)), cluster="c1", length=8):
         return chip_clusters_df(pos=pos, cluster=cluster, length=length)
 
@@ -591,7 +520,7 @@ class TestSnps(BaseSNPsTestCase):
         def f():
             s = SNPs("tests/input/23andme.txt")
             # drop SNPs not currently remapped by test mapping data
-            s._snps.drop(["rs4", "rs5", "rs6", "rs7", "rs8"], inplace=True)
+            s._snps = s._snps.drop(["rs4", "rs5", "rs6", "rs7", "rs8"])
             s._build = 36  # manually set build 36
             self.assertEqual(s.cluster, "c1")
             self.assertEqual(s.build, 36)  # ensure copy gets remapped
@@ -651,7 +580,7 @@ class TestSnps(BaseSNPsTestCase):
         def f():
             s = SNPs("tests/input/generic.csv")
             # drop SNPs not currently remapped by test mapping data
-            s._snps.drop(["rs4", "rs5", "rs6", "rs7", "rs8"], inplace=True)
+            s._snps = s._snps.drop(["rs4", "rs5", "rs6", "rs7", "rs8"])
             s._build = 36  # manually set build 36
             s.identify_low_quality_snps()
             self.assert_frame_equal_with_string_index(
@@ -1086,9 +1015,6 @@ class TestSNPsMerge(TestSnps):
 
 class TestDeprecatedMethods(TestSnps):
     def run_deprecated_test(self, f, msg):
-        if pd.__version__ == "1.5.3":
-            self.skipTest("Skipping test for pandas version 1.5.3")
-
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             f()
@@ -1168,8 +1094,7 @@ class TestDeprecatedMethods(TestSnps):
     def test_not_null_snps(self):
         def f():
             s = SNPs("tests/input/generic.csv")
-            snps = self.generic_snps()
-            snps.drop("rs5", inplace=True)
+            snps = self.generic_snps().drop("rs5")
             self.assert_frame_equal_with_string_index(
                 s.not_null_snps(), snps, check_exact=True
             )

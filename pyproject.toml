@@ -7,7 +7,7 @@ name = "snps"
 dynamic = ["version"]
 description = "tools for reading, writing, generating, merging, and remapping SNPs"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = "BSD-3-Clause"
 license-files = ["LICENSE.txt"]
 authors = [{ name = "Andrew Riha", email = "apriha@gmail.com" }]
@@ -20,26 +20,22 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Natural Language :: English",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Information Analysis",
     "Topic :: Utilities",
 ]
 dependencies = [
-    "numpy",
-    "pandas",
+    "numpy>=2",
+    "pandas>=2.2.2",
     "atomicwrites",
-    "pooch",
+    "pooch>=1.8",
 ]
-
-[project.optional-dependencies]
-ezancestry = ["ezancestry"]
 
 [project.urls]
 Homepage = "https://github.com/apriha/snps"
@@ -56,14 +52,13 @@ dev = [
     { include-group = "test" },
 ]
 
-# ezancestry requires pandas/numpy <2.0, so it resolves separately from the dev group.
-[tool.uv]
-conflicts = [[{ extra = "ezancestry" }, { group = "dev" }]]
-
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools_scm]
+
+[tool.ruff]
+target-version = "py311"
 
 # https://github.com/astral-sh/ruff/issues/465#issuecomment-1783684428
 [tool.ruff.lint]

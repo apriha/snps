@@ -356,7 +356,7 @@ class Writer:
         discrepant_vcf_position = snps.loc[
             (snps.pos - seq.start < 0) | (snps.pos - seq.start > seq.length - 1)
         ]
-        df.drop(discrepant_vcf_position.index, inplace=True)
+        df = df.drop(discrepant_vcf_position.index)
 
         # https://stackoverflow.com/a/24838429
         df["REF"] = list(map(chr, seq.sequence[df.POS - seq.start]))

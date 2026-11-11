@@ -43,7 +43,7 @@ def get_empty_snps_dataframe():
     """
     df = pd.DataFrame(columns=["rsid", "chrom", "pos", "genotype"])
     df = df.astype(NORMALIZED_DTYPES)
-    df.set_index("rsid", inplace=True)
+    df = df.set_index("rsid")
     return df
 
 
@@ -764,11 +764,9 @@ class Reader:
                     },
                     compression=compression,
                 )
-                df.rename(
-                    columns={"chromosome": "chrom", "position": "pos"}, inplace=True
-                )
+                df = df.rename(columns={"chromosome": "chrom", "position": "pos"})
                 df = df.astype(dtype=NORMALIZED_DTYPES)
-                df.set_index("rsid", inplace=True)
+                df = df.set_index("rsid")
                 return (df,)
             else:
 
@@ -796,7 +794,7 @@ class Reader:
                     df = parse("SNP.Name", 0)
 
                 df["genotype"] = df["Allele1...Plus"] + df["Allele2...Plus"]
-                df.rename(columns={"Chr": "chrom", "Position": "pos"}, inplace=True)
+                df = df.rename(columns={"Chr": "chrom", "Position": "pos"})
                 df.index.name = "rsid"
                 df = df[["chrom", "pos", "genotype"]]
 
@@ -975,10 +973,10 @@ class Reader:
             df = df.filter(items=("rsid", "chrom", "pos", "genotype"), axis=1)
 
             # discard rows without values
-            df.dropna(subset=["rsid", "chrom", "pos"], inplace=True)
+            df = df.dropna(subset=["rsid", "chrom", "pos"])
 
             # reindex for the new identifiers
-            df.set_index(["rsid"], inplace=True)
+            df = df.set_index(["rsid"])
 
             return (df,)
 
@@ -1028,7 +1026,7 @@ class Reader:
             df = df.filter(items=("rsid", "chrom", "pos", "genotype"), axis=1)
 
             # reindex for the new identifiers
-            df.set_index(["rsid"], inplace=True)
+            df = df.set_index(["rsid"])
 
             return (df,)
 
@@ -1140,7 +1138,7 @@ class Reader:
             df.chrom = df.chrom.str[3:]
             df.genotype = df.genotype.apply(lambda x: "".join(x.split("/")))
             df = df.astype(NORMALIZED_DTYPES)
-            df.set_index("rsid", inplace=True)
+            df = df.set_index("rsid")
 
             return (df,)
 
@@ -1632,6 +1630,6 @@ class Reader:
             df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
             df = df.astype(NORMALIZED_DTYPES)
 
-            df.set_index("rsid", inplace=True, drop=True)
+            df = df.set_index("rsid", drop=True)
 
         return (df, phased)

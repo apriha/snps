@@ -60,9 +60,10 @@ jobs:
     needs: [lint-format, build-docs]
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+        python-version: ['3.11', '3.12', '3.13', '3.14', '3.15']
         include:
           - os: macos-latest
             python-version: '3.14'
@@ -102,32 +103,6 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
 
-  test-extras:
-    needs: [lint-format, build-docs]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python-version: ['3.9', '3.10', '3.11']
-
-    steps:
-    - uses: actions/checkout@v7
-      with:
-        fetch-depth: 0
-        persist-credentials: false
-    - name: Setup Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        pip install --upgrade pip setuptools wheel
-        pip install pytest-cov sybil
-        pip install .[ezancestry]
-    - name: Test with pytest
-      run: |
-        pytest --cov=snps tests README.md
-
   # Everyday CI runs fully offline against fixture-backed resources. The live-integration
   # job below is the only one that contacts the real resource servers (Zenodo, S3,
   # Ensembl, NCBI). It runs weekly and on changes to `main`.
@@ -148,7 +123,7 @@ jobs:
       shell: bash
       run: |
         oses=(ubuntu-latest macos-latest windows-latest)
-        pys=(3.9 3.10 3.11 3.12 3.13 3.14)
+        pys=(3.11 3.12 3.13 3.14 3.15)
         n=$(( ${#oses[@]} * ${#pys[@]} ))
         idx=$(( 10#$(date -u +%V) % n ))
         os="${oses[$(( idx / ${#pys[@]} ))]}"

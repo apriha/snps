@@ -48,7 +48,6 @@ genotype data*
 
 - Derive sex from SNPs
 - Detect deduced genotype / chip array and chip version based on [chip clusters](https://doi.org/10.1016/j.csbj.2021.06.040)
-- Predict ancestry from SNPs (when installed with [ezancestry](https://github.com/arvkevi/ezancestry))
 
 ## Supported Genotype Files
 
@@ -75,7 +74,7 @@ Additionally, `snps` can read a variety of "generic" CSV and TSV files.
 
 ## Requirements
 
-`snps` requires [Python](https://www.python.org) 3.9+; its dependencies are specified in
+`snps` requires [Python](https://www.python.org) 3.11+; its dependencies are specified in
 `pyproject.toml` and installed automatically by `pip`.
 
 ## Installation
@@ -88,12 +87,10 @@ Python dependencies) via `pip`:
 $ pip install snps
 ```
 
-For [ancestry prediction](https://snps.readthedocs.io/en/stable/snps.html#snps.snps.SNPs.predict_ancestry)
-capability, `snps` can be installed with [ezancestry](https://github.com/arvkevi/ezancestry):
+## Ancestry Prediction
 
-```bash
-$ pip install snps[ezancestry]
-```
+To predict genetic ancestry, see [ezancestry](https://github.com/arvkevi/ezancestry), a
+separate package that uses `snps` to read raw data files.
 
 ## Examples
 

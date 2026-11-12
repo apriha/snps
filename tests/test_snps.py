@@ -690,6 +690,26 @@ class TestSNPsMerge(TestSnps):
             ],
         )
 
+    def test_merge_inputs_source_unchanged(self):
+        s1 = SNPs("tests/input/GRCh37.csv")
+        s2 = SNPs("tests/input/23andme.txt")
+        s = SNPs()
+        s.merge([s1, s2])
+        self.assertEqual(s.source, "generic, 23andMe")
+        self.assertEqual(s1.source, "generic")
+        self.assertEqual(s2.source, "23andMe")
+
+    def test_sort_merged_input_unchanged(self):
+        s1 = SNPs("tests/input/GRCh37.csv")
+        chrom_dtype = s1.snps["chrom"].dtype
+        s = SNPs()
+        s.merge([s1])
+        s.sort()
+        self.assertEqual(s1.snps["chrom"].dtype, chrom_dtype)
+        self.assert_frame_equal_with_string_index(
+            s1.snps, self.snps_GRCh37(), check_exact=True
+        )
+
     def test_merge_remapping(self):
         def f():
             s = SNPs("tests/input/NCBI36.csv")

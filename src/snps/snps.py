@@ -3,16 +3,13 @@
 import copy
 import logging
 import os
-import re
 import warnings
-from collections import Counter
-from itertools import count, groupby
+from dataclasses import replace
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import CategoricalDtype
 
-from snps.build_constants import BUILD_MARKER_SNPS
+from snps.data import SNPData
 from snps.io import Reader, Writer, get_empty_snps_dataframe
 from snps.resources import get_default_provider
 from snps.utils import Parallelizer
@@ -71,7 +68,7 @@ class SNPs:
         """
         self._file = file
         self._only_detect_source = only_detect_source
-        self._snps = get_empty_snps_dataframe()
+        self._data = SNPData()
         self._duplicate = get_empty_snps_dataframe()
         self._discrepant_XY = get_empty_snps_dataframe()
         self._heterozygous_MT = get_empty_snps_dataframe()
@@ -79,11 +76,6 @@ class SNPs:
         self._low_quality = get_empty_snps_dataframe().index
         self._discrepant_merge_positions = pd.DataFrame()
         self._discrepant_merge_genotypes = pd.DataFrame()
-        self._source = []
-        self._phased = False
-        self._build = 0
-        self._build_detected = False
-        self._build_original = 0
         self._output_dir = output_dir
         self._resources = resources or get_default_provider(resources_dir)
         self._parallelizer = Parallelizer(parallelize=parallelize, processes=processes)
@@ -104,18 +96,18 @@ class SNPs:
             }
             d["snps"] = d["snps"].rename(index=multi_rsids)
 
-            self._snps = d["snps"]
-            self._source = (
-                d["source"].split(", ") if ", " in d["source"] else [d["source"]]
+            source = d["source"].split(", ") if ", " in d["source"] else [d["source"]]
+            build_detected = True if d["build"] else False
+            self._data = SNPData(
+                snps=d["snps"],
+                source=tuple(source),
+                phased=d["phased"],
+                build=d["build"],
+                build_detected=build_detected,
+                build_original=d["build"] if build_detected else 0,
             )
-            self._phased = d["phased"]
-            self._build = d["build"]
-            self._build_detected = True if d["build"] else False
 
-            if self._build_detected:
-                self._build_original = self._build
-
-            if not self._snps.empty:
+            if not self._data.snps.empty:
                 self.sort()
 
                 if deduplicate:
@@ -123,14 +115,16 @@ class SNPs:
 
                 # use build detected from `read` method or comments, if any
                 # otherwise use SNP positions to detect build
-                if not self._build_detected:
-                    self._build = self.detect_build()
-                    self._build_detected = True if self._build else False
+                if not self._data.build_detected:
+                    build = self.detect_build()
 
-                    if not self._build:
-                        self._build = 37  # assume Build 37 / GRCh37 if not detected
+                    if not build:
+                        # assume Build 37 / GRCh37 if not detected
+                        self._data = replace(self._data, build=37, build_detected=False)
                     else:
-                        self._build_detected = True
+                        self._data = replace(
+                            self._data, build=build, build_detected=True
+                        )
 
                 if assign_par_snps:
                     self._assign_par_snps()
@@ -157,6 +151,41 @@ class SNPs:
         else:
             return "SNPs(<bytes>)"
 
+    # private properties over the fields of the held SNPData; each setter replaces
+    # self._data with an updated SNPData
+
+    @property
+    def _snps(self):
+        return self._data.snps
+
+    @_snps.setter
+    def _snps(self, value):
+        self._data = self._data.with_snps(value)
+
+    @property
+    def _source(self):
+        return list(self._data.source)
+
+    @_source.setter
+    def _source(self, value):
+        self._data = replace(self._data, source=tuple(value))
+
+    @property
+    def _phased(self):
+        return self._data.phased
+
+    @_phased.setter
+    def _phased(self, value):
+        self._data = replace(self._data, phased=value)
+
+    @property
+    def _build(self):
+        return self._data.build
+
+    @_build.setter
+    def _build(self, value):
+        self._data = replace(self._data, build=value)
+
     @property
     def source(self):
         """Summary of the SNP data source(s).
@@ -166,7 +195,7 @@ class SNPs:
         str
             Data source(s) for this ``SNPs`` object, separated by ", ".
         """
-        return ", ".join(self._source)
+        return ", ".join(self._data.source)
 
     @property
     def snps(self):
@@ -197,7 +226,7 @@ class SNPs:
         pandas.DataFrame
             normalized ``snps`` dataframe
         """
-        return self._snps
+        return self._data.snps
 
     @property
     def snps_qc(self):
@@ -218,10 +247,10 @@ class SNPs:
 
         if len(self._low_quality) > 0:
             # filter out low quality SNPs
-            return self._snps.drop(self._low_quality)
+            return self._data.snps.drop(self._low_quality)
         else:
             # no low quality SNPs to filter
-            return self._snps
+            return self._data.snps
 
     @property
     def duplicate(self):
@@ -287,7 +316,7 @@ class SNPs:
             # ensure low quality SNPs, if any, are identified
             self.identify_low_quality_snps()
 
-        return self._snps.loc[self._low_quality]
+        return self._data.snps.loc[self._low_quality]
 
     @property
     def discrepant_merge_positions(self):
@@ -381,7 +410,7 @@ class SNPs:
         -------
         int
         """
-        return self._build
+        return self._data.build
 
     @property
     def build_detected(self):
@@ -391,7 +420,7 @@ class SNPs:
         -------
         bool
         """
-        return self._build_detected
+        return self._data.build_detected
 
     @property
     def build_original(self):
@@ -401,7 +430,7 @@ class SNPs:
         -------
         int
         """
-        return self._build_original
+        return self._data.build_original
 
     @property
     def assembly(self):
@@ -411,14 +440,7 @@ class SNPs:
         -------
         str
         """
-        if self.build == 37:
-            return "GRCh37"
-        elif self.build == 36:
-            return "NCBI36"
-        elif self.build == 38:
-            return "GRCh38"
-        else:
-            return ""
+        return self._data.assembly
 
     @property
     def count(self):
@@ -428,7 +450,7 @@ class SNPs:
         -------
         int
         """
-        return self.get_count()
+        return self._data.count
 
     @property
     def chromosomes(self):
@@ -439,10 +461,7 @@ class SNPs:
         list
             list of str chromosomes (e.g., ['1', '2', '3', 'MT'], empty list if no chromosomes
         """
-        if not self._snps.empty:
-            return list(pd.unique(self._snps["chrom"]))
-        else:
-            return []
+        return self._data.chromosomes
 
     @property
     def chromosomes_summary(self):
@@ -453,33 +472,7 @@ class SNPs:
         str
             human-readable listing of chromosomes (e.g., '1-3, MT'), empty str if no chromosomes
         """
-        if not self._snps.empty:
-            chroms = list(pd.unique(self._snps["chrom"]))
-
-            int_chroms = [int(chrom) for chrom in chroms if chrom.isdigit()]
-            str_chroms = [chrom for chrom in chroms if not chrom.isdigit()]
-
-            # https://codereview.stackexchange.com/a/5202
-            def as_range(iterable):
-                list_items = list(iterable)
-                if len(list_items) > 1:
-                    return f"{list_items[0]}-{list_items[-1]}"
-                else:
-                    return f"{list_items[0]}"
-
-            # create str representations
-            int_chroms = ", ".join(
-                as_range(g)
-                for _, g in groupby(int_chroms, key=lambda n, c=count(): n - next(c))
-            )
-            str_chroms = ", ".join(str_chroms)
-
-            if int_chroms != "" and str_chroms != "":
-                int_chroms += ", "
-
-            return int_chroms + str_chroms
-        else:
-            return ""
+        return self._data.chromosomes_summary
 
     @property
     def sex(self):
@@ -490,10 +483,7 @@ class SNPs:
         str
             'Male' or 'Female' if detected, else empty str
         """
-        sex = self.determine_sex(chrom="X")
-        if not sex:
-            sex = self.determine_sex(chrom="Y")
-        return sex
+        return self._data.sex
 
     @property
     def unannotated_vcf(self):
@@ -516,7 +506,7 @@ class SNPs:
         -------
         bool
         """
-        return self._phased
+        return self._data.phased
 
     @property
     def cluster(self):
@@ -584,13 +574,7 @@ class SNPs:
         pandas.DataFrame
             normalized ``snps`` dataframe
         """
-        df = self._filter(chrom)
-
-        return df.loc[
-            (df.genotype.notnull())
-            & (df.genotype.str.len() == 2)
-            & (df.genotype.str[0] != df.genotype.str[1])
-        ]
+        return self._data.heterozygous(chrom)
 
     def homozygous(self, chrom=""):
         """Get homozygous SNPs.
@@ -605,13 +589,7 @@ class SNPs:
         pandas.DataFrame
             normalized ``snps`` dataframe
         """
-        df = self._filter(chrom)
-
-        return df.loc[
-            (df.genotype.notnull())
-            & (df.genotype.str.len() == 2)
-            & (df.genotype.str[0] == df.genotype.str[1])
-        ]
+        return self._data.homozygous(chrom)
 
     def notnull(self, chrom=""):
         """Get not null genotype SNPs.
@@ -626,9 +604,7 @@ class SNPs:
         pandas.DataFrame
             normalized ``snps`` dataframe
         """
-        df = self._filter(chrom)
-
-        return df.loc[df.genotype.notnull()]
+        return self._data.notnull(chrom)
 
     @property
     def summary(self):
@@ -663,10 +639,7 @@ class SNPs:
         bool
             True if ``SNPs`` is valid
         """
-        if self.snps.empty:
-            return False
-        else:
-            return True
+        return self._data.valid
 
     def save(
         self,
@@ -835,7 +808,7 @@ class SNPs:
         )
 
     def _filter(self, chrom=""):
-        return self.snps.loc[self.snps.chrom == chrom] if chrom else self.snps
+        return self._data._filter(chrom)
 
     def _read_raw_data(self, file, only_detect_source, rsids):
         r = Reader(file, only_detect_source, self._resources, rsids)
@@ -859,7 +832,8 @@ class SNPs:
            rs28736870, rs113313554, and rs758419898 (dbSNP Build ID: 151). Available from:
            http://www.ncbi.nlm.nih.gov/SNP/
         """
-        for rsid in self._snps.loc[self._snps["chrom"] == "PAR"].index.values:
+        snps = self._data.snps
+        for rsid in snps.loc[snps["chrom"] == "PAR"].index.values:
             if "rs" in rsid:
                 response = self._resources.get_par_lookup(rsid)
 
@@ -868,25 +842,32 @@ class SNPs:
                         "placements_with_allele"
                     ]:
                         if "NC_000023" in item["seq_id"]:
-                            assigned = self._assign_snp(rsid, item["alleles"], "X")
+                            assigned = self._assign_snp(
+                                snps, rsid, item["alleles"], "X"
+                            )
                         elif "NC_000024" in item["seq_id"]:
-                            assigned = self._assign_snp(rsid, item["alleles"], "Y")
+                            assigned = self._assign_snp(
+                                snps, rsid, item["alleles"], "Y"
+                            )
                         else:
                             assigned = False
 
                         if assigned:
-                            if not self._build_detected:
-                                self._build = self._extract_build(item)
-                                self._build_detected = True
+                            if not self._data.build_detected:
+                                self._data = replace(
+                                    self._data,
+                                    build=self._extract_build(item),
+                                    build_detected=True,
+                                )
                             break
 
-    def _assign_snp(self, rsid, alleles, chrom):
+    def _assign_snp(self, snps, rsid, alleles, chrom):
         # only assign SNP if positions match (i.e., same build)
         for allele in alleles:
             allele_pos = allele["allele"]["spdi"]["position"]
             # ref SNP positions seem to be 0-based...
-            if allele_pos == self._snps.loc[rsid].pos - 1:
-                self._snps.loc[rsid, "chrom"] = chrom
+            if allele_pos == snps.loc[rsid].pos - 1:
+                snps.loc[rsid, "chrom"] = chrom
                 return True
         return False
 
@@ -933,14 +914,7 @@ class SNPs:
         """
         # Tally the build matched by each marker SNP, so that a single marker with an
         # unexpected position doesn't determine the build
-        votes = Counter()
-        for rsid, marker_data in BUILD_MARKER_SNPS.items():
-            if rsid in self._snps.index:
-                pos = self._snps.loc[rsid].pos
-                for build in (37, 38, 36):  # Check most common builds first
-                    if marker_data[build] == pos:
-                        votes[build] += 1
-                        break
+        votes = self._data._build_votes()
 
         if not votes:
             return 0
@@ -966,7 +940,7 @@ class SNPs:
         -------
         int
         """
-        return len(self._filter(chrom))
+        return self._data.get_count(chrom)
 
     def determine_sex(
         self,
@@ -990,34 +964,11 @@ class SNPs:
         str
             'Male' or 'Female' if detected, else empty str
         """
-        if not self._snps.empty:
-            if chrom == "X":
-                return self._determine_sex_X(heterozygous_x_snps_threshold)
-            elif chrom == "Y":
-                return self._determine_sex_Y(y_snps_not_null_threshold)
-        return ""
-
-    def _determine_sex_X(self, threshold):
-        x_snps = self.get_count("X")
-
-        if x_snps > 0:
-            if len(self.heterozygous("X")) / x_snps > threshold:
-                return "Female"
-            else:
-                return "Male"
-        else:
-            return ""
-
-    def _determine_sex_Y(self, threshold):
-        y_snps = self.get_count("Y")
-
-        if y_snps > 0:
-            if len(self.notnull("Y")) / y_snps > threshold:
-                return "Male"
-            else:
-                return "Female"
-        else:
-            return ""
+        return self._data.determine_sex(
+            heterozygous_x_snps_threshold=heterozygous_x_snps_threshold,
+            y_snps_not_null_threshold=y_snps_not_null_threshold,
+            chrom=chrom,
+        )
 
     def _get_non_par_start_stop(self, chrom):
         # get non-PAR start / stop positions for chrom
@@ -1050,31 +1001,33 @@ class SNPs:
             ].index
 
     def _deduplicate_rsids(self):
+        snps = self._data.snps
         # Keep first duplicate rsid.
-        duplicate_rsids = self._snps.index.duplicated(keep="first")
+        duplicate_rsids = snps.index.duplicated(keep="first")
         # save duplicate SNPs
-        self._duplicate = pd.concat([self._duplicate, self._snps.loc[duplicate_rsids]])
+        self._duplicate = pd.concat([self._duplicate, snps.loc[duplicate_rsids]])
         # deduplicate
-        self._snps = self._snps.loc[~duplicate_rsids]
+        self._data = self._data.with_snps(snps.loc[~duplicate_rsids])
 
     def _deduplicate_alleles(self, rsids):
         # remove duplicate allele
-        self._snps.loc[rsids, "genotype"] = self._snps.loc[rsids, "genotype"].apply(
-            lambda x: x[0]
-        )
+        snps = self._data.snps
+        snps.loc[rsids, "genotype"] = snps.loc[rsids, "genotype"].apply(lambda x: x[0])
 
     def _deduplicate_sex_chrom(self, chrom):
         """Deduplicate a chromosome in the non-PAR region."""
 
         discrepant_XY_snps = self._get_non_par_snps(chrom)
 
+        snps = self._data.snps
+
         # save discrepant XY SNPs
         self._discrepant_XY = pd.concat(
-            [self._discrepant_XY, self._snps.loc[discrepant_XY_snps]]
+            [self._discrepant_XY, snps.loc[discrepant_XY_snps]]
         )
 
         # drop discrepant XY SNPs since it's ambiguous for which allele to deduplicate
-        self._snps = self._snps.drop(discrepant_XY_snps)
+        self._data = self._data.with_snps(snps.drop(discrepant_XY_snps))
 
         # get remaining non-PAR SNPs with two alleles
         non_par_snps = self._get_non_par_snps(chrom, heterozygous=False)
@@ -1088,15 +1041,16 @@ class SNPs:
 
     def _deduplicate_MT_chrom(self):
         """Deduplicate MT chromosome."""
-        heterozygous_MT_snps = self._snps.loc[self.heterozygous("MT").index].index
+        snps = self._data.snps
+        heterozygous_MT_snps = snps.loc[self.heterozygous("MT").index].index
 
         # save heterozygous MT SNPs
         self._heterozygous_MT = pd.concat(
-            [self._heterozygous_MT, self._snps.loc[heterozygous_MT_snps]]
+            [self._heterozygous_MT, snps.loc[heterozygous_MT_snps]]
         )
 
         # drop heterozygous MT SNPs since it's ambiguous for which allele to deduplicate
-        self._snps = self._snps.drop(heterozygous_MT_snps)
+        self._data = self._data.with_snps(snps.drop(heterozygous_MT_snps))
 
         self._deduplicate_alleles(self.homozygous("MT").index)
 
@@ -1156,32 +1110,7 @@ class SNPs:
 
     def sort(self):
         """Sort SNPs based on ordered chromosome list and position."""
-        sorted_list = sorted(
-            (str(x) for x in self._snps["chrom"].unique()), key=self._natural_sort_key
-        )
-
-        # move PAR and MT to the end of the dataframe
-        if "PAR" in sorted_list:
-            sorted_list.remove("PAR")
-            sorted_list.append("PAR")
-
-        if "MT" in sorted_list:
-            sorted_list.remove("MT")
-            sorted_list.append("MT")
-
-        # convert chrom column to category for sorting
-        # https://stackoverflow.com/a/26707444
-        self._snps["chrom"] = self._snps["chrom"].astype(
-            CategoricalDtype(categories=sorted_list, ordered=True)
-        )
-
-        # sort based on ordered chromosome list and position
-        snps = self._snps.sort_values(["chrom", "pos"])
-
-        # convert chromosome back to object
-        snps["chrom"] = snps["chrom"].astype(object)
-
-        self._snps = snps
+        self._data = self._data.sort()
 
     def remap(self, target_assembly, complement_bases=True):
         """Remap SNP coordinates from one assembly to another.
@@ -1296,9 +1225,9 @@ class SNPs:
         snps.loc[remapped_snps.index, "genotype"] = remapped_snps["genotype"]
         snps.pos = snps.pos.astype(np.uint32)
 
-        self._snps = snps
+        self._data = self._data.with_snps(snps)
         self.sort()
-        self._build = int(target_assembly[-2:])
+        self._data = replace(self._data, build=int(target_assembly[-2:]))
 
         return chromosomes_remapped, chromosomes_not_remapped
 
@@ -1413,14 +1342,6 @@ class SNPs:
 
         return complement
 
-    # https://stackoverflow.com/a/16090640
-    @staticmethod
-    def _natural_sort_key(s, natural_sort_re=re.compile("([0-9]+)")):
-        return [
-            int(text) if text.isdigit() else text.lower()
-            for text in re.split(natural_sort_re, s)
-        ]
-
     def merge(
         self,
         snps_objects=(),
@@ -1469,17 +1390,14 @@ class SNPs:
 
         def init(s):
             # initialize this SNPs object with properties of the SNPs object being merged
-            self._snps = s.snps
+            # (retain this object's build_original, which init does not carry over)
+            self._data = replace(s._data, build_original=self._data.build_original)
             self._duplicate = s.duplicate
             self._discrepant_XY = s.discrepant_XY
             self._heterozygous_MT = s.heterozygous_MT
             self._discrepant_vcf_position = s.discrepant_vcf_position
             self._discrepant_merge_positions = s.discrepant_merge_positions
             self._discrepant_merge_genotypes = s.discrepant_merge_genotypes
-            self._source = s._source
-            self._phased = s.phased
-            self._build = s.build
-            self._build_detected = s.build_detected
 
         def ensure_same_build(s):
             # ensure builds match when merging
@@ -1497,13 +1415,15 @@ class SNPs:
         def merge_properties(s):
             if not s.build_detected:
                 # can no longer assume build has been detected for all SNPs after merge
-                self._build_detected = False
+                self._data = replace(self._data, build_detected=False)
 
             if not s.phased:
                 # can no longer assume all SNPs are phased after merge
-                self._phased = False
+                self._data = replace(self._data, phased=False)
 
-            self._source.extend(s._source)
+            self._data = replace(
+                self._data, source=self._data.source + tuple(s._data.source)
+            )
 
         def merge_dfs(s):
             # append dataframes created when a ``SNPs`` object is instantiated
@@ -1582,13 +1502,13 @@ class SNPs:
                 return (False,)
 
             # add new SNPs
-            self._snps = (
+            combined = (
                 self.snps.combine_first(s.snps)
                 if not merge_chrom
                 else self.snps.combine_first(s.snps.loc[s.snps.chrom == merge_chrom])
             )
             # combine_first converts position to float64, so convert it back to uint32
-            self._snps["pos"] = self.snps["pos"].astype(np.uint32)
+            combined["pos"] = combined["pos"].astype(np.uint32)
 
             if 0 < len(discrepant_positions) < positions_threshold:
                 logger.warning(
@@ -1601,7 +1521,9 @@ class SNPs:
                 )
 
             # set discrepant genotypes to null
-            self._snps.loc[discrepant_genotypes.index, "genotype"] = np.nan
+            combined.loc[discrepant_genotypes.index, "genotype"] = np.nan
+
+            self._data = self._data.with_snps(combined)
 
             # append discrepant positions dataframe
             self._discrepant_merge_positions = pd.concat(
@@ -1912,9 +1834,9 @@ class SNPs:
         if self.build != 37:
             to_remap = copy.deepcopy(self)
             to_remap.remap(37)  # clusters are relative to Build 37
-            self_snps = to_remap._snps[["chrom", "pos"]]
+            self_snps = to_remap._data.snps[["chrom", "pos"]]
         else:
-            self_snps = self._snps[["chrom", "pos"]]
+            self_snps = self._data.snps[["chrom", "pos"]]
 
         low_quality_snps = self._resources.get_low_quality_snps()
 

@@ -9,13 +9,7 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import is_object_dtype, is_string_dtype
 
-# Standard dtypes for normalized SNP DataFrames
-NORMALIZED_DTYPES = {
-    "rsid": object,
-    "chrom": object,
-    "pos": np.uint32,
-    "genotype": object,
-}
+from snps.constants import NORMALIZED_DTYPES
 
 
 def get_complement(base: str) -> str:

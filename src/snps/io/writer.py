@@ -137,7 +137,7 @@ class Writer:
             self._kwargs["header"] = ["chromosome", "position", "genotype"]
 
         return save_df_as_csv(
-            self._snps._snps,
+            self._snps.snps,
             self._snps._output_dir,
             filename,
             comment="\n".join(comment) + "\n",

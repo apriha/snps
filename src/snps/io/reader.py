@@ -15,15 +15,10 @@ import numpy as np
 import pandas as pd
 
 from snps.build_constants import CHROM_SIZES
+from snps.constants import NORMALIZED_DTYPES
+from snps.data import get_empty_snps_dataframe
 
 logger = logging.getLogger(__name__)
-
-NORMALIZED_DTYPES = {
-    "rsid": object,
-    "chrom": object,
-    "pos": np.uint32,
-    "genotype": object,
-}
 
 TWO_ALLELE_DTYPES = {
     "rsid": object,
@@ -32,19 +27,6 @@ TWO_ALLELE_DTYPES = {
     "allele1": object,
     "allele2": object,
 }
-
-
-def get_empty_snps_dataframe():
-    """Get empty dataframe normalized for usage with ``snps``.
-
-    Returns
-    -------
-    pd.DataFrame
-    """
-    df = pd.DataFrame(columns=["rsid", "chrom", "pos", "genotype"])
-    df = df.astype(NORMALIZED_DTYPES)
-    df = df.set_index("rsid")
-    return df
 
 
 class Reader:

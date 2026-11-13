@@ -381,7 +381,9 @@ class SNPData:
         votes: Counter[int] = Counter()
         for rsid, marker_data in BUILD_MARKER_SNPS.items():
             if rsid in self.snps.index:
-                pos = self.snps.loc[rsid].pos
+                # rsids repeat if not deduplicated; use the first row, which
+                # deduplication keeps
+                pos = self.snps.loc[[rsid], "pos"].iloc[0]
                 for build in (37, 38, 36):  # Check most common builds first
                     if marker_data[build] == pos:
                         votes[build] += 1

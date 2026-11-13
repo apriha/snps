@@ -84,6 +84,21 @@ class TestSnps(BaseSNPsTestCase):
         self.assertTrue(s.build_detected)
         self.assertIn("Build marker SNPs match different builds", cm.output[0])
 
+    def test_build_detected_duplicate_marker(self):
+        # a repeated marker votes with its first row after sorting (Build 37 here),
+        # the row deduplication keeps
+        data = (
+            "rsid,chromosome,position,genotype\n"
+            "rs3094315,1,817186,AG\n"
+            "rs3094315,1,752566,AA\n"
+        )
+        with self.assertNoLogs("snps.snps", level=logging.WARNING):
+            s = SNPs(data.encode(), deduplicate=False)
+        self.assertEqual(s.build, 37)
+        self.assertEqual(SNPs(data.encode()).build, 37)
+        self.assertTrue(s.build_detected)
+        self.assertEqual(len(s), 2)
+
     def test_build_no_snps(self):
         for snps in self.empty_snps():
             self.assertFalse(snps.build)

@@ -17,6 +17,9 @@ on:
     branches:
       - '**'
 
+permissions:
+  contents: read
+
 jobs:
   enable-workflow:
     runs-on: ubuntu-latest
@@ -102,6 +105,29 @@ jobs:
       uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+
+  # Runs the suite on the oldest versions of the dependencies that snps declares,
+  # on the oldest supported Python. uv's `lowest-direct` resolution lowers only
+  # snps' own requirements.
+  test-lowest:
+    needs: [lint-format, build-docs]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Setup Python 3.11
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.11'
+    - name: Install the lowest declared dependency versions
+      run: |
+        pip install uv pytest sybil
+        uv pip install --system --resolution lowest-direct .
+    - name: Test with pytest
+      run: |
+        pytest tests README.md
 
   # Everyday CI runs fully offline against fixture-backed resources. The live-integration
   # job below is the only one that contacts the real resource servers (Zenodo, S3,

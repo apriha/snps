@@ -32,7 +32,7 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=2",
-    "pandas>=2.2.2",
+    "pandas>=3",
     "atomicwrites",
     "pooch>=1.8",
 ]
@@ -68,6 +68,7 @@ extend-select = ["I"]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py", "tests.py"]
 addopts = "-ra --strict-markers --tb=short -p no:doctest"
+filterwarnings = ["error"]
 
 [tool.coverage.run]
 branch = true

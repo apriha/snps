@@ -11,6 +11,11 @@ include README.md
 
 exclude .git*
 
+# development tooling, not needed to build, install, or test from the sdist
+prune .github
+prune .vscode
+exclude .pre-commit-config.yaml .python-version .readthedocs.yaml uv.lock
+
 prune docs/_build
 
 global-exclude *.py[cod] __pycache__ *.so *.dylib

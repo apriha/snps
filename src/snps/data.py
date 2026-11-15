@@ -57,23 +57,23 @@ class SNPData:
     """Immutable container for a normalized SNP frame and its core metadata.
 
     ``SNPData`` is a frozen dataclass: its fields cannot be rebound after
-    construction. Transformations (:meth:`sort`, :meth:`with_snps`) return a *new*
+    construction. Transformations (:meth:`sort`, :meth:`with_frame`) return a *new*
     ``SNPData`` rather than modifying this one.
 
-    The immutability is shallow. The ``snps`` DataFrame is held by reference, not
-    copied, and can be shared with other objects; for example,
-    :attr:`snps.snps.SNPs.snps` returns the frame held by the ``SNPs`` object's
-    ``SNPData``. Treat the frame as read-only: modifying it in place changes it for
-    every object that shares it.
+    The SNPs are held in one DataFrame, by reference and not copied, with an internal
+    boolean ``phased`` column beside the columns of :attr:`frame`. :attr:`frame` and
+    :attr:`phased` share its data; under copy-on-write, writing to them leaves the held
+    data unchanged.
 
-    Instances compare equal only if they are the same object, and the ``snps`` frame
-    is omitted from ``repr``.
+    Instances compare equal only if they are the same object, and the frame is
+    omitted from ``repr``.
 
     Parameters
     ----------
-    snps : pandas.DataFrame
+    _frame : pandas.DataFrame
         normalized ``snps`` dataframe (``rsid`` index; ``chrom``, ``pos``, ``genotype``
-        columns), per :attr:`snps.snps.SNPs.snps`
+        columns), optionally with the internal boolean ``phased`` column (read it
+        through :attr:`phased`); without that column, every SNP is unphased
     build : int
         build / assembly of the SNPs (36, 37, 38), or 0 if unknown
     build_detected : bool
@@ -82,32 +82,61 @@ class SNPData:
         build of the SNPs before any remapping
     source : tuple of str
         data source(s) the SNPs were parsed from
-    phased : bool
-        whether the genotype is phased
     """
 
-    snps: pd.DataFrame = field(default_factory=get_empty_snps_dataframe, repr=False)
+    _frame: pd.DataFrame = field(default_factory=get_empty_snps_dataframe, repr=False)
     build: int = 0
     build_detected: bool = False
     build_original: int = 0
     source: tuple[str, ...] = ()
-    phased: bool = False
+
+    def __post_init__(self) -> None:
+        # a frame without a phased column holds unphased SNPs
+        if "phased" not in self._frame.columns:
+            object.__setattr__(self, "_frame", self._frame.assign(phased=False))
+
+    # -- frame and phased -----------------------------------------------------
+
+    @property
+    def frame(self) -> pd.DataFrame:
+        """Normalized SNPs.
+
+        Returns
+        -------
+        pandas.DataFrame
+            normalized ``snps`` dataframe, per :attr:`snps.snps.SNPs.snps`
+        """
+        return self._frame[["chrom", "pos", "genotype"]]
+
+    @property
+    def phased(self) -> pd.Series[bool]:
+        """Whether each SNP is phased.
+
+        A no-call is never phased.
+
+        Returns
+        -------
+        pandas.Series
+            boolean, indexed like :attr:`frame`
+        """
+        return self._frame["phased"]
 
     # -- transformations (return a new SNPData) -------------------------------
 
-    def with_snps(self, snps: pd.DataFrame) -> SNPData:
-        """Return a copy of this ``SNPData`` with a replaced ``snps`` frame.
+    def with_frame(self, frame: pd.DataFrame) -> SNPData:
+        """Return a copy of this ``SNPData`` with a replaced frame.
 
         Parameters
         ----------
-        snps : pandas.DataFrame
-            normalized ``snps`` dataframe
+        frame : pandas.DataFrame
+            normalized ``snps`` dataframe, optionally with the internal boolean
+            ``phased`` column; without that column, every SNP is unphased
 
         Returns
         -------
         SNPData
         """
-        return replace(self, snps=snps)
+        return replace(self, _frame=frame)
 
     def sort(self) -> SNPData:
         """Return a copy sorted by ordered chromosome list and position.
@@ -120,7 +149,7 @@ class SNPData:
         SNPData
         """
         sorted_list = sorted(
-            (str(x) for x in self.snps["chrom"].unique()), key=_natural_sort_key
+            (str(x) for x in self._frame["chrom"].unique()), key=_natural_sort_key
         )
 
         # move PAR and MT to the end of the dataframe
@@ -133,9 +162,9 @@ class SNPData:
             sorted_list.append("MT")
 
         # convert chrom column to category for sorting; the shallow copy shares
-        # column data with self.snps, and replacing its chrom column leaves
-        # self.snps unchanged
-        snps = self.snps.copy(deep=False)
+        # column data with self._frame, and replacing its chrom column leaves
+        # self._frame unchanged
+        snps = self._frame.copy(deep=False)
         snps["chrom"] = snps["chrom"].astype(
             CategoricalDtype(categories=sorted_list, ordered=True)
         )
@@ -146,7 +175,7 @@ class SNPData:
         # convert chromosome back to object
         snps["chrom"] = snps["chrom"].astype(object)
 
-        return replace(self, snps=snps)
+        return replace(self, _frame=snps)
 
     # -- derived scalars ------------------------------------------------------
 
@@ -158,7 +187,7 @@ class SNPData:
         -------
         bool
         """
-        return not self.snps.empty
+        return not self._frame.empty
 
     @property
     def count(self) -> int:
@@ -210,8 +239,8 @@ class SNPData:
         list of str
             e.g., ['1', '2', '3', 'MT']; empty list if no chromosomes
         """
-        if not self.snps.empty:
-            return list(pd.unique(self.snps["chrom"]))
+        if not self._frame.empty:
+            return list(pd.unique(self._frame["chrom"]))
         else:
             return []
 
@@ -224,8 +253,8 @@ class SNPData:
         str
             human-readable listing (e.g., '1-3, MT'); empty str if no chromosomes
         """
-        if not self.snps.empty:
-            chroms = list(pd.unique(self.snps["chrom"]))
+        if not self._frame.empty:
+            chroms = list(pd.unique(self._frame["chrom"]))
 
             int_chroms: list[int] = []
             str_chroms: list[str] = []
@@ -261,7 +290,8 @@ class SNPData:
     # -- frame views ----------------------------------------------------------
 
     def _filter(self, chrom: str = "") -> pd.DataFrame:
-        return self.snps.loc[self.snps.chrom == chrom] if chrom else self.snps
+        frame = self.frame
+        return frame.loc[frame.chrom == chrom] if chrom else frame
 
     def heterozygous(self, chrom: str = "") -> pd.DataFrame:
         """Get heterozygous SNPs.
@@ -346,7 +376,7 @@ class SNPData:
         str
             'Male' or 'Female' if detected, else empty str
         """
-        if not self.snps.empty:
+        if not self._frame.empty:
             if chrom == "X":
                 return self._determine_sex_X(heterozygous_x_snps_threshold)
             elif chrom == "Y":
@@ -380,10 +410,10 @@ class SNPData:
         # SNPs.detect_build for the marker SNPs and references
         votes: Counter[int] = Counter()
         for rsid, marker_data in BUILD_MARKER_SNPS.items():
-            if rsid in self.snps.index:
+            if rsid in self._frame.index:
                 # rsids repeat if not deduplicated; use the first row, which
                 # deduplication keeps
-                pos = self.snps.loc[[rsid], "pos"].iloc[0]
+                pos = self._frame.loc[[rsid], "pos"].iloc[0]
                 for build in (37, 38, 36):  # Check most common builds first
                     if marker_data[build] == pos:
                         votes[build] += 1

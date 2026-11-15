@@ -319,6 +319,67 @@ class TestSnps(BaseSNPsTestCase):
 
         self._run_remap_test(f, self.GRCh37_GRCh38())
 
+    def test_phased(self):
+        def phased(genotype, flags):
+            s = SNPs()
+            s._snps = self.create_snp_df(
+                rsid=[f"rs{i}" for i in range(len(genotype))],
+                chrom=["1"] * len(genotype),
+                pos=list(range(1, len(genotype) + 1)),
+                genotype=genotype,
+            ).assign(phased=flags)
+            return s.phased
+
+        # every called SNP is phased
+        self.assertTrue(phased(["AC", "GT"], [True, True]))
+        self.assertTrue(phased(["AC", np.nan], [True, False]))
+        # a called SNP is unphased
+        self.assertFalse(phased(["AC", "GT"], [True, False]))
+        # no SNP is called
+        self.assertFalse(phased([np.nan], [True]))
+        self.assertFalse(SNPs().phased)
+
+    def test_remap_phase(self):
+        # on the minus strand, positions reverse and each allele is complemented in
+        # place, so phased genotypes keep their allele order
+        mappings = {
+            "1": {
+                "mappings": [
+                    {
+                        "original": {
+                            "seq_region_name": "1",
+                            "strand": 1,
+                            "start": 101,
+                            "end": 109,
+                            "assembly": "GRCh37",
+                        },
+                        "mapped": {
+                            "seq_region_name": "1",
+                            "strand": -1,
+                            "start": 1001,
+                            "end": 1009,
+                            "assembly": "GRCh38",
+                        },
+                    }
+                ]
+            }
+        }
+
+        def f():
+            s = SNPs("tests/input/testvcf_mixed_phase.vcf")
+            s.remap(38)
+            expected = self.create_snp_df(
+                rsid=["rs8", "rs7", "rs6", "rs5", "rs4", "rs3", "rs2", "rs1"],
+                chrom=["1"] * 8,
+                pos=list(range(1002, 1010)),
+                genotype=["AT", "GA", "CG", np.nan, "AG", "CA", "GG", "TT"],
+            ).assign(phased=[False, True, False, False, True, True, False, True])
+            self.assert_frame_equal_with_string_index(
+                s._snps, expected, check_exact=True
+            )
+
+        self._run_remap_test(f, mappings)
+
     def test_remap_37_to_38_with_PAR_SNP(self):
         def f():
             s = self.load_assign_PAR_SNPs("tests/input/GRCh37_PAR.csv")
@@ -843,6 +904,111 @@ class TestSNPsMerge(TestSnps):
             ],
         )
 
+    def test_merge_phase(self):
+        # an added SNP keeps its phase; a SNP in both inputs keeps its genotype and
+        # stays phased only if it is phased in both
+        unphased = SNPs(
+            b"rsid,chromosome,position,genotype\nrs4,1,104,CT\nrs100,1,110,AG\n"
+        )
+        phased = SNPs(
+            b"##fileformat=VCFv4.1\n"
+            b"#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE\n"
+            b"1\t101\trs1\tA\t.\t.\t.\t.\tGT\t0|0\n"
+            b"1\t111\trs101\tG\tT\t.\t.\t.\tGT\t1|0\n"
+        )
+        s = SNPs()
+        s.merge(
+            [
+                SNPs("tests/input/testvcf_mixed_phase.vcf", deduplicate=False),
+                unphased,
+                phased,
+            ]
+        )
+
+        expected = pd.concat(
+            [
+                self.mixed_phase_snps(deduplicate=False),
+                self.create_snp_df(
+                    rsid=["rs100", "rs101"],
+                    chrom=["1", "1"],
+                    pos=[110, 111],
+                    genotype=["AG", "TG"],
+                ).assign(phased=[False, True]),
+            ]
+        )
+        expected.loc["rs4", "phased"] = False
+        self.assert_frame_equal_with_string_index(s._snps, expected, check_exact=True)
+        self.assertFalse(s.phased)
+
+    def test_merge_phase_follows_calls(self):
+        # a no-call neither clears nor gives phase, and the rows of an rsid repeated in
+        # the added data keep their own phase
+        header = (
+            b"##fileformat=VCFv4.1\n"
+            b"#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE\n"
+        )
+        s = SNPs(
+            header + b"1\t101\trs1\tA\tC\t.\t.\t.\tGT\t0|1\n"
+            b"1\t102\trs2\tA\tC\t.\t.\t.\tGT\t./.\n"
+        )
+        added = SNPs(
+            header + b"1\t101\trs1\tA\tC\t.\t.\t.\tGT\t./.\n"
+            b"1\t102\trs2\tA\tC\t.\t.\t.\tGT\t1|0\n"
+            b"1\t103\trs3\tG\tT\t.\t.\t.\tGT\t0|1\n"
+            b"1\t104\trs3\tC\tA\t.\t.\t.\tGT\t0/1\n",
+            deduplicate=False,
+        )
+        s.merge([added])
+
+        expected = self.create_snp_df(
+            rsid=["rs1", "rs2", "rs3", "rs3"],
+            chrom=["1"] * 4,
+            pos=[101, 102, 103, 104],
+            genotype=["AC", "CA", "GT", "CA"],
+        ).assign(phased=[True, True, True, False])
+        self.assert_frame_equal_with_string_index(s._snps, expected, check_exact=True)
+
+    def test_merge_no_calls_unphased(self):
+        header = (
+            b"##fileformat=VCFv4.1\n"
+            b"#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE\n"
+        )
+
+        # a genotype set to null as discrepant is no longer phased
+        s = SNPs(
+            header + b"1\t101\trs1\tA\tC\t.\t.\t.\tGT\t0|1\n"
+            b"1\t102\trs2\tA\tC\t.\t.\t.\tGT\t0|0\n"
+        )
+        s.merge(
+            [
+                SNPs(
+                    header + b"1\t101\trs1\tG\tT\t.\t.\t.\tGT\t0|1\n"
+                    b"1\t102\trs2\tA\tC\t.\t.\t.\tGT\t0|0\n"
+                )
+            ]
+        )
+        expected = self.create_snp_df(
+            rsid=["rs1", "rs2"],
+            chrom=["1", "1"],
+            pos=[101, 102],
+            genotype=[np.nan, "AA"],
+        ).assign(phased=[False, True])
+        self.assert_frame_equal_with_string_index(s._snps, expected, check_exact=True)
+
+        # a no-call stays unphased when the merged chromosome adds nothing
+        s = SNPs(
+            header + b"1\t101\trs1\tA\tC\t.\t.\t.\tGT\t0|1\n"
+            b"1\t102\trs2\tA\tC\t.\t.\t.\tGT\t./.\n"
+        )
+        s.merge([SNPs(header + b"2\t101\trs3\tA\tC\t.\t.\t.\tGT\t0|1\n")], chrom="1")
+        expected = self.create_snp_df(
+            rsid=["rs1", "rs2"],
+            chrom=["1", "1"],
+            pos=[101, 102],
+            genotype=["AC", np.nan],
+        ).assign(phased=[True, False])
+        self.assert_frame_equal_with_string_index(s._snps, expected, check_exact=True)
+
     def test_merge_non_existent_file(self):
         s = SNPs()
         results = s.merge(
@@ -952,7 +1118,7 @@ class TestSNPsMerge(TestSnps):
             expected_snps = SNPs()
             expected_snps._snps = expected
             expected_snps.sort()
-            expected = expected_snps.snps
+            expected = expected_snps._snps
 
             pd.testing.assert_index_equal(
                 s.discrepant_merge_positions.index,

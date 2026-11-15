@@ -187,7 +187,8 @@ class Writer:
                     f'##detectedChip="{self._snps.chip}{chip_version} per Lu et al.: https://doi.org/10.1016/j.csbj.2021.06.040"'
                 )
 
-        df = self._snps.snps
+        # the held frame, with its `phased` column
+        df = self._snps._snps
 
         p = self._snps._parallelizer
         tasks = []
@@ -355,7 +356,7 @@ class Writer:
         # drop SNPs with discrepant positions (outside reference sequence)
         discrepant_vcf_position = snps.loc[
             (snps.pos - seq.start < 0) | (snps.pos - seq.start > seq.length - 1)
-        ]
+        ].drop(columns="phased")
         df = df.drop(discrepant_vcf_position.index)
 
         # https://stackoverflow.com/a/24838429
@@ -366,6 +367,7 @@ class Writer:
         seq.clear()
 
         df["genotype"] = snps["genotype"]
+        df["phased"] = snps["phased"]
 
         temp = df.loc[df["genotype"].notnull()]
 
@@ -381,7 +383,7 @@ class Writer:
 
         df.loc[df["genotype"].notnull(), "SAMPLE"] = np.vectorize(
             self._compute_genotype
-        )(temp["REF"], temp["ALT"], temp["genotype"])
+        )(temp["REF"], temp["ALT"], temp["genotype"], temp["phased"])
 
         if sex == "Female":
             haploid_chroms = ["Y", "MT"]
@@ -398,6 +400,7 @@ class Writer:
         df.loc[df["SAMPLE"].isnull(), "SAMPLE"] = "./."
 
         del df["genotype"]
+        del df["phased"]
 
         return {
             "contig": contig,
@@ -427,14 +430,14 @@ class Writer:
             genotype_alleles.sort()
             return ",".join(genotype_alleles)
 
-    def _compute_genotype(self, ref, alt, genotype):
+    def _compute_genotype(self, ref, alt, genotype, phased):
         genotype = list(genotype)
 
         genotype = self._replace_genotype_indels(genotype)
 
         alleles = [ref]
 
-        if self._snps.phased:
+        if phased:
             separator = "|"
         else:
             separator = "/"

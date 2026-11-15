@@ -61,11 +61,12 @@ class Reader:
             dict with the following items:
 
             snps (pandas.DataFrame)
-                dataframe of parsed SNPs
+                dataframe of parsed SNPs; may carry a boolean ``phased`` column
+                saying whether each SNP is phased
             source (str)
                 detected source of SNPs
             phased (bool)
-                flag indicating if SNPs are phased
+                flag indicating if the whole file is phased
         """
         file = self._file
         compression = "infer"
@@ -366,11 +367,12 @@ class Reader:
             dict with the following items:
 
             snps (pandas.DataFrame)
-                dataframe of parsed SNPs
+                dataframe of parsed SNPs; may carry a boolean ``phased`` column
+                saying whether each SNP is phased
             source (str)
                 detected source of SNPs
             phased (bool)
-                flag indicating if SNPs are phased
+                flag indicating if the whole file is phased
             build (int)
                 detected build of SNPs
 
@@ -392,6 +394,10 @@ class Reader:
             elif len(extra) == 2:
                 phased = extra[0]
                 build = extra[1]
+
+            # a parser that reports the whole file as phased yields phased calls
+            if phased and "phased" not in df.columns:
+                df = df.assign(phased=df["genotype"].notna())
 
         return {"snps": df, "source": source, "phased": phased, "build": build}
 
@@ -1603,14 +1609,18 @@ class Reader:
                     f"{line_split[0]}".strip("chr"),
                     line_split[1],
                     genotype,
+                    # phased: a call with "|" or a single allele
+                    "/" not in zygote and pd.notna(genotype),
                 ]
                 rows.append(record_array)
 
             if len(rows) == 0:
                 phased = False
 
-            df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype"])
-            df = df.astype(NORMALIZED_DTYPES)
+            df = pd.DataFrame(
+                rows, columns=["rsid", "chrom", "pos", "genotype", "phased"]
+            )
+            df = df.astype({**NORMALIZED_DTYPES, "phased": bool})
 
             df = df.set_index("rsid", drop=True)
 

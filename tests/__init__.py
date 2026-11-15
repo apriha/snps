@@ -142,6 +142,17 @@ class BaseSNPsTestCase(SNPsTestMixin, TestCase):
             ]
         )
 
+    def mixed_phase_snps(self, deduplicate=True):
+        """SNPs of ``tests/input/testvcf_mixed_phase.vcf``, with a ``phased`` column."""
+        df = self.create_snp_df(
+            rsid=["rs1", "rs2", "rs3", "rs4", "rs5", "rs6", "rs7", "rs8", "rs3"],
+            chrom=["1"] * 9,
+            pos=list(range(101, 110)),
+            genotype=["AA", "CC", "GT", "TC", np.nan, "GC", "CT", "TA", "AC"],
+        ).assign(phased=[True, False, True, True, False, False, True, False, False])
+        # deduplication drops the second rs3
+        return df.iloc[:-1] if deduplicate else df
+
     def run_parsing_tests(
         self, file, source, phased=False, build=37, build_detected=False, snps_df=None
     ):

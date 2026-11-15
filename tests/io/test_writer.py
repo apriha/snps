@@ -167,6 +167,31 @@ class TestWriter(BaseSNPsTestCase):
             # read saved VCF
             self.run_parsing_tests_vcf(output, phased=True, build_detected=True)
 
+    def test_to_vcf_mixed_phase(self):
+        # each SNP is written with its own phase, and reads back unchanged
+        samples = ["0|0", "1/1", "0|1", "1|0", "./.", "0/1", "1|2", "1/0", "1/0"]
+        for deduplicate in (True, False):
+            with (
+                self.subTest(deduplicate=deduplicate),
+                tempfile.TemporaryDirectory() as tmpdir,
+            ):
+                s = SNPs(
+                    "tests/input/testvcf_mixed_phase.vcf",
+                    output_dir=tmpdir,
+                    deduplicate=deduplicate,
+                )
+                output = s.to_vcf()
+
+                with open(output) as f:
+                    rows = [line.split() for line in f if not line.startswith("#")]
+                self.assertListEqual([row[-1] for row in rows], samples[: len(s)])
+
+                self.assert_frame_equal_with_string_index(
+                    SNPs(output, deduplicate=deduplicate)._snps,
+                    s._snps,
+                    check_exact=True,
+                )
+
     def test_save_snps_phased(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             # read phased data

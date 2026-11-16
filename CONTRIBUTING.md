@@ -76,11 +76,12 @@ To set up `snps` for local development:
    > **Note:** After running the tests, a coverage report can be viewed by opening
    > `htmlcov/index.html` in a browser.
 
-6. Lint and format. The pre-commit hook runs these automatically on commit; you can also run them on
-   demand:
+6. Lint, format, and check types. The pre-commit hook runs the linting and formatting automatically
+   on commit; you can also run them on demand:
 
    ```bash
    $ uv run pre-commit run --all-files   # ruff lint, formatting, and file checks
+   $ uv run mypy                         # type checking
    ```
 
 7. Commit your changes and push your branch to GitHub:

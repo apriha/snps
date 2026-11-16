@@ -41,6 +41,21 @@ jobs:
         pip install pre-commit
         pre-commit run --all-files --show-diff-on-failure
 
+  type-check:
+    needs: [enable-workflow]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0  # fetch tags for setuptools-scm
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.14'
+    - name: Check types with mypy
+      run: |
+        pip install . mypy pandas-stubs
+        mypy
+
   build-docs:
     needs: [enable-workflow]
     runs-on: ubuntu-latest

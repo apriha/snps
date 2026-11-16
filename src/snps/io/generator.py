@@ -17,7 +17,7 @@ from pandas.api.types import CategoricalDtype
 
 from snps.build_constants import BUILD_MARKER_SNPS, CHROM_SIZES, VALID_BUILDS
 from snps.constants import REFERENCE_SEQUENCE_CHROMS
-from snps.io.reader import get_empty_snps_dataframe
+from snps.data import get_empty_snps_dataframe
 
 logger = logging.getLogger(__name__)
 
@@ -237,7 +237,7 @@ class SyntheticSNPGenerator:
             shift = int(self.rng.integers(-1000, 1000))
             chrom = str(df.loc[idx, "chrom"])
             max_pos = self.chrom_sizes[chrom]
-            new_pos = max(1, min(int(df.loc[idx, "pos"]) + shift, max_pos))  # type: ignore[arg-type]
+            new_pos = max(1, min(int(df.loc[idx, "pos"]) + shift, max_pos))
             df.loc[idx, "pos"] = np.uint32(new_pos)
         return set(indices)
 
@@ -413,7 +413,7 @@ class SyntheticSNPGenerator:
         """Generate a single random genotype."""
         bases = ["A", "C", "G", "T"]
         if self.rng.random() < 0.7:
-            base = self.rng.choice(bases)
+            base = str(self.rng.choice(bases))
             return base + base
         alleles = self.rng.choice(bases, size=2, replace=False)
         return "".join(sorted(alleles))

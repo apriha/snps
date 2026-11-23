@@ -43,7 +43,6 @@ def _parse(parse_input: ParseInput) -> ParsedData:
 
     # use the external mapping to turn
     # SNP names into rsids where possible
-    assert resources is not None
     df = df.merge(
         resources.get_gsa_rsid(),  # type: ignore[no-untyped-call]  # snps.resources is untyped
         how="left",  # left-hand join, gsa rsids may be NA

@@ -12,6 +12,7 @@ from typing import IO, Literal
 import numpy as np
 
 from snps.build_constants import CHROM_SIZES
+from snps.exceptions import ParseError
 
 TWO_ALLELE_DTYPES: dict[str, type] = {
     "rsid": object,
@@ -95,6 +96,11 @@ def detect_build_from_comments(comments: str, source: str) -> int:
     -------
     int
         detected build, or 0
+
+    Raises
+    ------
+    ParseError
+        if a VCF header line is malformed
     """
     # if its a VCF parse these properly
     if source == "vcf":
@@ -103,21 +109,29 @@ def detect_build_from_comments(comments: str, source: str) -> int:
             if not line:
                 # skip blanks
                 continue
-            assert line.startswith("#"), line
+            if not line.startswith("#"):
+                raise ParseError(f"Header line does not start with '#': {line}")
             if not line.startswith("##"):
                 # skip comments but not preamble
                 continue
             if "=" not in line:
                 # skip lines without key/value in
                 continue
+            header_line = line
             line = line[2:].strip()
             key = line[: line.index("=")]
             value = line[line.index("=") + 1 :]
             if key.lower() == "contig":
-                assert value.startswith("<"), value
-                assert value.endswith(">"), value
+                if not (value.startswith("<") and value.endswith(">")):
+                    raise ParseError(
+                        f"Contig line is not of the form ##contig=<...>: {header_line}"
+                    )
                 parts = value[1:-1].split(",")
                 for part in parts:
+                    if "=" not in part:
+                        raise ParseError(
+                            f"Contig line has a field without '=': {header_line}"
+                        )
                     part_key = part[: part.index("=")]
                     part_value = part[part.index("=") + 1 :]
                     if part_key.lower() == "assembly":

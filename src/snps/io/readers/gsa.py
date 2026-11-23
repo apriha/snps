@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from snps.constants import NORMALIZED_DTYPES
+from snps.exceptions import ParseError
 from snps.io.readers._common import extract_comments, handle_bytes_data
 from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
 
@@ -39,6 +40,8 @@ def _parse(parse_input: ParseInput) -> ParsedData:
 
     Raises
     ------
+    ParseError
+        if the data section has a column named rsid, chrom, pos or genotype
     ValueError
         if the file has no supported allele columns
     """
@@ -69,10 +72,12 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     )
 
     # reserve columns we want out
-    assert "rsid" not in df.columns
-    assert "chrom" not in df.columns
-    assert "pos" not in df.columns
-    assert "genotype" not in df.columns
+    reserved = [c for c in ("rsid", "chrom", "pos", "genotype") if c in df.columns]
+    if reserved:
+        raise ParseError(
+            f"The data section has columns reserved by snps: {', '.join(reserved)}; "
+            "rename or remove those columns."
+        )
 
     # prefer the specified chromosome and position, in prsent
     # this uses the gsa names, so needs to be done before rsid
@@ -84,7 +89,6 @@ def _parse(parse_input: ParseInput) -> ParsedData:
 
     else:
         # use an external source to map snp names to chromosome and position
-        assert resources is not None
         df = df.merge(
             resources.get_gsa_chrpos(),  # type: ignore[no-untyped-call]  # snps.resources is untyped
             how="inner",  # inner join, everything must have a position
@@ -103,7 +107,6 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     else:
         # if given RSIDs are not avaliable, then use the external mapping to turn
         # SNP names into rsids where possible
-        assert resources is not None
         df = df.merge(
             resources.get_gsa_rsid(),  # type: ignore[no-untyped-call]  # snps.resources is untyped
             how="left",  # left-hand join, gsa rsids may be NA
@@ -127,7 +130,6 @@ def _parse(parse_input: ParseInput) -> ParsedData:
         # is reverse reference for some RSIDs before dbSNP 151.
 
         # load list of reversable rsids
-        assert resources is not None
         dbsnp151 = resources.get_dbsnp_151_37_reverse()  # type: ignore[no-untyped-call]  # snps.resources is untyped
         # keep only the rsids
         dbsnp151 = dbsnp151.filter(items=("dbsnp151revrsid",), axis=1)

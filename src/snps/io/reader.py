@@ -1,19 +1,13 @@
 """Class for reading SNPs."""
 
-import gzip
-import io
 import os
 import warnings
-import zipfile
 
 from snps.data import get_empty_snps_dataframe
-from snps.io.readers import formats
-from snps.io.readers._common import (
-    detect_build_from_comments,
-    extract_comments,
-    handle_bytes_data,
-)
-from snps.io.readers._registry import Header, ParseInput, detect
+from snps.io.readers import _read_header, formats
+from snps.io.readers._common import detect_build_from_comments
+from snps.io.readers._registry import ParseInput, detect
+from snps.resources import get_default_provider
 
 
 class Reader:
@@ -36,7 +30,7 @@ class Reader:
         """
         self._file = file
         self._only_detect_source = only_detect_source
-        self._resources = resources
+        self._resources = resources if resources is not None else get_default_provider()
         self._rsids = frozenset(rsids)
 
     def read(self):
@@ -55,8 +49,6 @@ class Reader:
             phased (bool)
                 flag indicating if the whole file is phased
         """
-        file = self._file
-        compression = "infer"
         d = {
             "snps": get_empty_snps_dataframe(),
             "source": "",
@@ -65,30 +57,14 @@ class Reader:
         }
 
         # peek into files to determine the data format
-        if isinstance(file, str) and os.path.exists(file):
-            if ".zip" in file:
-                with zipfile.ZipFile(file) as z:
-                    with z.open(z.namelist()[0], "r") as f:
-                        first_line, comments, data = extract_comments(f, decode=True)
-                    compression = "zip"
-            elif ".gz" in file:
-                with gzip.open(file, "rt") as f:
-                    first_line, comments, data = extract_comments(f)
-                compression = "gzip"
-            else:
-                with open(file, "rb") as f:
-                    first_line, comments, data, compression = handle_bytes_data(
-                        f.read()
-                    )
-
-        elif isinstance(file, bytes):
-            first_line, comments, data, compression = handle_bytes_data(file)
-            file = io.BytesIO(file)
-
+        if isinstance(self._file, bytes) or (
+            isinstance(self._file, str) and os.path.exists(self._file)
+        ):
+            file, compression, header = _read_header(self._file)
         else:
             return d
 
-        header = Header(first_line, comments)
+        comments = header.comments
         fmt = detect(header, formats())
 
         if fmt is not None:

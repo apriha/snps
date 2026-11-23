@@ -10,7 +10,9 @@ import numpy as np
 import pandas as pd
 
 from snps.data import SNPData
+from snps.exceptions import UnsupportedFormatError
 from snps.io import Reader, Writer, get_empty_snps_dataframe
+from snps.io.readers import read_file
 from snps.resources import get_default_provider
 from snps.utils import Parallelizer
 
@@ -85,26 +87,35 @@ class SNPs:
         self._cluster_overlap_computed = False
 
         if file:
-            d = self._read_raw_data(file, only_detect_source, rsids)
+            if only_detect_source:
+                d = self._read_raw_data(file, only_detect_source, rsids)
+                source = (
+                    d["source"].split(", ") if ", " in d["source"] else [d["source"]]
+                )
+                build_detected = True if d["build"] else False
+                self._data = SNPData(
+                    d["snps"],
+                    source=tuple(source),
+                    build=d["build"],
+                    build_detected=build_detected,
+                    build_original=d["build"] if build_detected else 0,
+                )
+            elif isinstance(file, bytes) or (
+                isinstance(file, str) and os.path.exists(file)
+            ):
+                try:
+                    self._data = read_file(file, resources=self._resources, rsids=rsids)
+                except UnsupportedFormatError:
+                    self._data = SNPData()
 
             # Replace multiple rsids separated by commas in index with the first rsid. E.g. rs1,rs2 -> rs1
             multi_rsids = {
                 multi_rsid: multi_rsid.split(",")[0]
                 for multi_rsid in list(
-                    filter(lambda x: len(x.split(",")) > 1, d["snps"].index)
+                    filter(lambda x: len(x.split(",")) > 1, self._snps.index)
                 )
             }
-            d["snps"] = d["snps"].rename(index=multi_rsids)
-
-            source = d["source"].split(", ") if ", " in d["source"] else [d["source"]]
-            build_detected = True if d["build"] else False
-            self._data = SNPData(
-                d["snps"],
-                source=tuple(source),
-                build=d["build"],
-                build_detected=build_detected,
-                build_original=d["build"] if build_detected else 0,
-            )
+            self._snps = self._snps.rename(index=multi_rsids)
 
             if not self._snps.empty:
                 self.sort()

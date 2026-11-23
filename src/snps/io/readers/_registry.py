@@ -41,7 +41,7 @@ class ParseInput:
         compression of the file: ``"zip"``, ``"gzip"`` or None
     header : Header
         start of the file
-    resources : ResourceProvider or None
+    resources : ResourceProvider
         provider of external resources
     rsids : frozenset of str
         rsids to extract from a VCF file; empty for all
@@ -50,7 +50,7 @@ class ParseInput:
     file: str | io.BytesIO
     compression: Literal["zip", "gzip"] | None
     header: Header
-    resources: ResourceProvider | None
+    resources: ResourceProvider
     rsids: frozenset[str]
 
 

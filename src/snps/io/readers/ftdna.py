@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import io
-import zlib
-
 import pandas as pd
 
 from snps.constants import NORMALIZED_DTYPES
-from snps.io.readers._common import TWO_ALLELE_DTYPES, handle_bytes_data
+from snps.exceptions import ParseError
+from snps.io.readers._common import TWO_ALLELE_DTYPES, extract_comments
 from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
 
 
@@ -39,74 +37,39 @@ def _parse_ftdna(parse_input: ParseInput) -> ParsedData:
     ParsedData
         parsed SNPs
     """
-    file = parse_input.file
-    compression = parse_input.compression
+    source = parse_input.source
 
     try:
-        df = pd.read_csv(
-            file,
-            skiprows=1,
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype=NORMALIZED_DTYPES,
-            compression=compression,
-        )
+        with source.open() as file:
+            df = pd.read_csv(
+                file,
+                skiprows=1,
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype=NORMALIZED_DTYPES,
+            )
+    except ParseError:
+        raise
     except ValueError:
         # read files with second header for concatenated data
-        if isinstance(file, io.BytesIO):
-            file.seek(0)
-            parts = handle_bytes_data(file.read(), include_data=True)
-            file.seek(0)
-        else:
-            with open(file, "rb") as f:
-                parts = handle_bytes_data(f.read(), include_data=True)
-        # reconstruct file content from `handle_bytes_data` results
+        with source.open() as file:
+            parts = extract_comments(file, include_data=True)
+        # reconstruct file content from `extract_comments` results
         text = parts[0] + parts[2]
         lines = [line.strip() for line in text.split("\n")]
         # find index of second header
         second_header_idx = lines.index("RSID,CHROMOSOME,POSITION,RESULT", 1)
 
-        df = pd.read_csv(
-            file,
-            skiprows=[0, second_header_idx],
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype=NORMALIZED_DTYPES,
-            compression=compression,
-        )
-    except OSError:
-        # read concatenated gzip files with extra data
-        if isinstance(file, io.BytesIO):
-            file.seek(0)
-            data: memoryview | bytes = file.getbuffer()
-        else:
-            with open(file, "rb") as f:
-                data = f.read()
-
-        # https://stackoverflow.com/q/4928560
-        # https://stackoverflow.com/a/37042747
-        decompressor = zlib.decompressobj(31)
-
-        # decompress data from first concatenated gzip file
-        data = decompressor.decompress(data)
-
-        # decompress data from second concatenated gzip file
-        additional_data = zlib.decompress(decompressor.unused_data, 31)
-        data += additional_data[33:]  # skip over second header
-
-        new_file = io.BytesIO(data)
-
-        df = pd.read_csv(
-            new_file,
-            skiprows=1,
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype=NORMALIZED_DTYPES,
-            compression=None,  # already decompressed
-        )
+        with source.open() as file:
+            df = pd.read_csv(
+                file,
+                skiprows=[0, second_header_idx],
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype=NORMALIZED_DTYPES,
+            )
 
     return ParsedData(df)
 
@@ -126,18 +89,15 @@ def _parse_famfinder(parse_input: ParseInput) -> ParsedData:
     ParsedData
         parsed SNPs
     """
-    file = parse_input.file
-    compression = parse_input.compression
-
-    df = pd.read_csv(
-        file,
-        comment="#",
-        na_values="-",
-        names=["rsid", "chrom", "pos", "allele1", "allele2"],
-        index_col=0,
-        dtype=TWO_ALLELE_DTYPES,
-        compression=compression,
-    )
+    with parse_input.source.open() as file:
+        df = pd.read_csv(
+            file,
+            comment="#",
+            na_values="-",
+            names=["rsid", "chrom", "pos", "allele1", "allele2"],
+            index_col=0,
+            dtype=TWO_ALLELE_DTYPES,
+        )
 
     # create genotype column from allele columns
     df["genotype"] = df["allele1"] + df["allele2"]

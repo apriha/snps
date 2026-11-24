@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import errno
-import gzip
-import io
 import os
-import zipfile
 from collections.abc import Collection
-from typing import Literal
+from typing import BinaryIO
 
 import pandas as pd
 
@@ -34,17 +30,9 @@ from snps.io.readers import (
     tellmegen,
     vcf,
 )
-from snps.io.readers._common import (
-    detect_build_from_comments,
-    extract_comments,
-    handle_bytes_data,
-)
-from snps.io.readers._registry import (
-    Header,
-    ParseInput,
-    ReaderFormat,
-    detect,
-)
+from snps.io.readers._common import detect_build_from_comments
+from snps.io.readers._registry import ParseInput, ReaderFormat, detect
+from snps.io.readers._source import InputSource
 from snps.resources import ResourceProvider, get_default_provider
 
 __all__ = ["formats", "read_file"]
@@ -78,44 +66,6 @@ _FORMATS: tuple[ReaderFormat, ...] = (
 def formats() -> tuple[ReaderFormat, ...]:
     """Return the known formats, in the order detection tries them."""
     return _FORMATS
-
-
-def _read_header(
-    file: str | bytes,
-) -> tuple[str | io.BytesIO, Literal["zip", "gzip"] | None, Header]:
-    """Read the start of an existing file at a path, or of a file held in bytes.
-
-    Parameters
-    ----------
-    file : str or bytes
-        path to an existing file, or the contents of a file
-
-    Returns
-    -------
-    tuple
-        the path, or a buffer holding the bytes; the compression of the file
-        (``"zip"``, ``"gzip"`` or None); and the start of the file
-    """
-    buffer: str | io.BytesIO
-    compression: Literal["zip", "gzip"] | None
-    if isinstance(file, str):
-        buffer = file
-        if ".zip" in file:
-            with zipfile.ZipFile(file) as z:
-                with z.open(z.namelist()[0], "r") as f:
-                    first_line, comments, _ = extract_comments(f, decode=True)
-                compression = "zip"
-        elif ".gz" in file:
-            with gzip.open(file, "rt") as f:
-                first_line, comments, _ = extract_comments(f)
-            compression = "gzip"
-        else:
-            with open(file, "rb") as f:
-                first_line, comments, _, compression = handle_bytes_data(f.read())
-    else:
-        first_line, comments, _, compression = handle_bytes_data(file)
-        buffer = io.BytesIO(file)
-    return buffer, compression, Header(first_line, comments)
 
 
 def _problem(exc: Exception) -> str:
@@ -160,7 +110,7 @@ def _raised_by(exc: BaseException, resources: ResourceProvider) -> bool:
 
 
 def read_file(
-    file: str | bytes,
+    file: str | os.PathLike[str] | bytes | BinaryIO,
     *,
     resources: ResourceProvider | None = None,
     rsids: Collection[str] = (),
@@ -169,9 +119,8 @@ def read_file(
 
     Parameters
     ----------
-    file : str or bytes
-        path to the file, or the contents of the file; either may be zip or
-        gzip compressed
+    file : str, os.PathLike, bytes or binary file object
+        file to read, as for ``SNPs``
     resources : ResourceProvider, optional
         provider of external resources; defaults to the default provider
     rsids : collection of str, optional
@@ -186,77 +135,71 @@ def read_file(
     Raises
     ------
     TypeError
-        if ``file`` is not a str or bytes
+        if ``file`` is not a path, bytes or a binary file object
+    ValueError
+        if ``file`` is a closed file object
     FileNotFoundError
         if no file exists at the path
     IsADirectoryError
         if the path is a directory
     UnsupportedFormatError
-        if the file is in no supported format or layout
+        if the file is in no supported format or layout, or is a zip archive
+        that does not hold exactly one raw data file
     ParseError
-        if the file is in a supported format but its content cannot be parsed
+        if the file is in a supported format but its content cannot be parsed,
+        or its compressed data is corrupt or truncated
 
     Errors raised in a method of ``resources`` pass through unchanged.
     """
-    if isinstance(file, str):
-        if not os.path.exists(file):
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file)
-        if os.path.isdir(file):
-            raise IsADirectoryError(
-                errno.EISDIR, "Is a directory; pass the path of one raw data file", file
+    with InputSource(file) as source:
+        name = source.name
+        try:
+            header = source.header()
+        except UnicodeDecodeError as exc:
+            raise UnsupportedFormatError(
+                f"{name} is not a text raw data file in a supported format."
+            ) from exc
+
+        fmt = detect(header, formats())
+        if fmt is None:
+            raise UnsupportedFormatError(
+                f"{name} is not in a supported raw data format; "
+                "check that it is a genotype raw data file."
             )
-        name = f"'{file}'"
-    elif isinstance(file, bytes):
-        name = "bytes input"
-    else:
-        raise TypeError(
-            f"file must be a str path or the bytes of a file, not {type(file).__name__}"
-        )
 
-    try:
-        buffer, compression, header = _read_header(file)
-    except UnicodeDecodeError as exc:
-        raise UnsupportedFormatError(
-            f"{name} is not a text raw data file in a supported format."
-        ) from exc
-
-    fmt = detect(header, formats())
-    if fmt is None:
-        raise UnsupportedFormatError(
-            f"{name} is not in a supported raw data format; "
-            "check that it is a genotype raw data file."
-        )
-
-    file_source = fmt.source(header) if fmt.source is not None else fmt.name
-    if file_source is None:
-        raise _unsupported_layout(name, fmt.name)
-
-    if resources is None:
-        resources = get_default_provider()  # type: ignore[no-untyped-call]  # snps.resources is untyped
-
-    try:
-        parsed = fmt.parse(
-            ParseInput(buffer, compression, header, resources, frozenset(rsids))
-        )
-        if parsed is None:
+        file_source = fmt.source(header) if fmt.source is not None else fmt.name
+        if file_source is None:
             raise _unsupported_layout(name, fmt.name)
-        build = parsed.build or detect_build_from_comments(header.comments, file_source)
-    except ParseError as exc:
-        raise _parse_error(name, fmt.name, str(exc), advise=False) from exc
-    except SNPsError:
-        raise
-    except (
-        ValueError,
-        KeyError,
-        IndexError,
-        TypeError,
-        pd.errors.ParserError,
-        UnicodeDecodeError,
-    ) as exc:
-        # a failure inside the provider is not a fault of the file
-        if _raised_by(exc, resources):
+
+        if resources is None:
+            resources = get_default_provider()  # type: ignore[no-untyped-call]  # snps.resources is untyped
+
+        try:
+            parsed = fmt.parse(ParseInput(source, header, resources, frozenset(rsids)))
+            if parsed is None:
+                raise _unsupported_layout(name, fmt.name)
+            build = parsed.build or detect_build_from_comments(
+                header.comments, file_source
+            )
+        except ParseError as exc:
+            if source.raised(exc):
+                # its message already names the input
+                raise
+            raise _parse_error(name, fmt.name, str(exc), advise=False) from exc
+        except SNPsError:
             raise
-        raise _parse_error(name, fmt.name, _problem(exc)) from exc
+        except (
+            ValueError,
+            KeyError,
+            IndexError,
+            TypeError,
+            pd.errors.ParserError,
+            UnicodeDecodeError,
+        ) as exc:
+            # a failure inside the provider is not a fault of the file
+            if _raised_by(exc, resources):
+                raise
+            raise _parse_error(name, fmt.name, _problem(exc)) from exc
 
     frame = parsed.frame
     # a parser that reports the whole file as phased yields phased calls

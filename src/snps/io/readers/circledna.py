@@ -35,18 +35,17 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     ParsedData
         parsed SNPs
     """
-    file = parse_input.file
-    compression = parse_input.compression
-
     rs_chunks = []
-    with pd.read_csv(
-        file,
-        comment="#",
-        sep="\t",
-        chunksize=10000,
-        names=["rsid", "chrom", "pos", "genotype"],
-        compression=compression,
-    ) as reader:
+    with (
+        parse_input.source.open() as file,
+        pd.read_csv(
+            file,
+            comment="#",
+            sep="\t",
+            chunksize=10000,
+            names=["rsid", "chrom", "pos", "genotype"],
+        ) as reader,
+    ):
         for chunk in reader:
             # filter for SNPs with rsids
             tmp = chunk.loc[

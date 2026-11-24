@@ -1,4 +1,8 @@
-"""Shared, committed test support: a fixture-backed resource provider and canned data."""
+"""Shared, committed test support for the suite.
+
+It holds a fixture-backed resource provider, canned data, raw data file cases
+(``cases``) and inputs built from them (``inputs``).
+"""
 
 from tests.support.data import (
     GRCh37_GRCh38,

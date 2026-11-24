@@ -1,12 +1,13 @@
 """Class for reading SNPs."""
 
-import os
 import warnings
 
 from snps.data import get_empty_snps_dataframe
-from snps.io.readers import _read_header, formats
+from snps.exceptions import UnsupportedFormatError
+from snps.io.readers import formats
 from snps.io.readers._common import detect_build_from_comments
 from snps.io.readers._registry import ParseInput, detect
+from snps.io.readers._source import InputSource, can_read
 from snps.resources import get_default_provider
 
 
@@ -18,8 +19,8 @@ class Reader:
 
         Parameters
         ----------
-        file : str or bytes
-            path to file to load or bytes to load
+        file : str, os.PathLike, bytes or binary file object
+            file to read, as for ``SNPs``
         only_detect_source : bool
             only detect the source of the data
         resources : Resources
@@ -57,41 +58,43 @@ class Reader:
         }
 
         # peek into files to determine the data format
-        if isinstance(self._file, bytes) or (
-            isinstance(self._file, str) and os.path.exists(self._file)
-        ):
-            file, compression, header = _read_header(self._file)
-        else:
+        if not can_read(self._file):
+            return d
+        try:
+            input_source = InputSource(self._file)
+        except UnsupportedFormatError:
             return d
 
-        comments = header.comments
-        fmt = detect(header, formats())
+        with input_source:
+            header = input_source.header()
+            comments = header.comments
+            fmt = detect(header, formats())
 
-        if fmt is not None:
-            source = fmt.source(header) if fmt.source is not None else fmt.name
-            if source is None:
-                return d
-
-            if self._only_detect_source:
-                d["source"] = source
-            else:
-                parsed = fmt.parse(
-                    ParseInput(file, compression, header, self._resources, self._rsids)
-                )
-                if parsed is None:
+            if fmt is not None:
+                source = fmt.source(header) if fmt.source is not None else fmt.name
+                if source is None:
                     return d
 
-                df = parsed.frame
-                # a parser that reports the whole file as phased yields phased calls
-                if parsed.phased and "phased" not in df.columns:
-                    df = df.assign(phased=df["genotype"].notna())
+                if self._only_detect_source:
+                    d["source"] = source
+                else:
+                    parsed = fmt.parse(
+                        ParseInput(input_source, header, self._resources, self._rsids)
+                    )
+                    if parsed is None:
+                        return d
 
-                d = {
-                    "snps": df,
-                    "source": source,
-                    "phased": parsed.phased,
-                    "build": parsed.build,
-                }
+                    df = parsed.frame
+                    # a parser that reports the whole file as phased yields phased calls
+                    if parsed.phased and "phased" not in df.columns:
+                        df = df.assign(phased=df["genotype"].notna())
+
+                    d = {
+                        "snps": df,
+                        "source": source,
+                        "phased": parsed.phased,
+                        "build": parsed.build,
+                    }
 
         # otherwise use a build named in the comments
         if not d["build"]:

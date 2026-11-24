@@ -13,6 +13,7 @@ from snps.data import SNPData
 from snps.exceptions import UnsupportedFormatError
 from snps.io import Reader, Writer, get_empty_snps_dataframe
 from snps.io.readers import read_file
+from snps.io.readers._source import can_read
 from snps.resources import get_default_provider
 from snps.utils import Parallelizer
 
@@ -39,8 +40,11 @@ class SNPs:
 
         Parameters
         ----------
-        file : str or bytes
-            path to file to load or bytes to load
+        file : str, os.PathLike, bytes or binary file object
+            path to file to load, bytes to load, or a binary file object to read
+            from its current position; any of them may be gzip or zip compressed.
+            A file object is never closed: a seekable one is returned to its
+            position, and a non-seekable one is read to its end
         only_detect_source : bool
             only detect the source of the data
         assign_par_snps : bool
@@ -100,9 +104,7 @@ class SNPs:
                     build_detected=build_detected,
                     build_original=d["build"] if build_detected else 0,
                 )
-            elif isinstance(file, bytes) or (
-                isinstance(file, str) and os.path.exists(file)
-            ):
+            elif can_read(file):
                 try:
                     self._data = read_file(file, resources=self._resources, rsids=rsids)
                 except UnsupportedFormatError:

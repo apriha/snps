@@ -40,21 +40,18 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     ParsedData
         parsed SNPs
     """
-    file = parse_input.file
-    compression = parse_input.compression
-
-    df = pd.read_csv(
-        file,
-        comment="#",
-        header=0,
-        engine="c",
-        sep=r"\s+",
-        na_values="-",
-        names=["rsid", "chrom", "pos", "allele1", "allele2"],
-        index_col=0,
-        dtype=TWO_ALLELE_DTYPES,
-        compression=compression,
-    )
+    with parse_input.source.open() as file:
+        df = pd.read_csv(
+            file,
+            comment="#",
+            header=0,
+            engine="c",
+            sep=r"\s+",
+            na_values="-",
+            names=["rsid", "chrom", "pos", "allele1", "allele2"],
+            index_col=0,
+            dtype=TWO_ALLELE_DTYPES,
+        )
 
     # create genotype column from allele columns and keep only relevant columns
     df = df.assign(genotype=df["allele1"] + df["allele2"].fillna(""))[

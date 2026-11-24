@@ -28,24 +28,21 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     ParsedData
         parsed SNPs
     """
-    file = parse_input.file
-    compression = parse_input.compression
-
     columnnames = ["rsid", "chrom", "pos", "genotype"]
     dtype = NORMALIZED_DTYPES.copy()
 
     # Temporarily use nullable UInt32 for 'pos' column
     dtype["pos"] = pd.UInt32Dtype()  # type: ignore[assignment]  # read_csv takes dtype instances
 
-    df = pd.read_csv(
-        file,
-        comment="#",
-        sep="\t",
-        na_values=["--", "-"],
-        names=columnnames,
-        compression=compression,
-        dtype=dtype,
-    )
+    with parse_input.source.open() as file:
+        df = pd.read_csv(
+            file,
+            comment="#",
+            sep="\t",
+            na_values=["--", "-"],
+            names=columnnames,
+            dtype=dtype,
+        )
 
     # Drop rows with NaN values in 'pos' column
     df = df.dropna(subset=["pos"])

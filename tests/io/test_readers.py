@@ -1,4 +1,5 @@
 import dataclasses
+import gzip
 
 import numpy as np
 import pandas as pd
@@ -6,9 +7,20 @@ import pytest
 
 import snps.io.readers
 from snps.data import get_empty_snps_dataframe
+from snps.exceptions import ParseError
 from snps.io import Reader
 from snps.io.readers import formats
 from snps.io.readers._registry import Header, ParsedData, ReaderFormat, detect
+from tests.support.cases import INPUT
+from tests.support.inputs import (
+    INPUT_IDS,
+    INPUTS,
+    TEXT_READERS,
+    given_as,
+    package,
+    text_reader,
+    zip_bytes,
+)
 
 FORMAT_NAMES = [
     "23andMe",
@@ -253,3 +265,45 @@ def test_parser_build_wins_over_comments(monkeypatch, build, expected):
     parsed = ParsedData(toy_frame(), build=build)
     monkeypatch.setattr(snps.io.readers, "_FORMATS", (toy_format(parsed),))
     assert read(b"# toy file, build 37\nrs1\t1\t101\tAA\n")["build"] == expected
+
+
+@pytest.mark.parametrize(("kind", "packaging"), INPUTS, ids=INPUT_IDS)
+def test_reader_input_kinds(tmp_path, kind, packaging):
+    plain = INPUT / "23andme.txt"
+    packed = package(plain, packaging, tmp_path)
+    expected = read(plain)
+    with given_as(packed, kind) as file:
+        assert read(file, only_detect_source=True)["source"] == "23andMe"
+        d = read(file)
+        if kind == "file":
+            assert file.tell() == 0
+            assert not file.closed
+    pd.testing.assert_frame_equal(d["snps"], expected["snps"], check_exact=True)
+    assert d["source"] == expected["source"] == "23andMe"
+    assert d["phased"] is expected["phased"]
+    assert d["build"] == expected["build"]
+
+
+def test_reader_missing_path(tmp_path):
+    assert_empty_result(read(tmp_path / "missing.txt"))
+
+
+@pytest.mark.parametrize("only_detect_source", [False, True])
+def test_reader_zip_without_one_data_file(only_detect_source):
+    data = (INPUT / "23andme.txt").read_bytes()
+    archive = zip_bytes({"a.txt": data, "b.txt": data})
+    assert_empty_result(read(archive, only_detect_source))
+
+
+def test_reader_corrupt_data():
+    data = gzip.compress((INPUT / "23andme.txt").read_bytes())
+    with pytest.raises(ParseError, match="corrupt or truncated"):
+        read(data[:-20])
+
+
+@pytest.mark.parametrize("only_detect_source", [False, True])
+@pytest.mark.parametrize("kind", TEXT_READERS)
+def test_reader_text_stream(kind, only_detect_source):
+    text = (INPUT / "23andme.txt").read_text()
+    with text_reader(kind, text) as f:
+        assert_empty_result(read(f, only_detect_source))

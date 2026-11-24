@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import io
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
 if TYPE_CHECKING:
+    from snps.io.readers._source import InputSource
     from snps.resources import ResourceProvider
 
 
@@ -35,10 +35,8 @@ class ParseInput:
 
     Attributes
     ----------
-    file : str or io.BytesIO
-        path to the file, or a buffer holding its bytes
-    compression : str or None
-        compression of the file: ``"zip"``, ``"gzip"`` or None
+    source : InputSource
+        the file, which opens streams of its plain data
     header : Header
         start of the file
     resources : ResourceProvider
@@ -47,8 +45,7 @@ class ParseInput:
         rsids to extract from a VCF file; empty for all
     """
 
-    file: str | io.BytesIO
-    compression: Literal["zip", "gzip"] | None
+    source: InputSource
     header: Header
     resources: ResourceProvider
     rsids: frozenset[str]

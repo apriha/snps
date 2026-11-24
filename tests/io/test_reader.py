@@ -1,11 +1,76 @@
 import os
 import tempfile
+from functools import partial
 
+import pytest
 from atomicwrites import atomic_write
 
 from snps import SNPs
+from snps.io.readers import read_file
 from snps.utils import gzip_file
 from tests import BaseSNPsTestCase
+from tests.support.cases import CASES, ReadCase, assert_matches_case, homozygous_snps
+from tests.support.inputs import (
+    INPUT_IDS,
+    INPUTS,
+    assert_same_data,
+    given_as,
+    package,
+)
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda case: case.id)
+@pytest.mark.parametrize(("kind", "packaging"), INPUTS, ids=INPUT_IDS)
+def test_read(tmp_path, case, kind, packaging):
+    plain = case.path(tmp_path)
+    packed = package(plain, packaging, tmp_path / "packed")
+    with given_as(packed, kind) as file:
+        assert_matches_case(SNPs(file), case)
+    with given_as(packed, kind) as file:
+        data = read_file(file)
+    assert_same_data(data, read_file(plain))
+
+
+@pytest.mark.parametrize("kind", ["str", "bytes", "file"])
+def test_read_ftdna_concat_gzip_extra_data(tmp_path, kind):
+    # https://www.familytreedna.com
+
+    total_snps1 = 10
+    total_snps2 = 10
+    # generate content of first file
+    s1 = "RSID,CHROMOSOME,POSITION,RESULT\r\n"
+    for i in range(0, total_snps1):
+        s1 += f'"rs{1 + i}","1","{101 + i}","AA"\r\n'
+
+    # generate content of second file
+    s2 = "RSID,CHROMOSOME,POSITION,RESULT\r\n"
+    for i in range(0, total_snps2):
+        s2 += f'"rs{total_snps1 + 1 + i}","1","{total_snps1 + 101 + i}","AA"\r\n'
+
+    file1 = tmp_path / "ftdna_concat_gzip1.csv"
+    file2 = tmp_path / "ftdna_concat_gzip2.csv"
+    path = tmp_path / "ftdna_concat_gzip.csv.gz"
+
+    # write and compress individual files
+    file1.write_bytes(s1.encode())
+    file2.write_bytes(s2.encode())
+    gzip_file(str(file1), f"{file1}.gz")
+    gzip_file(str(file2), f"{file2}.gz")
+
+    # concatenate gzips and add extra data
+    data = (tmp_path / f"{file1.name}.gz").read_bytes()
+    data += (tmp_path / f"{file2.name}.gz").read_bytes()
+    data += b"extra data"
+    path.write_bytes(data)
+
+    case = ReadCase(
+        "ftdna_concat_gzip_extra_data",
+        path.read_bytes,
+        "FTDNA",
+        partial(homozygous_snps, total_snps1 + total_snps2),
+    )
+    with given_as(path, kind) as file:
+        assert_matches_case(SNPs(file), case)
 
 
 class TestReader(BaseSNPsTestCase):
@@ -35,259 +100,6 @@ class TestReader(BaseSNPsTestCase):
             run_parsing_tests_func(
                 file_build_comment, source, build=build_int, build_detected=True
             )
-
-    def test_read_23andme(self):
-        # https://www.23andme.com
-        self.run_parsing_tests("tests/input/23andme.txt", "23andMe")
-
-    def test_read_23andme_allele(self):
-        # https://www.23andme.com
-        # some files have split allele columns
-        self.run_parsing_tests("tests/input/23andme_allele.txt", "23andMe")
-
-    def test_read_23andme_win(self):
-        # https://www.23andme.com
-        # windows line endings
-        self.run_parsing_tests("tests/input/23andme_win.txt", "23andMe")
-
-    def test_read_23andme_build36(self):
-        self.run_build_detection_test(
-            self.run_parsing_tests,
-            "build 36",
-            36,
-            file="tests/input/23andme.txt",
-            source="23andMe",
-            comment_str="# {}\n",
-        )
-
-    def test_read_23andme_build37(self):
-        self.run_build_detection_test(
-            self.run_parsing_tests,
-            "build 37",
-            37,
-            file="tests/input/23andme.txt",
-            source="23andMe",
-            comment_str="# {}\n",
-        )
-
-    def test_read_ancestry(self):
-        # https://www.ancestry.com
-        self.run_parsing_tests("tests/input/ancestry.txt", "AncestryDNA")
-
-    def test_read_ancestry_extra_tab(self):
-        # https://www.ancestry.com
-
-        total_snps = 100
-        s = "#AncestryDNA\r\n"
-        s += "rsid\tchromosome\tposition\tallele1\tallele2\r\n"
-        # add extra tab separator in first line
-        s += "rs1\t1\t101\t\tA\tA\r\n"
-        # generate remainder of lines
-        for i in range(1, total_snps):
-            s += f"rs{1 + i}\t1\t{101 + i}\tA\tA\r\n"
-
-        snps_df = self.create_snp_df(
-            rsid=[f"rs{1 + i}" for i in range(0, total_snps)],
-            chrom="1",
-            pos=[101 + i for i in range(0, total_snps)],
-            genotype="AA",
-        )
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, "ancestry_extra_tab.txt")
-            with open(path, "w") as f:
-                f.write(s)
-
-            self.run_parsing_tests(path, "AncestryDNA", snps_df=snps_df)
-
-    def test_read_ancestry_multi_sep(self):
-        # https://www.ancestry.com
-        self.run_parsing_tests("tests/input/ancestry_multi_sep.txt", "AncestryDNA")
-
-    def test_read_codigo46(self):
-        # https://codigo46.com.mx
-        self.run_parsing_tests("tests/input/codigo46.txt", "Codigo46")
-
-    def test_read_tellmeGen(self):
-        # https://www.tellmegen.com/
-        self.run_parsing_tests("tests/input/tellmeGen.txt", "tellmeGen")
-
-    def test_read_DNALand(self):
-        # https://dna.land/
-        self.run_parsing_tests("tests/input/DNALand.txt", "DNA.Land")
-
-    def test_read_circledna(self):
-        # https://circledna.com/
-        df = self.generic_snps().drop("rs5")  # only called genotypes
-        self.run_parsing_tests("tests/input/circledna.txt", "CircleDNA", snps_df=df)
-
-    def test_read_plink(self):
-        self.run_parsing_tests("tests/input/plink.txt", "PLINK")
-
-    def test_read_SelfDecode(self):
-        # https://selfdecode.com
-        self.run_parsing_tests("tests/input/selfdecode.txt", "SelfDecode")
-
-    def test_read_23Mofang(self):
-        # https://www.23mofang.com
-        self.run_parsing_tests("tests/input/23mofang.txt", "23Mofang")
-
-    def test_read_ftdna(self):
-        # https://www.familytreedna.com
-        self.run_parsing_tests("tests/input/ftdna.csv", "FTDNA")
-
-    def test_read_ftdna_concat_gzip_extra_data(self):
-        # https://www.familytreedna.com
-
-        total_snps1 = 10
-        total_snps2 = 10
-        # generate content of first file
-        s1 = "RSID,CHROMOSOME,POSITION,RESULT\r\n"
-        for i in range(0, total_snps1):
-            s1 += f'"rs{1 + i}","1","{101 + i}","AA"\r\n'
-
-        # generate content of second file
-        s2 = "RSID,CHROMOSOME,POSITION,RESULT\r\n"
-        for i in range(0, total_snps2):
-            s2 += f'"rs{total_snps1 + 1 + i}","1","{total_snps1 + 101 + i}","AA"\r\n'
-        snps_df = self.create_snp_df(
-            rsid=[f"rs{1 + i}" for i in range(0, total_snps1 + total_snps2)],
-            chrom="1",
-            pos=[101 + i for i in range(0, total_snps1 + total_snps2)],
-            genotype="AA",
-        )
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            file1 = os.path.join(tmpdir, "ftdna_concat_gzip1.csv")
-            file1_gz = f"{file1}.gz"
-            file2 = os.path.join(tmpdir, "ftdna_concat_gzip2.csv")
-            file2_gz = f"{file2}.gz"
-            path = os.path.join(tmpdir, "ftdna_concat_gzip.csv.gz")
-
-            # write individual files
-            with open(file1, "w") as f:
-                f.write(s1)
-            with open(file2, "w") as f:
-                f.write(s2)
-
-            # compress files
-            gzip_file(file1, file1_gz)
-            gzip_file(file2, file2_gz)
-
-            # concatenate gzips
-            with open(file1_gz, "rb") as f:
-                data = f.read()
-            with open(file2_gz, "rb") as f:
-                data += f.read()
-
-            # add extra data
-            data += b"extra data"
-
-            # write file with concatenated gzips and extra data
-            with open(path, "wb") as f:
-                f.write(data)
-
-            self.make_parsing_assertions(
-                self.parse_file(path), "FTDNA", False, 37, False, snps_df
-            )
-            self.make_parsing_assertions(
-                self.parse_bytes(path), "FTDNA", False, 37, False, snps_df
-            )
-
-    def test_read_ftdna_famfinder(self):
-        # https://www.familytreedna.com
-        self.run_parsing_tests("tests/input/ftdna_famfinder.csv", "FTDNA")
-
-    def test_read_ftdna_second_header(self):
-        # https://www.familytreedna.com
-
-        total_snps1 = 100
-        total_snps2 = 10
-        s = "RSID,CHROMOSOME,POSITION,RESULT\n"
-        # generate first chunk of lines
-        for i in range(0, total_snps1):
-            s += f'"rs{1 + i}","1","{101 + i}","AA"\n'
-        # add second header
-        s += "RSID,CHROMOSOME,POSITION,RESULT\n"
-        # generate second chunk of lines
-        for i in range(0, total_snps2):
-            s += f'"rs{total_snps1 + 1 + i}","1","{total_snps1 + 101 + i}","AA"\n'
-
-        snps_df = self.create_snp_df(
-            rsid=[f"rs{1 + i}" for i in range(0, total_snps1 + total_snps2)],
-            chrom="1",
-            pos=[101 + i for i in range(0, total_snps1 + total_snps2)],
-            genotype="AA",
-        )
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, "ftdna_second_header.txt")
-            with open(path, "w") as f:
-                f.write(s)
-
-            self.run_parsing_tests(path, "FTDNA", snps_df=snps_df)
-
-    def test_read_generic_csv(self):
-        self.run_parsing_tests("tests/input/generic.csv", "generic")
-
-    def test_read_generic_tsv(self):
-        self.run_parsing_tests("tests/input/generic.tsv", "generic")
-
-    def test_read_generic_extra_column_tsv(self):
-        self.run_parsing_tests("tests/input/generic_extra_column.tsv", "generic")
-
-    def test_read_generic_header_comment(self):
-        self.run_parsing_tests("tests/input/generic_header_comment.tsv", "generic")
-
-    def test_read_generic_multi_rsid_tsv(self):
-        self.run_parsing_tests("tests/input/generic_multi_rsid.tsv", "generic")
-
-    def test_read_generic_no_header(self):
-        self.run_parsing_tests("tests/input/generic_no_header.tsv", "generic")
-
-    def test_read_generic_non_standard_columns(self):
-        self.run_parsing_tests(
-            "tests/input/generic_non_standard_columns.tsv", "generic"
-        )
-
-    def test_read_genes_for_good(self):
-        # https://genesforgood.sph.umich.edu/
-        self.run_parsing_tests("tests/input/genesforgood.txt", "GenesForGood")
-
-    def test_read_livingdna(self):
-        # https://livingdna.com
-        self.run_parsing_tests("tests/input/livingdna.csv", "LivingDNA")
-
-    def test_read_mapmygenome(self):
-        # https://mapmygenome.in
-        self.run_parsing_tests("tests/input/mapmygenome.txt", "Mapmygenome")
-
-    def test_read_mapmygenome_alt_header(self):
-        # https://mapmygenome.in
-        self.run_parsing_tests("tests/input/mapmygenome_alt_header.txt", "Mapmygenome")
-
-    def test_read_mapmygenome_new_format(self):
-        # https://mapmygenome.in
-        self.run_parsing_tests(
-            "tests/input/mapmygenome_new_format.txt", "Mapmygenome", build_detected=True
-        )
-
-    def test_read_myheritage(self):
-        # https://www.myheritage.com
-        self.run_parsing_tests("tests/input/myheritage.csv", "MyHeritage")
-
-    def test_read_myheritage_extra_quotes(self):
-        # https://www.myheritage.com
-        self.run_parsing_tests("tests/input/myheritage_extra_quotes.csv", "MyHeritage")
-
-    def test_read_sano(self):
-        # https://sanogenetics.com
-        self.run_parsing_tests("tests/input/sano.txt", "Sano")
-
-    def test_read_sano_dtc(self):
-        # https://sanogenetics.com
-        self.run_parsing_tests("tests/input/sano_dtc.txt", "Sano")
-        self.run_parsing_tests("tests/input/sano_dtc_no_comments.txt", "Sano")
 
     def test_read_vcf(self):
         self.run_parsing_tests_vcf("tests/input/testvcf.vcf")

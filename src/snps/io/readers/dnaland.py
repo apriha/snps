@@ -27,21 +27,18 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     ParsedData
         parsed SNPs
     """
-    file = parse_input.file
-    compression = parse_input.compression
-
-    return ParsedData(
-        pd.read_csv(
-            file,
-            comment="#",
-            sep="\t",
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype=NORMALIZED_DTYPES,
-            compression=compression,
+    with parse_input.source.open() as file:
+        return ParsedData(
+            pd.read_csv(
+                file,
+                comment="#",
+                sep="\t",
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype=NORMALIZED_DTYPES,
+            )
         )
-    )
 
 
 FORMAT = ReaderFormat(name="DNA.Land", detect=_detect, parse=_parse)

@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import gzip
 import io
 import logging
 from collections.abc import Set
+from typing import IO
 
 import numpy as np
 import pandas as pd
 
 from snps.constants import NORMALIZED_DTYPES
-from snps.io.readers._common import is_gzip
 from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
 
 logger = logging.getLogger(__name__)
@@ -44,7 +43,7 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     Notes
     -----
     This function attempts to read and parse a VCF file or buffer, optionally
-    compressed with gzip. Some assumptions are made throughout this process:
+    compressed with gzip or zip. Some assumptions are made throughout this process:
 
         * SNPs that are not annotated with an RSID are skipped
         * If the VCF contains multiple samples, only the first sample is used to
@@ -64,33 +63,22 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     ParsedData
         parsed SNPs, with a ``phased`` column
     """
-    file = parse_input.file
     rsids = parse_input.rsids
 
-    if not isinstance(file, io.BytesIO):
-        with open(file, "rb") as f:
-            df, phased = _parse_vcf(f, rsids)
-    else:
-        df, phased = _parse_vcf(file, rsids)
+    with parse_input.source.open() as f:
+        df, phased = _parse_vcf(f, rsids)
 
     return ParsedData(df, phased)
 
 
-def _parse_vcf(buffer: io.BufferedIOBase, rsids: Set[str]) -> tuple[pd.DataFrame, bool]:
-    """Parse the records of a VCF file, which may be gzip compressed."""
+def _parse_vcf(buffer: IO[bytes], rsids: Set[str]) -> tuple[pd.DataFrame, bool]:
+    """Parse the records of a VCF file."""
     rows = []
     phased = True
-    first_four_bytes = buffer.read(4)
-    buffer.seek(0)
-
-    if is_gzip(first_four_bytes):
-        f: io.BufferedIOBase = gzip.open(buffer)
-    else:
-        f = buffer
 
     logged_multi_sample = False
 
-    with io.TextIOWrapper(io.BufferedReader(f)) as file:
+    with io.TextIOWrapper(buffer) as file:
         for line in file:
             line_strip = line.strip("\n")
 

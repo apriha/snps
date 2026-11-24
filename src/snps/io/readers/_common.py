@@ -2,12 +2,7 @@
 
 from __future__ import annotations
 
-import binascii
-import gzip
-import io
-import zipfile
-from copy import deepcopy
-from typing import IO, Literal
+from typing import IO
 
 import numpy as np
 
@@ -23,19 +18,13 @@ TWO_ALLELE_DTYPES: dict[str, type] = {
 }
 
 
-def extract_comments(
-    f: IO[bytes] | IO[str] | io.BufferedIOBase,
-    decode: bool = False,
-    include_data: bool = False,
-) -> tuple[str, str, str]:
+def extract_comments(f: IO[bytes], include_data: bool = False) -> tuple[str, str, str]:
     """Read the first line, the leading comments and optionally the data of a file.
 
     Parameters
     ----------
     f : file object
-        file to read; rewound afterwards unless it is a zip member
-    decode : bool
-        decode the bytes read from ``f`` as UTF-8
+        binary file to read, decoded as UTF-8
     include_data : bool
         also read the rest of the file
 
@@ -44,7 +33,7 @@ def extract_comments(
     tuple of str
         first line, comments, and data (empty unless ``include_data``)
     """
-    line = read_line(f, decode)
+    line = read_line(f)
 
     first_line = line
     comments = ""
@@ -53,32 +42,24 @@ def extract_comments(
     if first_line.startswith("#"):
         while line.startswith("#"):
             comments += line
-            line = read_line(f, decode)
+            line = read_line(f)
         if include_data:
             while line:
                 data += line
-                line = read_line(f, decode)
+                line = read_line(f)
 
     elif first_line.startswith("[Header]"):
-        while not line.startswith("[Data]"):
+        while line and not line.startswith("[Data]"):
             comments += line
-            line = read_line(f, decode)
+            line = read_line(f)
         # Ignore the [Data] row
-        line = read_line(f, decode)
+        line = read_line(f)
         if include_data:
             while line:
                 data += line
-                line = read_line(f, decode)
+                line = read_line(f)
     if not data and include_data:
-        rest = f.read()
-        if decode:
-            assert isinstance(rest, bytes)
-            data = rest.decode()
-        else:
-            assert isinstance(rest, str)
-            data = rest
-    if not isinstance(f, zipfile.ZipExtFile):
-        f.seek(0)
+        data = f.read().decode()
     return first_line, comments, data
 
 
@@ -183,77 +164,8 @@ def detect_build_from_comments(comments: str, source: str) -> int:
             return 0
 
 
-def handle_bytes_data(
-    file: bytes, include_data: bool = False
-) -> tuple[str, str, str, Literal["zip", "gzip"] | None]:
-    """Read the first line, comments and optionally data of a file held in bytes.
-
-    Parameters
-    ----------
-    file : bytes
-        contents of the file, which may be zip or gzip compressed
-    include_data : bool
-        also read the rest of the file
-
-    Returns
-    -------
-    tuple
-        first line, comments, data (empty unless ``include_data``), and the
-        compression of the file (``"zip"``, ``"gzip"`` or None)
-    """
-    compression: Literal["zip", "gzip"] | None
-    if is_zip(file):
-        compression = "zip"
-        with zipfile.ZipFile(io.BytesIO(file)) as z:
-            namelist = z.namelist()
-            key = "GFG_filtered_unphased_genotypes_23andMe.txt"
-            key_search = [key in name for name in namelist]
-
-            if any(key_search):
-                filename = namelist[key_search.index(True)]
-            else:
-                filename = namelist[0]
-
-            with z.open(filename, "r") as f:
-                first_line, comments, data = extract_comments(
-                    f, decode=True, include_data=include_data
-                )
-
-    elif is_gzip(file):
-        compression = "gzip"
-
-        with gzip.open(io.BytesIO(file), "rb") as f:
-            first_line, comments, data = extract_comments(
-                f, decode=True, include_data=include_data
-            )
-
-    else:
-        compression = None
-        buffer = io.BytesIO(file)
-        first_line, comments, data = extract_comments(
-            deepcopy(buffer), decode=True, include_data=include_data
-        )
-        buffer.seek(0)
-    return first_line, comments, data, compression
-
-
-def is_zip(bytes_data: bytes) -> bool:
-    """Check whether or not a bytes_data file is a valid Zip file."""
-    return zipfile.is_zipfile(io.BytesIO(bytes_data))
-
-
-def is_gzip(bytes_data: bytes) -> bool:
-    """Check whether or not a bytes_data file is a valid gzip file."""
-    return binascii.hexlify(bytes_data[:2]) == b"1f8b"
-
-
-def read_line(f: IO[bytes] | IO[str] | io.BufferedIOBase, decode: bool) -> str:
-    """Read a line from a file, decoding it from UTF-8 bytes if ``decode``."""
+def read_line(f: IO[bytes]) -> str:
+    """Read a line from a binary file, decoding it from UTF-8."""
     line = f.readline()
-    if decode:
-        assert isinstance(line, bytes)
-        # https://stackoverflow.com/a/606199
-        return line.decode("utf-8")
-    else:
-        assert isinstance(line, str)
-        return line
+    # https://stackoverflow.com/a/606199
+    return line.decode("utf-8")

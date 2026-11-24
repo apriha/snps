@@ -32,26 +32,25 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     ParsedData
         parsed SNPs
     """
-    file = parse_input.file
-    compression = parse_input.compression
+    source = parse_input.source
     header = parse_input.header.first_line
     comments = parse_input.header.comments
 
     if "rsid\tchromosome\tposition\tgenotype" in header or "Mapmygenome" in comments:
-        df = pd.read_csv(
-            file,
-            comment="#",
-            sep="\t",
-            na_values="--",
-            header=0,
-            dtype={
-                "rsid": object,
-                "chromosome": object,
-                "position": np.uint32,
-                "genotype": object,
-            },
-            compression=compression,
-        )
+        with source.open() as file:
+            df = pd.read_csv(
+                file,
+                comment="#",
+                sep="\t",
+                na_values="--",
+                header=0,
+                dtype={
+                    "rsid": object,
+                    "chromosome": object,
+                    "position": np.uint32,
+                    "genotype": object,
+                },
+            )
         df = df.rename(columns={"chromosome": "chrom", "position": "pos"})
         df = df.astype(dtype=NORMALIZED_DTYPES)
         df = df.set_index("rsid")
@@ -59,22 +58,22 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     else:
 
         def parse(rsid_col_name: str, rsid_col_idx: int) -> pd.DataFrame:
-            return pd.read_csv(
-                file,
-                comment="#",
-                sep="\t",
-                na_values="--",
-                header=0,
-                index_col=rsid_col_idx,
-                dtype={
-                    rsid_col_name: object,
-                    "Chr": object,
-                    "Position": np.uint32,
-                    "Allele1...Top": object,
-                    "Allele2...Top": object,
-                },
-                compression=compression,
-            )
+            with source.open() as file:
+                return pd.read_csv(
+                    file,
+                    comment="#",
+                    sep="\t",
+                    na_values="--",
+                    header=0,
+                    index_col=rsid_col_idx,
+                    dtype={
+                        rsid_col_name: object,
+                        "Chr": object,
+                        "Position": np.uint32,
+                        "Allele1...Top": object,
+                        "Allele2...Top": object,
+                    },
+                )
 
         if "rsID" in header:
             df = parse("rsID", 1)

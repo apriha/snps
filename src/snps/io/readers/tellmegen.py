@@ -27,19 +27,17 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     ParsedData
         parsed SNPs
     """
-    file = parse_input.file
-    compression = parse_input.compression
     resources = parse_input.resources
 
-    df = pd.read_csv(
-        file,
-        sep="\t",
-        skiprows=1,
-        na_values="--",
-        names=["rsid", "chrom", "pos", "genotype"],
-        dtype=NORMALIZED_DTYPES,
-        compression=compression,
-    )
+    with parse_input.source.open() as file:
+        df = pd.read_csv(
+            file,
+            sep="\t",
+            skiprows=1,
+            na_values="--",
+            names=["rsid", "chrom", "pos", "genotype"],
+            dtype=NORMALIZED_DTYPES,
+        )
 
     # use the external mapping to turn
     # SNP names into rsids where possible

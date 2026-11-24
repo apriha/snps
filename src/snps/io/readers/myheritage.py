@@ -7,7 +7,7 @@ import io
 import pandas as pd
 
 from snps.constants import NORMALIZED_DTYPES
-from snps.io.readers._common import handle_bytes_data
+from snps.io.readers._common import extract_comments
 from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
 
 
@@ -30,17 +30,8 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     ParsedData
         parsed SNPs
     """
-    file = parse_input.file
-
-    if isinstance(file, str):
-        with open(file, "rb") as f:
-            first_line, comments, data, comrpession = handle_bytes_data(
-                f.read(), include_data=True
-            )
-    else:
-        first_line, comments, data, compression = handle_bytes_data(
-            file.read(), include_data=True
-        )
+    with parse_input.source.open() as file:
+        _, _, data = extract_comments(file, include_data=True)
 
     file_string_in = io.StringIO(data)
     file_string_out = io.StringIO()

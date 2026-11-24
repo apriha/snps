@@ -1,5 +1,7 @@
 import errno
+import io
 import logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -11,6 +13,7 @@ from snps.io import Reader
 from snps.io.readers import read_file
 from snps.io.readers._registry import ReaderFormat
 from tests.support import FakeResources
+from tests.support.inputs import TEXT_READERS, given_as, text_reader
 
 VCF_COLUMNS = "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tS1\n"
 
@@ -96,23 +99,54 @@ def write(tmp_path, content, name="raw.txt"):
 
 @pytest.mark.parametrize("file", [1, ["rs1"], None])
 def test_unsupported_input_type(file):
-    with pytest.raises(TypeError, match="str path or the bytes"):
+    with pytest.raises(
+        TypeError, match="must be a path, bytes or a binary file object"
+    ):
         read_file(file)
 
 
-def test_missing_path(tmp_path):
+@pytest.mark.parametrize("kind", TEXT_READERS)
+def test_text_stream(kind):
+    with text_reader(kind, FILE_23ANDME) as f:
+        with pytest.raises(TypeError, match="binary mode"):
+            read_file(f)
+
+
+def test_closed_file_object():
+    stream = io.BytesIO(FILE_23ANDME.encode())
+    stream.close()
+    with pytest.raises(ValueError, match="closed file"):
+        read_file(stream)
+
+
+@pytest.mark.parametrize("as_path", [str, Path])
+def test_missing_path(tmp_path, as_path):
     path = str(tmp_path / "missing.txt")
     with pytest.raises(FileNotFoundError) as info:
-        read_file(path)
+        read_file(as_path(path))
     assert info.value.errno == errno.ENOENT
     assert info.value.filename == path
 
 
-def test_directory_path(tmp_path):
+@pytest.mark.parametrize("as_path", [str, Path])
+def test_directory_path(tmp_path, as_path):
     with pytest.raises(IsADirectoryError) as info:
-        read_file(str(tmp_path))
+        read_file(as_path(tmp_path))
     assert info.value.errno == errno.EISDIR
     assert info.value.filename == str(tmp_path)
+
+
+@pytest.mark.parametrize("kind", ["path", "file"])
+def test_path_named_in_messages(tmp_path, kind):
+    path = Path(write(tmp_path, "invented notes\nnothing here\n"))
+    with given_as(path, kind) as file, pytest.raises(UnsupportedFormatError) as info:
+        read_file(file)
+    assert f"'{path}'" in str(info.value)
+
+
+def test_unnamed_file_object_in_messages():
+    with pytest.raises(UnsupportedFormatError, match="file object input"):
+        read_file(io.BytesIO(b"invented notes\nnothing here\n"))
 
 
 def test_empty_bytes():
@@ -267,6 +301,17 @@ def test_snps_falls_back_for_missing_path(tmp_path, caplog):
 def test_snps_falls_back_for_unrecognized_bytes(caplog):
     with caplog.at_level(logging.WARNING, logger="snps.snps"):
         s = SNPs(b"invented notes\nnothing here\n")
+    assert s.count == 0
+    assert s.source == ""
+    assert "no SNPs loaded..." in caplog.text
+
+
+@pytest.mark.parametrize("only_detect_source", [False, True])
+@pytest.mark.parametrize("kind", TEXT_READERS)
+def test_snps_falls_back_for_text_stream(caplog, kind, only_detect_source):
+    with text_reader(kind, FILE_23ANDME) as f:
+        with caplog.at_level(logging.WARNING, logger="snps.snps"):
+            s = SNPs(f, only_detect_source=only_detect_source)
     assert s.count == 0
     assert s.source == ""
     assert "no SNPs loaded..." in caplog.text

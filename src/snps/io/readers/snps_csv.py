@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import io
-
 import pandas as pd
 
 from snps.constants import NORMALIZED_DTYPES
@@ -77,28 +75,24 @@ def _parse(parse_input: ParseInput) -> ParsedData:
         parsed SNPs
     """
     _, phased, build = _read_comments(parse_input.header.comments)
-    file = parse_input.file
-    compression = parse_input.compression
+    source = parse_input.source
 
     def parse_csv(sep: str) -> pd.DataFrame:
-        return pd.read_csv(
-            file,
-            sep=sep,
-            comment="#",
-            header=0,
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype=NORMALIZED_DTYPES,
-            compression=compression,
-        )
+        with source.open() as file:
+            return pd.read_csv(
+                file,
+                sep=sep,
+                comment="#",
+                header=0,
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype=NORMALIZED_DTYPES,
+            )
 
     try:
         return ParsedData(parse_csv(","), phased)
     except pd.errors.ParserError:
-        if isinstance(file, io.BufferedIOBase):
-            file.seek(0)
-
         return ParsedData(parse_csv("\t"), phased, build)
 
 

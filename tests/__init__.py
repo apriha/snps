@@ -1,18 +1,20 @@
 import os
 import shutil
 import tempfile
+from pathlib import Path
 from unittest import TestCase
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_object_dtype, is_string_dtype, is_unsigned_integer_dtype
 
 from snps import SNPs
 from snps.resources import set_default_provider
 from snps.testing import SNPsTestMixin, create_simulated_snp_df
-from snps.utils import gzip_file, zip_file
+from snps.utils import gzip_file
 from tests.support import FakeResources, chip_clusters_df, low_quality_snps_df
 from tests.support import data as _data
+from tests.support.cases import ReadCase, assert_matches_case, assert_normalized_frame
+from tests.support.inputs import INPUTS, given_as, package
 
 
 class BaseSNPsTestCase(SNPsTestMixin, TestCase):
@@ -156,52 +158,21 @@ class BaseSNPsTestCase(SNPsTestMixin, TestCase):
     def run_parsing_tests(
         self, file, source, phased=False, build=37, build_detected=False, snps_df=None
     ):
-        self.make_parsing_assertions(
-            self.parse_file(file), source, phased, build, build_detected, snps_df
+        """Assert what reading ``file`` gives, as each input kind and packaging."""
+        case = ReadCase(
+            os.path.basename(file),
+            Path(file).read_bytes,
+            source,
+            self.generic_snps if snps_df is None else snps_df.copy,
+            phased=phased,
+            build=build,
+            build_detected=build_detected,
         )
-        self.make_parsing_assertions(
-            self.parse_bytes(file), source, phased, build, build_detected, snps_df
-        )
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            base = os.path.basename(file)
-            dest = os.path.join(tmpdir, f"{base}.gz")
-            gzip_file(file, dest)
-            self.make_parsing_assertions(
-                self.parse_file(dest), source, phased, build, build_detected, snps_df
-            )
-            self.make_parsing_assertions(
-                self.parse_bytes(dest), source, phased, build, build_detected, snps_df
-            )
-            # remove .gz extension
-            shutil.move(dest, dest[:-3])
-            self.make_parsing_assertions(
-                self.parse_file(dest[:-3]),
-                source,
-                phased,
-                build,
-                build_detected,
-                snps_df,
-            )
-
-            dest = os.path.join(tmpdir, f"{base}.zip")
-            zip_file(file, dest, base)
-            self.make_parsing_assertions(
-                self.parse_file(dest), source, phased, build, build_detected, snps_df
-            )
-            self.make_parsing_assertions(
-                self.parse_bytes(dest), source, phased, build, build_detected, snps_df
-            )
-            # remove .zip extension
-            shutil.move(dest, dest[:-4])
-            self.make_parsing_assertions(
-                self.parse_file(dest[:-4]),
-                source,
-                phased,
-                build,
-                build_detected,
-                snps_df,
-            )
+            for kind, packaging in INPUTS:
+                directory = Path(tmpdir) / f"{kind}-{packaging}"
+                with given_as(package(Path(file), packaging, directory), kind) as f:
+                    assert_matches_case(SNPs(f), case)
 
     def run_parsing_tests_vcf(
         self,
@@ -276,16 +247,7 @@ class BaseSNPsTestCase(SNPsTestMixin, TestCase):
             )
 
     def make_normalized_dataframe_assertions(self, df):
-        self.assertEqual(df.index.name, "rsid")
-        # Accept both object dtype and StringDtype (used in Python 3.14+)
-        self.assertTrue(is_string_dtype(df.index.dtype))
-        self.assertTrue(
-            is_string_dtype(df.chrom.dtype) or is_object_dtype(df.chrom.dtype)
-        )
-        self.assertTrue(is_unsigned_integer_dtype(df.pos.dtype))
-        self.assertTrue(
-            is_string_dtype(df.genotype.dtype) or is_object_dtype(df.genotype.dtype)
-        )
+        assert_normalized_frame(df)
 
     def parse_file(self, file, rsids=()):
         return SNPs(file, rsids=rsids)
@@ -293,31 +255,6 @@ class BaseSNPsTestCase(SNPsTestMixin, TestCase):
     def parse_bytes(self, file, rsids=()):
         with open(file, "rb") as f:
             return SNPs(f.read(), rsids=rsids)
-
-    def make_parsing_assertions(
-        self, snps, source, phased, build, build_detected, snps_df
-    ):
-        if snps_df is None:
-            snps_df = self.generic_snps()
-
-        # these are useful for debugging if there is a problem
-        print("Observed:")
-        print(snps.snps)
-        print(snps.snps.info())
-        print("Expected:")
-        print(snps_df)
-        print(snps_df.info())
-
-        self.assertEqual(snps.source, source)
-        self.assert_frame_equal_with_string_index(snps.snps, snps_df, check_exact=True)
-        self.assertTrue(snps.phased) if phased else self.assertFalse(snps.phased)
-        self.assertEqual(snps.build, build)
-        (
-            self.assertTrue(snps.build_detected)
-            if build_detected
-            else self.assertFalse(snps.build_detected)
-        )
-        self.make_normalized_dataframe_assertions(snps.snps)
 
     def make_parsing_assertions_vcf(
         self, snps, source, phased, unannotated, rsids, build, build_detected, snps_df

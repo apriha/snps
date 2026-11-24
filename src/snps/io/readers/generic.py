@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import io
 import re
 
 import pandas as pd
 
 from snps.constants import NORMALIZED_DTYPES
+from snps.exceptions import ParseError
 from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
 
 _HEADER = "^#*[ \t]*rsid[, \t]*chr"
@@ -45,46 +45,43 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     ParsedData
         parsed SNPs
     """
-    file = parse_input.file
-    compression = parse_input.compression
+    source = parse_input.source
     skip = 1 if re.match(_HEADER, parse_input.header.first_line) else 0
 
     def parse(sep: str) -> pd.DataFrame:
-        return pd.read_csv(
-            file,
-            sep=sep,
-            skiprows=skip,
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            index_col=0,
-            dtype=NORMALIZED_DTYPES,
-            compression=compression,
-        )
+        with source.open() as file:
+            return pd.read_csv(
+                file,
+                sep=sep,
+                skiprows=skip,
+                na_values="--",
+                names=["rsid", "chrom", "pos", "genotype"],
+                index_col=0,
+                dtype=NORMALIZED_DTYPES,
+            )
 
     try:
         df = parse(",")
+    except ParseError:
+        raise
     except ValueError:
         try:
-            if isinstance(file, io.BufferedIOBase):
-                file.seek(0)
-
             df = parse("\t")
+        except ParseError:
+            raise
         except ValueError:
-            if isinstance(file, io.BufferedIOBase):
-                file.seek(0)
-
-            df = pd.read_csv(
-                file,
-                sep=None,
-                na_values="--",
-                skiprows=skip,
-                engine="python",
-                names=["rsid", "chrom", "pos", "genotype"],
-                usecols=[0, 1, 2, 3],
-                index_col=0,
-                dtype=NORMALIZED_DTYPES,
-                compression=compression,
-            )
+            with source.open() as file:
+                df = pd.read_csv(
+                    file,
+                    sep=None,
+                    na_values="--",
+                    skiprows=skip,
+                    engine="python",
+                    names=["rsid", "chrom", "pos", "genotype"],
+                    usecols=[0, 1, 2, 3],
+                    index_col=0,
+                    dtype=NORMALIZED_DTYPES,
+                )
     return ParsedData(df)
 
 

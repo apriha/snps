@@ -25,18 +25,15 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     ParsedData
         parsed SNPs
     """
-    file = parse_input.file
-    compression = parse_input.compression
-
     columnnames = ["rsid", "chrom", "pos", "genotype"]
-    df = pd.read_csv(
-        file,
-        comment="#",
-        sep="\t",
-        na_values=["--", "-"],
-        names=columnnames,
-        compression=compression,
-    )
+    with parse_input.source.open() as file:
+        df = pd.read_csv(
+            file,
+            comment="#",
+            sep="\t",
+            na_values=["--", "-"],
+            names=columnnames,
+        )
     # turn number numbers into string numbers
     df["chrom"] = df["chrom"].map(
         {

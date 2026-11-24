@@ -9,7 +9,7 @@ import pandas as pd
 
 from snps.constants import NORMALIZED_DTYPES
 from snps.exceptions import ParseError
-from snps.io.readers._common import extract_comments, handle_bytes_data
+from snps.io.readers._common import extract_comments
 from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
 
 
@@ -45,20 +45,11 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     ValueError
         if the file has no supported allele columns
     """
-    file = parse_input.file
     resources = parse_input.resources
 
     # read the comments so we get to the actual data
-    if isinstance(file, str):
-        try:
-            with open(file, "rb") as f:
-                _, _, data = extract_comments(f, decode=True, include_data=True)
-        except UnicodeDecodeError:
-            # compressed file on filesystem
-            with open(file, "rb") as f:
-                _, _, data, _ = handle_bytes_data(f.read(), include_data=True)
-    else:
-        _, _, data, _ = handle_bytes_data(file.read(), include_data=True)
+    with parse_input.source.open() as file:
+        _, _, data = extract_comments(file, include_data=True)
 
     # turn the data into a pandas dataframe for manipulation
     df = pd.read_csv(

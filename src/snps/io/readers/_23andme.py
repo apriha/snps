@@ -54,9 +54,6 @@ def _parse(parse_input: ParseInput) -> ParsedData | None:
     joined = _joined(parse_input.header)
     if joined is None:
         return None
-    file = parse_input.file
-    compression = parse_input.compression
-
     if joined:
         columnnames = ["rsid", "chrom", "pos", "genotype"]
         dtype = NORMALIZED_DTYPES.copy()
@@ -67,15 +64,15 @@ def _parse(parse_input: ParseInput) -> ParsedData | None:
     # Temporarily use nullable UInt32 for 'pos' column
     dtype["pos"] = pd.UInt32Dtype()  # type: ignore[assignment]  # read_csv takes dtype instances
 
-    df = pd.read_csv(
-        file,
-        comment="#",
-        sep="\t",
-        na_values=["--", "-"],
-        names=columnnames,
-        compression=compression,
-        dtype=dtype,
-    )
+    with parse_input.source.open() as file:
+        df = pd.read_csv(
+            file,
+            comment="#",
+            sep="\t",
+            na_values=["--", "-"],
+            names=columnnames,
+            dtype=dtype,
+        )
 
     # Drop rows with NaN values in 'pos' column
     df = df.dropna(subset=["pos"])

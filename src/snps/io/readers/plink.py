@@ -5,6 +5,7 @@ from __future__ import annotations
 import pandas as pd
 
 from snps.constants import NORMALIZED_DTYPES
+from snps.io.readers._common import parse_positions
 from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
 
 
@@ -33,6 +34,7 @@ def _parse(parse_input: ParseInput) -> ParsedData:
             sep="\t",
             na_values=["--", "-"],
             names=columnnames,
+            dtype={"pos": str},
         )
     # turn number numbers into string numbers
     df["chrom"] = df["chrom"].map(
@@ -88,6 +90,7 @@ def _parse(parse_input: ParseInput) -> ParsedData:
         }
     )
     df = df.dropna(subset=["rsid", "chrom", "pos"])
+    df["pos"] = parse_positions(df["pos"])
     df = df.astype(dtype=NORMALIZED_DTYPES)
     df = df.set_index("rsid")
     return ParsedData(df)

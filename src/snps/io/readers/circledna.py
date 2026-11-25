@@ -5,6 +5,7 @@ from __future__ import annotations
 import pandas as pd
 
 from snps.constants import NORMALIZED_DTYPES
+from snps.io.readers._common import parse_positions
 from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
 
 
@@ -57,6 +58,7 @@ def _parse(parse_input: ParseInput) -> ParsedData:
     df = pd.concat(rs_chunks)
     df["chrom"] = df.chrom.str[3:]
     df["genotype"] = df.genotype.apply(lambda x: "".join(x.split("/")))
+    df["pos"] = parse_positions(df["pos"])
     df = df.astype(NORMALIZED_DTYPES)
     df = df.set_index("rsid")
 

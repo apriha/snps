@@ -2,6 +2,7 @@ import os
 import tempfile
 from functools import partial
 
+import pandas as pd
 import pytest
 from atomicwrites import atomic_write
 
@@ -71,6 +72,13 @@ def test_read_ftdna_concat_gzip_extra_data(tmp_path, kind):
     )
     with given_as(path, kind) as file:
         assert_matches_case(SNPs(file), case)
+
+
+def test_read_vcf_float_positions():
+    data = read_file("tests/input/testvcf_float_positions.vcf")
+    expected = read_file("tests/input/testvcf.vcf")
+
+    pd.testing.assert_frame_equal(data.frame, expected.frame)
 
 
 class TestReader(BaseSNPsTestCase):

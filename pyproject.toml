@@ -32,7 +32,7 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=2",
-    "pandas>=3",
+    "pandas>=3.1",
     "atomicwrites",
     "pooch>=1.8",
 ]

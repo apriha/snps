@@ -8,6 +8,7 @@ import pandas as pd
 
 from snps.constants import NORMALIZED_DTYPES
 from snps.exceptions import ParseError
+from snps.io.readers._common import parse_positions
 from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
 
 _HEADER = "^#*[ \t]*rsid[, \t]*chr"
@@ -80,8 +81,9 @@ def _parse(parse_input: ParseInput) -> ParsedData:
                     names=["rsid", "chrom", "pos", "genotype"],
                     usecols=[0, 1, 2, 3],
                     index_col=0,
-                    dtype=NORMALIZED_DTYPES,
+                    dtype={**NORMALIZED_DTYPES, "pos": str},
                 )
+            df["pos"] = parse_positions(df["pos"])
     return ParsedData(df)
 
 

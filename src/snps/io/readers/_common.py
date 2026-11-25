@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import IO
 
 import numpy as np
+import pandas as pd
 
 from snps.build_constants import CHROM_SIZES
 from snps.exceptions import ParseError
@@ -16,6 +17,8 @@ TWO_ALLELE_DTYPES: dict[str, type] = {
     "allele1": object,
     "allele2": object,
 }
+
+_MAX_POSITION = np.iinfo(np.uint32).max
 
 
 def extract_comments(f: IO[bytes], include_data: bool = False) -> tuple[str, str, str]:
@@ -169,3 +172,38 @@ def read_line(f: IO[bytes]) -> str:
     line = f.readline()
     # https://stackoverflow.com/a/606199
     return line.decode("utf-8")
+
+
+def parse_positions(positions: pd.Series[str | float]) -> pd.Series[int]:
+    """Convert positions to unsigned 32-bit integers.
+
+    A position is valid when ``pandas.to_numeric`` reads it as a whole number from 0
+    to 4294967295.
+
+    Parameters
+    ----------
+    positions : pandas.Series of str or numbers
+        positions as read from a file; missing positions are NaN
+
+    Returns
+    -------
+    pandas.Series of numpy.uint32
+        the positions, with the index of ``positions``
+
+    Raises
+    ------
+    ValueError
+        if a position is missing or invalid
+    """
+    values = pd.to_numeric(positions, errors="coerce")
+    numbers = values.to_numpy(dtype=np.float64, na_value=np.nan)
+    valid = (numbers >= 0) & (numbers <= _MAX_POSITION) & (np.floor(numbers) == numbers)
+    if not valid.all():
+        first = int(np.argmin(valid))
+        if positions.isna().iloc[first]:
+            raise ValueError("position is missing")
+        raise ValueError(
+            f"position '{positions.iloc[first]}' is not a whole number "
+            f"from 0 to {_MAX_POSITION}"
+        )
+    return values.astype(np.uint32)

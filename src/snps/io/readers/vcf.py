@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from snps.constants import NORMALIZED_DTYPES
+from snps.io.readers._common import parse_positions
 from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
 
 logger = logging.getLogger(__name__)
@@ -163,6 +164,7 @@ def _parse_vcf(buffer: IO[bytes], rsids: Set[str]) -> tuple[pd.DataFrame, bool]:
             phased = False
 
         df = pd.DataFrame(rows, columns=["rsid", "chrom", "pos", "genotype", "phased"])
+        df["pos"] = parse_positions(df["pos"])
         df = df.astype({**NORMALIZED_DTYPES, "phased": bool})
 
         df = df.set_index("rsid", drop=True)

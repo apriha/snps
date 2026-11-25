@@ -1132,7 +1132,7 @@ test = [
 requires-dist = [
     { name = "atomicwrites" },
     { name = "numpy", specifier = ">=2" },
-    { name = "pandas", specifier = ">=3" },
+    { name = "pandas", specifier = ">=3.1" },
     { name = "pooch", specifier = ">=1.8" },
 ]
 

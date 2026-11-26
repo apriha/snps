@@ -1,56 +1,27 @@
-"""SelfDecode raw data files."""
+"""SelfDecode raw data files.
+
+https://selfdecode.com
+"""
 
 from __future__ import annotations
 
-import numpy as np
+from functools import partial
+
 import pandas as pd
 
 from snps.constants import NORMALIZED_DTYPES
-from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
+from snps.io.readers._registry import Header, ReaderFormat
+from snps.io.readers._table import TableLayout, parse_table
+
+_LAYOUT = TableLayout(
+    dtypes={**NORMALIZED_DTYPES, "pos": pd.UInt32Dtype()}, drop_incomplete=True
+)
 
 
 def _detect(header: Header) -> bool:
     return "SelfDecode" in header.comments
 
 
-def _parse(parse_input: ParseInput) -> ParsedData:
-    """Read and parse SelfDecode file.
-
-    https://selfdecode.com/
-
-    Parameters
-    ----------
-    parse_input : ParseInput
-        file to parse
-
-    Returns
-    -------
-    ParsedData
-        parsed SNPs
-    """
-    columnnames = ["rsid", "chrom", "pos", "genotype"]
-    dtype = NORMALIZED_DTYPES.copy()
-
-    # Temporarily use nullable UInt32 for 'pos' column
-    dtype["pos"] = pd.UInt32Dtype()  # type: ignore[assignment]  # read_csv takes dtype instances
-    with parse_input.source.open() as file:
-        df = pd.read_csv(
-            file,
-            comment="#",
-            sep="\t",
-            na_values="--",
-            names=columnnames,
-            dtype=dtype,
-        )
-    # Drop rows with NaN values in 'pos' column
-    df = df.dropna(subset=["pos"])
-    # Convert 'pos' column to np.uint32
-    df["pos"] = df["pos"].astype(np.uint32)
-
-    df = df.dropna(subset=["rsid", "chrom", "pos"])
-    df = df.astype(dtype=NORMALIZED_DTYPES)
-    df = df.set_index("rsid")
-    return ParsedData(df)
-
-
-FORMAT = ReaderFormat(name="SelfDecode", detect=_detect, parse=_parse)
+FORMAT = ReaderFormat(
+    name="SelfDecode", detect=_detect, parse=partial(parse_table, _LAYOUT)
+)

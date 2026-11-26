@@ -1,44 +1,22 @@
-"""DNA.Land raw data files."""
+"""DNA.Land raw data files.
+
+https://dna.land
+"""
 
 from __future__ import annotations
 
-import pandas as pd
+from functools import partial
 
-from snps.constants import NORMALIZED_DTYPES
-from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
+from snps.io.readers._registry import Header, ReaderFormat
+from snps.io.readers._table import TableLayout, parse_table
+
+_LAYOUT = TableLayout()
 
 
 def _detect(header: Header) -> bool:
     return "DNA.Land" in header.comments
 
 
-def _parse(parse_input: ParseInput) -> ParsedData:
-    """Read and parse DNA.land files.
-
-    https://dna.land/
-
-    Parameters
-    ----------
-    parse_input : ParseInput
-        file to parse
-
-    Returns
-    -------
-    ParsedData
-        parsed SNPs
-    """
-    with parse_input.source.open() as file:
-        return ParsedData(
-            pd.read_csv(
-                file,
-                comment="#",
-                sep="\t",
-                na_values="--",
-                names=["rsid", "chrom", "pos", "genotype"],
-                index_col=0,
-                dtype=NORMALIZED_DTYPES,
-            )
-        )
-
-
-FORMAT = ReaderFormat(name="DNA.Land", detect=_detect, parse=_parse)
+FORMAT = ReaderFormat(
+    name="DNA.Land", detect=_detect, parse=partial(parse_table, _LAYOUT)
+)

@@ -105,6 +105,34 @@ For merging, you should:
 2. Update documentation when there's new API, functionality, etc.
 3. Add yourself to `CONTRIBUTORS.md` if you'd like.
 
+## Adding or changing a reader
+
+Each file format has a module in `src/snps/io/readers/`. `livingdna.py` is a complete example;
+`ancestry.py` also adjusts the table after reading it.
+
+To add a format:
+
+1. Create `src/snps/io/readers/<vendor>.py` with a module docstring naming the vendor and its URL,
+   and define `FORMAT = ReaderFormat(name=..., detect=..., parse=...)`:
+   - `name`: the format's name, reported as the file's source unless the optional `source(header)`
+     returns another.
+   - `detect(header)`: returns `True` if `header.first_line` or `header.comments` (the file's
+     leading comment lines) mark the file as this format.
+   - `parse`: if the data is one delimited table, describe it with a `TableLayout` (its fields are
+     documented in `_table.py`) and use `partial(parse_table, LAYOUT)`; if the table needs
+     adjusting, write a function that calls `read_table(parse_input.source, LAYOUT)` and adjusts
+     the result. A format that is not a table provides its own parser (see `vcf.py`).
+2. Add `FORMAT` to `_FORMATS` in `src/snps/io/readers/__init__.py`. The first format whose `detect`
+   matches wins, so put it before any format that would also match its files.
+3. Add a small invented file to `tests/input/` and a `ReadCase` for it to `CASES` in
+   `tests/support/cases.py`.
+4. Add the name to `FORMAT_NAMES` in `tests/io/test_readers.py`. If another format's `detect` also
+   matches the new header, add a case to `test_reader_precedence` there.
+5. Add the vendor to "Supported Genotype Files" in `README.md`.
+
+To change a reader, edit its layout or its `parse`, and add a `ReadCase` (with a new file in
+`tests/input/` if needed) that shows the new behavior.
+
 ## Documentation
 
 After the development environment has been setup, documentation can be generated via the

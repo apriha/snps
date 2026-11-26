@@ -10,14 +10,6 @@ import pandas as pd
 from snps.build_constants import CHROM_SIZES
 from snps.exceptions import ParseError
 
-TWO_ALLELE_DTYPES: dict[str, type] = {
-    "rsid": object,
-    "chrom": object,
-    "pos": np.uint32,
-    "allele1": object,
-    "allele2": object,
-}
-
 _MAX_POSITION = np.iinfo(np.uint32).max
 
 
@@ -143,15 +135,7 @@ def detect_build_from_comments(comments: str, source: str) -> int:
             return 37
         elif "build 38" in comments.lower():
             return 38
-        # these can cause false positives
-        # elif "b37" in comments.lower():
-        #    return 37
-        # elif "b38" in comments.lower():
-        #    return 38
-        # elif "hg19" in comments.lower():
-        #    return 37
-        # elif "hg38" in comments.lower():
-        #    return 38
+        # "b37", "b38", "hg19" and "hg38" are not checked: they give false positives
         elif "grch38" in comments.lower():
             return 38
         elif "grch37" in comments.lower():

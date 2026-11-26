@@ -1,13 +1,29 @@
-"""Sano Genetics direct-to-consumer raw data files."""
+"""Sano Genetics direct-to-consumer raw data files.
+
+https://sanogenetics.com
+"""
 
 from __future__ import annotations
 
 import re
+from functools import partial
 
-import pandas as pd
+from snps.io.readers._registry import Header, ReaderFormat
+from snps.io.readers._table import (
+    TWO_ALLELE_COLUMNS,
+    TWO_ALLELE_DTYPES,
+    TableLayout,
+    parse_table,
+)
 
-from snps.io.readers._common import TWO_ALLELE_DTYPES
-from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
+_LAYOUT = TableLayout(
+    columns=TWO_ALLELE_COLUMNS,
+    separator=r"\s+",
+    na_values=("-",),
+    header=0,
+    dtypes=TWO_ALLELE_DTYPES,
+    alleles="allele2_optional",
+)
 
 
 def _detect(header: Header) -> bool:
@@ -25,40 +41,9 @@ def _source(header: Header) -> str:
     return "Sano"
 
 
-def _parse(parse_input: ParseInput) -> ParsedData:
-    """Read and parse Sano Genetics DTC file.
-
-    https://sanogenetics.com
-
-    Parameters
-    ----------
-    parse_input : ParseInput
-        file to parse
-
-    Returns
-    -------
-    ParsedData
-        parsed SNPs
-    """
-    with parse_input.source.open() as file:
-        df = pd.read_csv(
-            file,
-            comment="#",
-            header=0,
-            engine="c",
-            sep=r"\s+",
-            na_values="-",
-            names=["rsid", "chrom", "pos", "allele1", "allele2"],
-            index_col=0,
-            dtype=TWO_ALLELE_DTYPES,
-        )
-
-    # create genotype column from allele columns and keep only relevant columns
-    df = df.assign(genotype=df["allele1"] + df["allele2"].fillna(""))[
-        ["chrom", "pos", "genotype"]
-    ]
-
-    return ParsedData(df)
-
-
-FORMAT = ReaderFormat(name="sano_dtc", detect=_detect, parse=_parse, source=_source)
+FORMAT = ReaderFormat(
+    name="sano_dtc",
+    detect=_detect,
+    parse=partial(parse_table, _LAYOUT),
+    source=_source,
+)

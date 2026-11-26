@@ -1,99 +1,34 @@
-"""PLINK text files."""
+"""PLINK text files.
+
+https://www.cog-genomics.org/plink/
+"""
 
 from __future__ import annotations
 
-import pandas as pd
+from collections.abc import Mapping
+from functools import partial
+from types import MappingProxyType
 
-from snps.constants import NORMALIZED_DTYPES
-from snps.io.readers._common import parse_positions
-from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
+from snps.io.readers._registry import Header, ReaderFormat
+from snps.io.readers._table import TableLayout, parse_table
+
+# integer keys match codes pandas reads as numbers (floats when a code is
+# missing); a row whose code is not listed is dropped
+_CHROMOSOMES: Mapping[str | int, str] = MappingProxyType(
+    {code: str(n) for n in range(1, 23) for code in (str(n), n)}
+    | {"X": "X", "Y": "Y", "XY": "Y", "MT": "MT"}
+)
+
+_LAYOUT = TableLayout(
+    na_values=("--", "-"),
+    dtypes={"pos": str},
+    chromosomes=_CHROMOSOMES,
+    drop_incomplete=True,
+)
 
 
 def _detect(header: Header) -> bool:
     return "# Below is a text version of your data." in header.comments
 
 
-def _parse(parse_input: ParseInput) -> ParsedData:
-    """Read and parse plink file.
-
-    Parameters
-    ----------
-    parse_input : ParseInput
-        file to parse
-
-    Returns
-    -------
-    ParsedData
-        parsed SNPs
-    """
-    columnnames = ["rsid", "chrom", "pos", "genotype"]
-    with parse_input.source.open() as file:
-        df = pd.read_csv(
-            file,
-            comment="#",
-            sep="\t",
-            na_values=["--", "-"],
-            names=columnnames,
-            dtype={"pos": str},
-        )
-    # turn number numbers into string numbers
-    df["chrom"] = df["chrom"].map(
-        {
-            "1": "1",
-            "2": "2",
-            "3": "3",
-            "4": "4",
-            "5": "5",
-            "6": "6",
-            "7": "7",
-            "8": "8",
-            "9": "9",
-            "10": "10",
-            "11": "11",
-            "12": "12",
-            "13": "13",
-            "14": "14",
-            "15": "15",
-            "16": "16",
-            "17": "17",
-            "18": "18",
-            "19": "19",
-            "20": "20",
-            "21": "21",
-            "22": "22",
-            1: "1",
-            2: "2",
-            3: "3",
-            4: "4",
-            5: "5",
-            6: "6",
-            7: "7",
-            8: "8",
-            9: "9",
-            10: "10",
-            11: "11",
-            12: "12",
-            13: "13",
-            14: "14",
-            15: "15",
-            16: "16",
-            17: "17",
-            18: "18",
-            19: "19",
-            20: "20",
-            21: "21",
-            22: "22",
-            "X": "X",
-            "Y": "Y",
-            "XY": "Y",
-            "MT": "MT",
-        }
-    )
-    df = df.dropna(subset=["rsid", "chrom", "pos"])
-    df["pos"] = parse_positions(df["pos"])
-    df = df.astype(dtype=NORMALIZED_DTYPES)
-    df = df.set_index("rsid")
-    return ParsedData(df)
-
-
-FORMAT = ReaderFormat(name="PLINK", detect=_detect, parse=_parse)
+FORMAT = ReaderFormat(name="PLINK", detect=_detect, parse=partial(parse_table, _LAYOUT))

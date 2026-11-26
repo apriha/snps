@@ -3,16 +3,27 @@
 from __future__ import annotations
 
 import re
-
-import pandas as pd
+from dataclasses import replace
 
 from snps.constants import NORMALIZED_DTYPES
-from snps.exceptions import ParseError
-from snps.io.readers._common import parse_positions
 from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
+from snps.io.readers._table import TableLayout, read_table
 
 _HEADER = "^#*[ \t]*rsid[, \t]*chr"
 _NO_HEADER = "^rs[0-9]*[, \t]{1}[1]"
+
+_COMMA_LAYOUT = TableLayout(separator=",", comment=None)
+
+_LAYOUTS = (
+    _COMMA_LAYOUT,
+    replace(_COMMA_LAYOUT, separator="\t"),
+    replace(
+        _COMMA_LAYOUT,
+        separator=None,
+        usecols=(0, 1, 2, 3),
+        dtypes={**NORMALIZED_DTYPES, "pos": str},
+    ),
+)
 
 
 def _detect(header: Header) -> bool:
@@ -23,68 +34,9 @@ def _detect(header: Header) -> bool:
 
 
 def _parse(parse_input: ParseInput) -> ParsedData:
-    """Read and parse generic CSV or TSV file.
-
-    Notes
-    -----
-    Assumes columns are 'rsid', 'chrom' / 'chromosome', 'pos' / 'position', and 'genotype';
-    values are comma separated; unreported genotypes are indicated by '--'; and one header row
-    precedes data. For example:
-
-        rsid,chromosome,position,genotype
-        rs1,1,1,AA
-        rs2,1,2,CC
-        rs3,1,3,--
-
-    Parameters
-    ----------
-    parse_input : ParseInput
-        file to parse
-
-    Returns
-    -------
-    ParsedData
-        parsed SNPs
-    """
-    source = parse_input.source
     skip = 1 if re.match(_HEADER, parse_input.header.first_line) else 0
-
-    def parse(sep: str) -> pd.DataFrame:
-        with source.open() as file:
-            return pd.read_csv(
-                file,
-                sep=sep,
-                skiprows=skip,
-                na_values="--",
-                names=["rsid", "chrom", "pos", "genotype"],
-                index_col=0,
-                dtype=NORMALIZED_DTYPES,
-            )
-
-    try:
-        df = parse(",")
-    except ParseError:
-        raise
-    except ValueError:
-        try:
-            df = parse("\t")
-        except ParseError:
-            raise
-        except ValueError:
-            with source.open() as file:
-                df = pd.read_csv(
-                    file,
-                    sep=None,
-                    na_values="--",
-                    skiprows=skip,
-                    engine="python",
-                    names=["rsid", "chrom", "pos", "genotype"],
-                    usecols=[0, 1, 2, 3],
-                    index_col=0,
-                    dtype={**NORMALIZED_DTYPES, "pos": str},
-                )
-            df["pos"] = parse_positions(df["pos"])
-    return ParsedData(df)
+    layouts = [replace(layout, skiprows=skip) for layout in _LAYOUTS]
+    return ParsedData(read_table(parse_input.source, *layouts))
 
 
 FORMAT = ReaderFormat(name="generic", detect=_detect, parse=_parse)

@@ -1,11 +1,16 @@
-"""tellmeGen raw data files."""
+"""tellmeGen raw data files.
+
+https://www.tellmegen.com
+"""
 
 from __future__ import annotations
 
 import pandas as pd
 
-from snps.constants import NORMALIZED_DTYPES
 from snps.io.readers._registry import Header, ParsedData, ParseInput, ReaderFormat
+from snps.io.readers._table import TableLayout, read_table
+
+_LAYOUT = TableLayout(comment=None, skiprows=1, index=None)
 
 
 def _detect(header: Header) -> bool:
@@ -13,31 +18,9 @@ def _detect(header: Header) -> bool:
 
 
 def _parse(parse_input: ParseInput) -> ParsedData:
-    """Read and parse tellmeGen files.
-
-    https://www.tellmegen.com/
-
-    Parameters
-    ----------
-    parse_input : ParseInput
-        file to parse
-
-    Returns
-    -------
-    ParsedData
-        parsed SNPs
-    """
     resources = parse_input.resources
 
-    with parse_input.source.open() as file:
-        df = pd.read_csv(
-            file,
-            sep="\t",
-            skiprows=1,
-            na_values="--",
-            names=["rsid", "chrom", "pos", "genotype"],
-            dtype=NORMALIZED_DTYPES,
-        )
+    df = read_table(parse_input.source, _LAYOUT)
 
     # use the external mapping to turn
     # SNP names into rsids where possible

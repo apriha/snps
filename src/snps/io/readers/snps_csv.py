@@ -68,7 +68,7 @@ def _source(header: Header) -> str:
 def _parse(parse_input: ParseInput) -> ParsedData:
     _, phased, build = _read_comments(parse_input.header.comments)
     try:
-        return ParsedData(read_table(parse_input.source, _COMMA_LAYOUT), phased)
+        return ParsedData(read_table(parse_input.source, _COMMA_LAYOUT), phased, build)
     except pd.errors.ParserError:
         return ParsedData(read_table(parse_input.source, _TAB_LAYOUT), phased, build)
 

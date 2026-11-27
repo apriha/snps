@@ -68,6 +68,25 @@ class TestWriter(BaseSNPsTestCase):
             "to_tsv", filename="generic.txt", output_file="generic.txt"
         )
 
+    def test_to_csv_preserves_detected_build(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            s = SNPs("tests/input/generic.csv", output_dir=tmpdir)
+            s._data = s._data.__class__(
+                s._snps,
+                build=38,
+                build_detected=True,
+                build_original=38,
+                source=s._data.source,
+            )
+
+            for writer in (s.to_csv, s.to_tsv):
+                with self.subTest(writer=writer.__name__):
+                    path = writer()
+                    reloaded = SNPs(path)
+                    self.assertEqual(reloaded.build, 38)
+                    self.assertTrue(reloaded.build_detected)
+                    self.assertEqual(reloaded.build_original, 38)
+
     def test_to_vcf(self):
         self.run_writer_test(
             "to_vcf",

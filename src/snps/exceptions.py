@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__all__ = ["ParseError", "SNPsError", "UnsupportedFormatError"]
+__all__ = ["ParseError", "ResourceError", "SNPsError", "UnsupportedFormatError"]
 
 
 class SNPsError(Exception):
@@ -15,3 +15,7 @@ class UnsupportedFormatError(SNPsError, ValueError):
 
 class ParseError(SNPsError, ValueError):
     """A file in a recognized format has content that cannot be parsed."""
+
+
+class ResourceError(SNPsError):
+    """A request for an external resource failed or returned unusable data."""

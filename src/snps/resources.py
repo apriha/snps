@@ -21,14 +21,16 @@ import logging
 import os
 import tarfile
 import tempfile
+from collections.abc import Mapping
 from typing import Protocol
 
 import numpy as np
 import pandas as pd
 import pooch
 
+from snps._rest import RestClient
+from snps._variation import VariationClient
 from snps.constants import REFERENCE_SEQUENCE_CHROMS
-from snps.ensembl import EnsemblRestClient
 from snps.utils import create_dir
 
 logger = logging.getLogger(__name__)
@@ -77,12 +79,10 @@ class Resources:
         if resources_dir is None:
             resources_dir = os.environ.get("SNPS_DATA_DIR") or pooch.os_cache("snps")
         self._resources_dir = os.path.abspath(resources_dir)
-        self._ensembl_rest_client = EnsemblRestClient()
-        # NCBI Variation Services client for PAR SNP lookups; reused across lookups so
-        # its rate limiter is preserved (a fresh client per lookup would reset it)
-        self._ncbi_rest_client = EnsemblRestClient(
-            server="https://api.ncbi.nlm.nih.gov", reqs_per_sec=1
+        self._ensembl_rest_client = RestClient(
+            server="https://rest.ensembl.org", requests_per_second=15
         )
+        self._variation_client = VariationClient()
         self._init_resource_attributes()
 
     def _init_resource_attributes(self):
@@ -151,7 +151,12 @@ class Resources:
         Returns
         -------
         dict
-            dict of json assembly mapping data if loading was successful, else {}
+            dict of JSON assembly mapping data
+
+        Raises
+        ------
+        ResourceError
+            A chromosome mapping could not be fetched from Ensembl.
         """
         return self._load_assembly_mapping_data(
             self._get_path_assembly_mapping_data(source_assembly, target_assembly)
@@ -530,8 +535,8 @@ class Resources:
         return seqs
 
     def _get_path_assembly_mapping_data(
-        self, source_assembly, target_assembly, retries=10
-    ):
+        self, source_assembly: str, target_assembly: str
+    ) -> str:
         """Get local path to assembly mapping data, downloading if necessary.
 
         Parameters
@@ -540,8 +545,6 @@ class Resources:
             assembly to remap from
         target_assembly : {'NCBI36', 'GRCh37', 'GRCh38'}
             assembly to remap to
-        retries : int
-            number of retries per chromosome to download assembly mapping data
 
         Returns
         -------
@@ -550,10 +553,8 @@ class Resources:
 
         References
         ----------
-        1. Ensembl, Assembly Information Endpoint,
-           https://rest.ensembl.org/documentation/info/assembly_info
-        2. Ensembl, Assembly Map Endpoint,
-           http://rest.ensembl.org/documentation/info/assembly_map
+        1. Ensembl, Assembly Map Endpoint,
+           https://rest.ensembl.org/documentation/info/assembly_map
 
         """
 
@@ -572,14 +573,18 @@ class Resources:
             logger.info(f"Downloading {os.path.relpath(destination)}")
 
             self._download_assembly_mapping_data(
-                destination, chroms, source_assembly, target_assembly, retries
+                destination, chroms, source_assembly, target_assembly
             )
 
         return destination
 
     def _download_assembly_mapping_data(
-        self, destination, chroms, source_assembly, target_assembly, retries
-    ):
+        self,
+        destination: str,
+        chroms: list[str],
+        source_assembly: str,
+        target_assembly: str,
+    ) -> None:
         fd, tmp_path = tempfile.mkstemp(dir=self._resources_dir, suffix=".tar.gz")
         os.close(fd)
         try:
@@ -591,27 +596,19 @@ class Resources:
                         f"/map/human/{source_assembly}/{chrom}/{target_assembly}?"
                     )
 
-                    # get assembly mapping data
-                    response = None
-                    retry = 0
-                    while response is None and retry < retries:
-                        response = self._ensembl_rest_client.perform_rest_action(
-                            map_endpoint
-                        )
-                        retry += 1
-
-                    if response is not None:
-                        # open temp file, save json response to file, close temp file
-                        with tempfile.NamedTemporaryFile(
-                            delete=False, mode="w"
-                        ) as f_tmp:
-                            json.dump(response, f_tmp)
-
-                        # add temp file to archive
-                        out_tar.add(f_tmp.name, arcname=file)
-
-                        # remove temp file
-                        os.remove(f_tmp.name)
+                    response = self._ensembl_rest_client.get_json(map_endpoint)
+                    member = tempfile.NamedTemporaryFile(
+                        mode="w",
+                        encoding="utf-8",
+                        delete=False,
+                        dir=self._resources_dir,
+                    )
+                    try:
+                        with member:
+                            json.dump(response, member)
+                        out_tar.add(member.name, arcname=file)
+                    finally:
+                        os.remove(member.name)
 
             os.replace(tmp_path, destination)
         except BaseException:
@@ -680,8 +677,10 @@ class Resources:
             self._gsa_chrpos_map = chrpos
         return self._gsa_chrpos_map
 
-    def get_par_lookup(self, rsid):
+    def get_par_lookup(self, rsid: str) -> Mapping[str, object] | None:
         """Look up the dbSNP RefSNP snapshot for a PAR SNP via the NCBI Variation Services API.
+
+        Follow the first target when a record has merged into multiple records.
 
         Parameters
         ----------
@@ -690,30 +689,20 @@ class Resources:
 
         Returns
         -------
-        dict
-            RefSNP snapshot (following merges), else None
+        mapping of str to object or None
+            The RefSNP snapshot, or None when the record has no position.
+
+        Raises
+        ------
+        ResourceError
+            A snapshot could not be fetched or its merge metadata was unusable.
 
         References
         ----------
         1. National Center for Biotechnology Information, Variation Services, RefSNP,
            https://api.ncbi.nlm.nih.gov/variation/v0/
         """
-        return self._lookup_refsnp_snapshot(rsid, self._ncbi_rest_client)
-
-    def _lookup_refsnp_snapshot(self, rsid, rest_client):
-        id = rsid.split("rs")[1]
-        response = rest_client.perform_rest_action("/variation/v0/refsnp/" + id)
-        if "merged_snapshot_data" in response:
-            # this RefSnp id was merged into another
-            # we'll pick the first one to decide which chromosome this PAR will be assigned to
-            merged_id = "rs" + response["merged_snapshot_data"]["merged_into"][0]
-            logger.info(f"SNP id {rsid} has been merged into id {merged_id}")
-            return self._lookup_refsnp_snapshot(merged_id, rest_client)
-        elif "nosnppos_snapshot_data" in response:
-            logger.warning(f"Unable to look up SNP id {rsid}")
-            return None
-        else:
-            return response
+        return self._variation_client.get_par_lookup(rsid)
 
     def _fetch(self, url, filename):
         """Fetch a file into the resources cache, downloading only if not already present.

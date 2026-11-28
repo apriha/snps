@@ -68,16 +68,6 @@ Synthetic SNP data generation utilities.
 Data Resources
 --------------
 
-snps.ensembl
-~~~~~~~~~~~~
-
-Interface to Ensembl REST API for genomic data.
-
-.. automodule:: snps.ensembl
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 snps.resources
 ~~~~~~~~~~~~~~
 
@@ -86,6 +76,12 @@ Resource management for reference data and assembly mappings.
 .. automodule:: snps.resources
    :members:
    :undoc-members:
+   :show-inheritance:
+
+Exceptions
+----------
+
+.. autoclass:: snps.exceptions.ResourceError
    :show-inheritance:
 
 Utilities
